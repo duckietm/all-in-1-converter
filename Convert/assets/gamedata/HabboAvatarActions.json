@@ -177,7 +177,6 @@
                 "fx.210",
                 "fx.211",
                 "fx.212",
-                "fx.213",
                 "fx.214",
                 "fx.215",
                 "fx.216",
@@ -187,6 +186,10 @@
                 "fx.221",
                 "fx.222",
                 "fx.223",
+                "fx.229",
+                "fx.230",
+                "fx.231",
+                "fx.232",
                 "fx.880",
                 "fx.881",
                 "fx.882",
@@ -372,7 +375,6 @@
                 "fx.210",
                 "fx.211",
                 "fx.212",
-                "fx.213",
                 "fx.214",
                 "fx.215",
                 "fx.216",
@@ -381,6 +383,11 @@
                 "fx.219",
                 "fx.221",
                 "fx.227",
+                "fx.228",
+                "fx.229",
+                "fx.230",
+                "fx.231",
+                "fx.232",
                 "fx.880",
                 "fx.881",
                 "fx.882",
@@ -559,7 +566,6 @@
                 "fx.210",
                 "fx.211",
                 "fx.212",
-                "fx.213",
                 "fx.214",
                 "fx.215",
                 "fx.216",
@@ -568,6 +574,11 @@
                 "fx.219",
                 "fx.221",
                 "fx.227",
+                "fx.228",
+                "fx.229",
+                "fx.230",
+                "fx.231",
+                "fx.232",
                 "fx.880",
                 "fx.881",
                 "fx.882",
@@ -662,6 +673,10 @@
                 "fx.218",
                 "fx.219",
                 "fx.221",
+                "fx.229",
+                "fx.230",
+                "fx.231",
+                "fx.232",
                 "fx.880",
                 "fx.881",
                 "fx.882",
@@ -1585,10 +1600,16 @@
                     ]
                 }, {
                     "id": "218",
-                    "animated": true,
+                    "animated": true
                 }, {
                     "id": "219",
-                    "animated": true
+                    "animated": true,
+                    "prevents": [
+                        "usei",
+                        "cri",
+                        "wave",
+                        "sign"
+                    ]
                 }, {
                     "id": "221",
                     "animated": true,
@@ -1600,10 +1621,10 @@
                     ]
                 }, {
                     "id": "222",
-                    "animated": true,
+                    "animated": true
                 }, {
                     "id": "223",
-                    "animated": false,
+                    "animated": false
                 }, {
                     "id": "227",
                     "animated": true,
@@ -1614,6 +1635,42 @@
                         "sign",
                         "respect"
                     ]
+                }, {
+                    "id": "228",
+                    "animated": true,
+                    "prevents": [
+                        "usei",
+                        "cri",
+                        "wave",
+                        "sign",
+                        "respect"
+                    ]
+                }, {
+                    "id": "229",
+                    "animated": true,
+                    "prevents": [
+                        "usei",
+                        "cri",
+                        "wave",
+                        "sign",
+                        "respect",
+                        "Sleep",
+                        "talk",
+                        "gest",
+                        "sml",
+                        "sad",
+                        "agr",
+                        "srp"
+                    ]
+                }, {
+                    "id": "230",
+                    "animated": true
+                }, {
+                    "id": "231",
+                    "animated": true
+                }, {
+                    "id": "232",
+                    "animated": true
                 }, {
                     "id": "880",
                     "animated": false,
@@ -2445,9 +2502,6 @@
                     "value": "231"
                 }, {
                     "id": "138",
-                    "value": "232"
-                }, {
-                    "id": "139",
                     "value": "232"
                 }, {
                     "id": "142",
@@ -3387,6 +3441,68 @@
             "geometryType": "vertical",
             "activePartSet": "figure",
             "assetPartDefinition": "std"
+        }, {
+            "id": "Snowboard360",
+            "state": "sb360",
+            "precedence": 140,
+            "animation": 1,
+            "main": 1,
+            "geometryType": "vertical",
+            "activePartSet": "figure",
+            "assetPartDefinition": "sb360",
+            "startFromFrameZero": true,
+            "prevents": [
+                "usei",
+                "cri",
+                "wave",
+                "sign"
+            ]
+        }, {
+            "id": "SnowboardOllie",
+            "state": "sbollie",
+            "precedence": 141,
+            "animation": 1,
+            "main": 1,
+            "geometryType": "vertical",
+            "activePartSet": "figure",
+            "assetPartDefinition": "sbollie",
+            "startFromFrameZero": true,
+            "prevents": [
+                "usei",
+                "cri",
+                "wave",
+                "sign"
+            ]
+        }, {
+            "id": "SnowboardUp",
+            "state": "sbup",
+            "precedence": 142,
+            "animation": 1,
+            "main": 1,
+            "geometryType": "vertical",
+            "activePartSet": "figure",
+            "assetPartDefinition": "std",
+            "startFromFrameZero": true
+        }, {
+            "id": "SnowboardSquat",
+            "state": "sbsq",
+            "precedence": 143,
+            "animation": 1,
+            "main": 1,
+            "geometryType": "vertical",
+            "activePartSet": "figure",
+            "assetPartDefinition": "std",
+            "startFromFrameZero": true
+        }, {
+            "id": "RideJump",
+            "state": "ridejump",
+            "precedence": 144,
+            "animation": 1,
+            "main": 1,
+            "geometryType": "vertical",
+            "activePartSet": "figure",
+            "assetPartDefinition": "std",
+            "startFromFrameZero": true
         }
     ],
     "actionOffsets": [{
