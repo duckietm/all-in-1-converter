@@ -1,25 +1,20 @@
-﻿using System;
-using System.Configuration;
-using System.IO;
-using System.Net;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     public static class ProductDataDownloader
     {
-        public static void DownloadProductData()
+        private static readonly HttpClient httpClient = new HttpClient();
+
+        public static async Task DownloadProductDataAsync()
         {
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
 
             try
             {
-                if (!Directory.Exists("./files"))
-                {
-                    Directory.CreateDirectory("./files");
-                }
+                Directory.CreateDirectory("./files");
 
                 Console.WriteLine("Saving productdata...");
+
                 string productdataurl = config["AppSettings:productdataurl"];
                 if (string.IsNullOrEmpty(productdataurl))
                 {
@@ -29,11 +24,9 @@ namespace ConsoleApplication
                     return;
                 }
 
-                using (WebClient webClient = new WebClient())
-                {
-                    webClient.Headers.Add($"User-Agent: {CommonConfig.UserAgent}");
-                    webClient.DownloadFile(productdataurl, "./files/productdata.txt");
-                }
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+
+                await DownloadFileAsync(productdataurl, "./files/productdata.txt", "productdata.txt");
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Productdata Saved");
@@ -44,6 +37,31 @@ namespace ConsoleApplication
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Error downloading productdata: " + ex.Message);
                 Console.ForegroundColor = ConsoleColor.Gray;
+            }
+        }
+
+        private static async Task DownloadFileAsync(string url, string filePath, string fileName)
+        {
+            try
+            {
+                var response = await httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await response.Content.CopyToAsync(fileStream);
+                }
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"Downloaded: {fileName}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error downloading {fileName}: {ex.Message}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+                throw;
             }
         }
     }

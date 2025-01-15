@@ -1,71 +1,80 @@
-﻿using System;
-using System.IO;
-using System.Net.Http;
-using System.Threading.Tasks;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     public static class FurnidataDownloader
     {
+        private static readonly HttpClient httpClient = new HttpClient();
+
         public static async Task DownloadFurnidata()
         {
-            // Load configuration from config.ini
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
 
-            // Get URLs from config
             string furnidataTXT = config["AppSettings:furnidataTXT"];
             string furnidataXML = config["AppSettings:furnidataXML"];
 
-            // Ensure the files directory exists
             if (!Directory.Exists("./files"))
             {
                 Directory.CreateDirectory("./files");
             }
 
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+
             Console.WriteLine("Saving furnidata...");
 
-            using (HttpClient httpClient = new HttpClient())
+            try
             {
-                // Add User-Agent header to mimic a browser request
-                httpClient.DefaultRequestHeaders.Add("User-Agent", CommonConfig.UserAgent);
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"Downloading furnidata.txt from: {furnidataTXT}");
+                Console.ForegroundColor = ConsoleColor.Gray;
 
-                try
+                await DownloadFileAsync(furnidataTXT, "./files/furnidata.txt", "furnidata.txt");
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"Downloading furnidata_xml.xml from: {furnidataXML}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+
+                await DownloadFileAsync(furnidataXML, "./files/furnidata_xml.xml", "furnidata_xml.xml");
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Furnidata Saved");
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Error downloading furnidata: " + ex.Message);
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Unexpected error downloading furnidata: " + ex.Message);
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+        }
+
+        private static async Task DownloadFileAsync(string url, string filePath, string fileName)
+        {
+            try
+            {
+                var response = await httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
                 {
-                    // Debug: Display the full URL for furnidata.txt
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine($"Downloading furnidata.txt from: {furnidataTXT}");
-                    Console.ForegroundColor = ConsoleColor.Gray;
-
-                    // Download furnidata.txt
-                    byte[] txtData = await httpClient.GetByteArrayAsync(furnidataTXT);
-                    File.WriteAllBytes("./files/furnidata.txt", txtData);
-
-                    // Debug: Display the full URL for furnidata_xml.xml
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine($"Downloading furnidata_xml.xml from: {furnidataXML}");
-                    Console.ForegroundColor = ConsoleColor.Gray;
-
-                    // Download furnidata_xml.xml
-                    byte[] xmlData = await httpClient.GetByteArrayAsync(furnidataXML);
-                    File.WriteAllBytes("./files/furnidata_xml.xml", xmlData);
-
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Furnidata Saved");
-                    Console.ForegroundColor = ConsoleColor.Gray;
+                    await response.Content.CopyToAsync(fileStream);
                 }
-                catch (HttpRequestException ex)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Error downloading furnidata: " + ex.Message);
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                }
-                catch (Exception ex)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Unexpected error downloading furnidata: " + ex.Message);
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                }
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"Downloaded: {fileName}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error downloading {fileName}: {ex.Message}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+                throw;
             }
         }
     }

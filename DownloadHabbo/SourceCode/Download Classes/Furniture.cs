@@ -1,37 +1,34 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
+
 
 namespace ConsoleApplication
 {
     internal static class FurnitureDownloader
     {
-        internal static void DownloadFurniture()
+        private static readonly HttpClient httpClient = new HttpClient();
+
+        internal static async Task DownloadFurnitureAsync()
         {
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
 
             string furnidataUrl = config["AppSettings:furnidataTXT"];
             string furnitureUrl = config["AppSettings:furnitureurl"];
+
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+
             Console.WriteLine("Furniture Download Started");
 
-            if (!Directory.Exists("./hof_furni"))
-                Directory.CreateDirectory("./hof_furni");
-            if (!Directory.Exists("./hof_furni/icons"))
-                Directory.CreateDirectory("./hof_furni/icons");
-            if (!Directory.Exists("./temp"))
-                Directory.CreateDirectory("./temp");
+            Directory.CreateDirectory("./hof_furni");
+            Directory.CreateDirectory("./hof_furni/icons");
+            Directory.CreateDirectory("./temp");
 
             string furnidataTxtPath = "./temp/furnidata.txt";
-            WebClient webClient = new WebClient();
-            webClient.Headers.Add("User-Agent", CommonConfig.UserAgent);
 
             try
             {
                 Console.WriteLine("Downloading furnidata...");
-                webClient.DownloadFile(furnidataUrl, furnidataTxtPath);
+                await DownloadFileAsync(furnidataUrl, furnidataTxtPath, "furnidata.txt");
                 Console.WriteLine("Furnidata downloaded successfully.");
             }
             catch (Exception ex)
@@ -60,12 +57,10 @@ namespace ConsoleApplication
                     string furnitureNameWithMetadata = match.Groups[3].Value.Replace("\"", "");
                     string furnitureDirWithMetadata = match.Groups[4].Value.Replace("\"", "");
 
-
                     string furnitureName = furnitureNameWithMetadata.Split('*')[0];
                     string variant = furnitureNameWithMetadata.Contains('*') ? furnitureNameWithMetadata.Split('*')[1] : "";
 
                     string iconName = string.IsNullOrEmpty(variant) ? furnitureName : $"{furnitureName}_{variant}";
-
                     string furnitureDir = furnitureDirWithMetadata.Split(',')[0];
 
                     string swfFilePath = $"./hof_furni/{furnitureName}.swf";
@@ -75,49 +70,42 @@ namespace ConsoleApplication
                     {
                         string swfUrl = $"{furnitureUrl}/{furnitureDir}/{furnitureName}.swf";
 
-                        if (!FileExistsOnServer(swfUrl))
+                        if (await FileExistsOnServerAsync(swfUrl))
                         {
-                            continue;
-                        }
-
-                        try
-                        {
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"Downloading: {furnitureName}.swf");
-                            webClient.DownloadFile(swfUrl, swfFilePath);
-                            downloadedCount++;
-                        }
-                        catch (WebException ex)
-                        {
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine($"Error downloading {furnitureName}.swf: {ex.Message}");
-                            Console.ForegroundColor = ConsoleColor.Gray;
-                            continue;
+                            try
+                            {
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                Console.WriteLine($"Downloading: {furnitureName}.swf");
+                                await DownloadFileAsync(swfUrl, swfFilePath, $"{furnitureName}.swf");
+                                downloadedCount++;
+                            }
+                            catch (HttpRequestException ex)
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine($"Error downloading {furnitureName}.swf: {ex.Message}");
+                                Console.ForegroundColor = ConsoleColor.Gray;
+                            }
                         }
                     }
 
-                    if (File.Exists(iconFilePath))
+                    if (!File.Exists(iconFilePath))
                     {
-                        continue;
-                    }
+                        string iconUrl = $"{furnitureUrl}/{furnitureDir}/{iconName}_icon.png";
 
-                    string iconUrl = $"{furnitureUrl}/{furnitureDir}/{iconName}_icon.png";
-
-                    if (!FileExistsOnServer(iconUrl))
-                    {
-                        continue;
-                    }
-
-                    try
-                    {
-                        Console.WriteLine($"Downloading: {iconName}_icon.png");
-                        webClient.DownloadFile(iconUrl, iconFilePath);
-                    }
-                    catch (WebException ex)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Error downloading {iconName}_icon.png: {ex.Message}");
-                        Console.ForegroundColor = ConsoleColor.Gray;
+                        if (await FileExistsOnServerAsync(iconUrl))
+                        {
+                            try
+                            {
+                                Console.WriteLine($"Downloading: {iconName}_icon.png");
+                                await DownloadFileAsync(iconUrl, iconFilePath, $"{iconName}_icon.png");
+                            }
+                            catch (HttpRequestException ex)
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine($"Error downloading {iconName}_icon.png: {ex.Message}");
+                                Console.ForegroundColor = ConsoleColor.Gray;
+                            }
+                        }
                     }
                 }
 
@@ -136,20 +124,41 @@ namespace ConsoleApplication
             }
         }
 
-        private static bool FileExistsOnServer(string url)
+        private static async Task<bool> FileExistsOnServerAsync(string url)
         {
             try
             {
-                WebRequest request = WebRequest.Create(url);
-                request.Method = "HEAD";
-                using (WebResponse response = request.GetResponse())
-                {
-                    return true;
-                }
+                var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
+                return response.IsSuccessStatusCode;
             }
             catch
             {
                 return false;
+            }
+        }
+
+        private static async Task DownloadFileAsync(string url, string filePath, string fileName)
+        {
+            try
+            {
+                var response = await httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await response.Content.CopyToAsync(fileStream);
+                }
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"Downloaded: {fileName}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error downloading {fileName}: {ex.Message}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+                throw;
             }
         }
     }

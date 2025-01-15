@@ -1,23 +1,17 @@
-﻿using System;
-using System.IO;
-using System.Net;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     public static class VariablesDownloader
     {
-        public static void DownloadVariables()
+        private static readonly HttpClient httpClient = new HttpClient();
+
+        public static async Task DownloadVariablesAsync()
         {
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
 
             try
             {
-
-                if (!Directory.Exists("./files"))
-                {
-                    Directory.CreateDirectory("./files");
-                }
+                Directory.CreateDirectory("./files");
 
                 Console.WriteLine("Saving External Variables...");
 
@@ -39,23 +33,21 @@ namespace ConsoleApplication
                     return;
                 }
 
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+
                 int retryCount = 3;
                 while (retryCount > 0)
                 {
                     try
                     {
-                        using (WebClient webClient = new WebClient())
-                        {
-                            webClient.Headers.Add($"User-Agent: {CommonConfig.UserAgent}");
-                            webClient.DownloadFile(externalvarsurl, "./files/external_variables.txt");
-                        }
+                        await DownloadFileAsync(externalvarsurl, "./files/external_variables.txt", "external_variables.txt");
 
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine("External Variables Saved");
                         Console.ForegroundColor = ConsoleColor.Gray;
                         return;
                     }
-                    catch (WebException ex)
+                    catch (HttpRequestException ex)
                     {
                         retryCount--;
                         Console.ForegroundColor = ConsoleColor.Yellow;
@@ -76,6 +68,31 @@ namespace ConsoleApplication
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Error downloading external variables: " + ex.Message);
                 Console.ForegroundColor = ConsoleColor.Gray;
+            }
+        }
+
+        private static async Task DownloadFileAsync(string url, string filePath, string fileName)
+        {
+            try
+            {
+                var response = await httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await response.Content.CopyToAsync(fileStream);
+                }
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"Downloaded: {fileName}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error downloading {fileName}: {ex.Message}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+                throw;
             }
         }
     }

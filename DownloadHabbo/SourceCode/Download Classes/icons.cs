@@ -1,10 +1,4 @@
-﻿using System;
-using System.Configuration;
-using System.IO;
-using System.Net.Http;
-using System.Threading.Tasks;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     public static class IconDownloader
     {
@@ -36,7 +30,7 @@ namespace ConsoleApplication
                         string url = $"{catalogIconUrl}{iconNumber}.png";
                         byte[] iconData = await httpClient.GetByteArrayAsync(url);
 
-                        File.WriteAllBytes(filePath, iconData);
+                        await File.WriteAllBytesAsync(filePath, iconData);
 
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine($"Downloaded Icon {iconNumber}");

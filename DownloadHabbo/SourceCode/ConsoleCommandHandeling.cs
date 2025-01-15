@@ -24,11 +24,11 @@
                                 break;
 
                             case "furniture":
-                                FurnitureDownloader.DownloadFurniture();
+                                await FurnitureDownloader.DownloadFurnitureAsync();
                                 break;
 
                             case "nitrofurniture":
-                                NitroFurnitureDownloader.DownloadFurniture();
+                                await NitroFurnitureDownloader.DownloadFurnitureAsync();
                                 break;
 
                             case "nitroclothes":
@@ -36,8 +36,7 @@
                                 break;
 
                             case "icons":
-                                Task task = IconDownloader.DownloadIcons();
-                                task.Wait();
+                                await IconDownloader.DownloadIcons();
                                 break;
 
                             case "clothes":
@@ -45,7 +44,7 @@
                                 break;
 
                             case "mp3":
-                                Mp3Downloader.DownloadMp3s();
+                                await Mp3Downloader.DownloadMp3sAsync();
                                 break;
 
                             case "furnidata":
@@ -57,19 +56,19 @@
                                 break;
 
                             case "texts":
-                                TextsDownloader.DownloadTexts();
+                                await TextsDownloader.DownloadTextsAsync();
                                 break;
 
                             case "productdata":
-                                ProductDataDownloader.DownloadProductData();
+                                await ProductDataDownloader.DownloadProductDataAsync();
                                 break;
 
                             case "variables":
-                                VariablesDownloader.DownloadVariables();
+                                await VariablesDownloader.DownloadVariablesAsync();
                                 break;
 
                             case "quests":
-                                QuestsDownloader.DownloadQuests();
+                                await QuestsDownloader.DownloadQuestsAsync();
                                 break;
 
                             case "badges":
@@ -97,11 +96,7 @@
                         break;
 
                     case "version":
-                        Task.Run(async () => await VersionChecker.CheckVersionAsync()).Wait();
-                        break;
-
-                    case "customclothes":
-                        Task.Run(async () => await NitroClothesDownloader.DownloadCustomClothesAsync()).Wait();
+                        await VersionChecker.CheckVersionAsync();
                         break;
 
                     default:

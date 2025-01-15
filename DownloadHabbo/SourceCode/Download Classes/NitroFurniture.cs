@@ -1,14 +1,13 @@
-﻿using System;
-using System.IO;
-using System.Net;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace ConsoleApplication
 {
     internal static class NitroFurnitureDownloader
     {
-        internal static void DownloadFurniture()
+        private static readonly HttpClient httpClient = new HttpClient();
+
+        internal static async Task DownloadFurnitureAsync()
         {
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
@@ -19,19 +18,18 @@ namespace ConsoleApplication
 
             Console.WriteLine("Furniture Download Started");
 
-            // Create necessary directories
             Directory.CreateDirectory("./Nitro_hof_furni");
             Directory.CreateDirectory("./Nitro_hof_furni/icons");
             Directory.CreateDirectory("./temp");
 
             string furnidataJsonPath = "./temp/furnidata.json";
-            WebClient webClient = new WebClient();
-            webClient.Headers.Add("User-Agent", CommonConfig.UserAgent);
+
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
 
             try
             {
                 Console.WriteLine("Downloading furnidata...");
-                webClient.DownloadFile(furnidataUrl, furnidataJsonPath);
+                await DownloadFileAsync(furnidataUrl, furnidataJsonPath, "furnidata.json");
                 Console.WriteLine("Furnidata downloaded successfully.");
             }
             catch (Exception ex)
@@ -52,14 +50,14 @@ namespace ConsoleApplication
 
                 if (furnidata?.RoomItemTypes?.FurniType != null)
                 {
-                    var result = ProcessFurniType(furnidata.RoomItemTypes.FurniType, furnitureUrl, furnitureIconUrl, webClient);
+                    var result = await ProcessFurniTypeAsync(furnidata.RoomItemTypes.FurniType, furnitureUrl, furnitureIconUrl);
                     nitroDownloadCount += result.NitroCount;
                     iconDownloadCount += result.IconCount;
                 }
 
                 if (furnidata?.WallItemTypes?.FurniType != null)
                 {
-                    var result = ProcessFurniType(furnidata.WallItemTypes.FurniType, furnitureUrl, furnitureIconUrl, webClient);
+                    var result = await ProcessFurniTypeAsync(furnidata.WallItemTypes.FurniType, furnitureUrl, furnitureIconUrl);
                     nitroDownloadCount += result.NitroCount;
                     iconDownloadCount += result.IconCount;
                 }
@@ -71,7 +69,6 @@ namespace ConsoleApplication
             }
             finally
             {
-                // Clean up temporary files
                 if (Directory.Exists("./temp"))
                 {
                     foreach (string file in Directory.GetFiles("./temp"))
@@ -82,12 +79,11 @@ namespace ConsoleApplication
                 }
             }
 
-            // Prompt user to press Enter to continue
             Console.WriteLine("Press Enter to exit...");
             while (Console.ReadKey(true).Key != ConsoleKey.Enter) { }
         }
 
-        private static (int NitroCount, int IconCount) ProcessFurniType(FurniType[] furniTypes, string furnitureUrl, string furnitureIconUrl, WebClient webClient)
+        private static async Task<(int NitroCount, int IconCount)> ProcessFurniTypeAsync(FurniType[] furniTypes, string furnitureUrl, string furnitureIconUrl)
         {
             int nitroDownloadCount = 0;
             int iconDownloadCount = 0;
@@ -108,27 +104,19 @@ namespace ConsoleApplication
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine($"Downloading: {baseClassname}.nitro");
-                        webClient.DownloadFile(nitroUrl, nitroFilePath);
-                        Console.WriteLine($"Successfully downloaded: {baseClassname}.nitro");
+                        await DownloadFileAsync(nitroUrl, nitroFilePath, $"{baseClassname}.nitro");
                         nitroDownloadCount++;
                     }
-                    catch (WebException ex)
+                    catch (HttpRequestException ex)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        if (ex.Response is HttpWebResponse response)
-                        {
-                            Console.WriteLine($"Downloading {classname}.nitro => Failed: {response.StatusDescription}");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Downloading {classname}.nitro => Failed: {ex.Message}");
-                        }
+                        Console.WriteLine($"Downloading {baseClassname}.nitro => Failed: {ex.Message}");
                         Console.ForegroundColor = ConsoleColor.Gray;
                     }
                     catch (Exception ex)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Downloading {classname}.nitro => Failed: {ex.Message}");
+                        Console.WriteLine($"Downloading {baseClassname}.nitro => Failed: {ex.Message}");
                         Console.ForegroundColor = ConsoleColor.Gray;
                     }
                 }
@@ -139,21 +127,13 @@ namespace ConsoleApplication
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine($"Downloading: {classname.Replace('*', '_')}_icon.png");
-                        webClient.DownloadFile(iconUrl, iconFilePath);
-                        Console.WriteLine($"Successfully downloaded: {classname.Replace('*', '_')}_icon.png");
+                        await DownloadFileAsync(iconUrl, iconFilePath, $"{classname.Replace('*', '_')}_icon.png");
                         iconDownloadCount++;
                     }
-                    catch (WebException ex)
+                    catch (HttpRequestException ex)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        if (ex.Response is HttpWebResponse response)
-                        {
-                            Console.WriteLine($"Downloading {classname.Replace('*', '_')}_icon.png => Failed: {response.StatusDescription}");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Downloading {classname.Replace('*', '_')}_icon.png => Failed: {ex.Message}");
-                        }
+                        Console.WriteLine($"Downloading {classname.Replace('*', '_')}_icon.png => Failed: {ex.Message}");
                         Console.ForegroundColor = ConsoleColor.Gray;
                     }
                     catch (Exception ex)
@@ -166,6 +146,31 @@ namespace ConsoleApplication
             }
 
             return (nitroDownloadCount, iconDownloadCount);
+        }
+
+        private static async Task DownloadFileAsync(string url, string filePath, string fileName)
+        {
+            try
+            {
+                var response = await httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await response.Content.CopyToAsync(fileStream);
+                }
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"Downloaded: {fileName}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error downloading {fileName}: {ex.Message}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+                throw;
+            }
         }
 
         private class Furnidata

@@ -1,37 +1,39 @@
-﻿using System;
-using System.Net.Http;
-using System.Threading.Tasks;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     internal static class VersionChecker
     {
+        private static readonly HttpClient httpClient = new HttpClient();
+
         internal static async Task CheckVersionAsync()
         {
-            string release_ver;
-            HttpClient httpClient_version_ver = new HttpClient();
-
-            // Use the shared UserAgent from CommonConfig
-            httpClient_version_ver.DefaultRequestHeaders.Add("User-Agent", CommonConfig.UserAgent);
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
 
             try
             {
-                HttpResponseMessage res = await httpClient_version_ver.GetAsync("https://www.habbo.com/gamedata/external_variables/1");
-                string source = await res.Content.ReadAsStringAsync();
+                string externalVariablesUrl = "https://www.habbo.com/gamedata/external_variables/1";
+                string source = await httpClient.GetStringAsync(externalVariablesUrl);
 
-                foreach (string Line in source.Split(Environment.NewLine.ToCharArray()))
+                foreach (string line in source.Split(Environment.NewLine.ToCharArray()))
                 {
-                    if (!Line.Contains("flash.client.url="))
+                    if (line.Contains("flash.client.url="))
                     {
-                        continue;
+                        string releaseVersion = line.Substring(0, line.Length - 1).Split('/')[4];
+                        Console.WriteLine("Current Habbo release: " + releaseVersion);
+                        break;
                     }
-                    release_ver = Line.Substring(0, Line.Length - 1).Split('/')[4];
-                    Console.WriteLine("Current habbo release: " + release_ver);
                 }
             }
-            catch (Exception e)
+            catch (HttpRequestException ex)
             {
-                Console.WriteLine(e);
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Error fetching Habbo release version: " + ex.Message);
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Unexpected error: " + ex.Message);
+                Console.ForegroundColor = ConsoleColor.Gray;
             }
         }
     }
