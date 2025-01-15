@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     internal class Program
     {
@@ -13,8 +7,8 @@ namespace ConsoleApplication
             string configFilePath = "config.ini";
             Dictionary<string, string> config = IniFileParser.Parse(configFilePath);
 
-            string soundMachineUrl = config["AppSettings:soundmachineurl"];
-            string furnitureUrl = config["AppSettings:furnitureurl"];
+            string soundMachineUrl = config.GetValueOrDefault("AppSettings:soundmachineurl", "default_soundmachineurl");
+            string furnitureUrl = config.GetValueOrDefault("AppSettings:furnitureurl", "default_furnitureurl");
 
             ShowStartupAnimation();
             CheckAndCreateFolders();
@@ -23,7 +17,7 @@ namespace ConsoleApplication
             {
                 DisplayMainMenu();
 
-                string input = Console.ReadLine();
+                string input = Console.ReadLine() ?? string.Empty;
 
                 if (input.ToLower() == "exit")
                 {

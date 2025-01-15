@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.IO;
-using System.Net;
-using System.Threading.Tasks;
-using System.Threading;
+﻿using System.Collections.Concurrent;
+
 
 namespace ConsoleApplication
 {
@@ -13,8 +9,15 @@ namespace ConsoleApplication
         private const string TempDirectory = "./temp";
         private const int BufferSize = 1500;
         private static SemaphoreSlim semaphore = new SemaphoreSlim(100);
+        private static HttpClient httpClient;
 
-        public static void DownloadBadges()
+        static Badges()
+        {
+            httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent.Replace("User-Agent: ", ""));
+        }
+
+        public static async Task DownloadBadgesAsync()
         {
             EnsureDirectoriesExist();
 
@@ -22,12 +25,19 @@ namespace ConsoleApplication
 
             string[] domains = { "com", "fr", "fi", "es", "nl", "de", "it", "com.tr", "com.br" };
 
-            Parallel.ForEach(domains, domain =>
+            var tasks = new Task[domains.Length];
+            for (int i = 0; i < domains.Length; i++)
             {
-                Console.WriteLine($"Start initializing badges from .{domain.ToUpper()}");
-                DownloadBadgesForDomain(domain);
-                Console.WriteLine($"Finished downloading badges from .{domain.ToUpper()}");
-            });
+                string domain = domains[i];
+                tasks[i] = Task.Run(async () =>
+                {
+                    Console.WriteLine($"Start initializing badges from .{domain.ToUpper()}");
+                    await DownloadBadgesForDomainAsync(domain);
+                    Console.WriteLine($"Finished downloading badges from .{domain.ToUpper()}");
+                });
+            }
+
+            await Task.WhenAll(tasks);
 
             int finalBadgeCount = Directory.GetFiles(BadgesDirectory, "*.*", SearchOption.AllDirectories).Length;
             Console.ForegroundColor = ConsoleColor.Green;
@@ -47,15 +57,38 @@ namespace ConsoleApplication
             }
         }
 
-        private static void DownloadBadgesForDomain(string domain)
+        private static async Task DownloadBadgesForDomainAsync(string domain)
         {
             string externalFlashTextsUrl = $"https://www.habbo.{domain}/gamedata/external_flash_texts/1";
             string externalFlashTextsFilePath = Path.Combine(TempDirectory, $"external_flash_texts_{domain}.txt");
 
-            using (WebClient webClient = new WebClient())
+            try
             {
-                webClient.Headers.Add("user-agent", CommonConfig.UserAgent);
-                webClient.DownloadFile(externalFlashTextsUrl, externalFlashTextsFilePath);
+                using (var response = await httpClient.GetAsync(externalFlashTextsUrl))
+                {
+                    if (response.IsSuccessStatusCode)
+                    {
+                        using (var contentStream = await response.Content.ReadAsStreamAsync())
+                        using (var fileStream = new FileStream(externalFlashTextsFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
+                        {
+                            await contentStream.CopyToAsync(fileStream);
+                        }
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Failed to download external flash texts for {domain}. Status code: {response.StatusCode}");
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                        return;
+                    }
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"HTTP request failed for {domain}: {ex.Message}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+                return;
             }
 
             var badgeNames = new ConcurrentBag<string>();
@@ -82,10 +115,10 @@ namespace ConsoleApplication
 
             if (badgeBuffer.Count > 0)
             {
-                DownloadBadgesInBuffer(badgeBuffer, tasks);
+                await DownloadBadgesInBufferAsync(badgeBuffer, tasks);
             }
 
-            Task.WaitAll(tasks.ToArray());
+            await Task.WhenAll(tasks.ToArray());
         }
 
         private static void ProcessBadgeLine(string line, ConcurrentBag<string> badgeBuffer, ConcurrentBag<Task> tasks)
@@ -107,7 +140,7 @@ namespace ConsoleApplication
 
             if (badgeBuffer.Count >= BufferSize)
             {
-                DownloadBadgesInBuffer(badgeBuffer, tasks);
+                DownloadBadgesInBufferAsync(badgeBuffer, tasks).Wait();
                 while (!badgeBuffer.IsEmpty)
                 {
                     badgeBuffer.TryTake(out _);
@@ -115,7 +148,7 @@ namespace ConsoleApplication
             }
         }
 
-        private static void DownloadBadgesInBuffer(ConcurrentBag<string> badgeBuffer, ConcurrentBag<Task> tasks)
+        private static async Task DownloadBadgesInBufferAsync(ConcurrentBag<string> badgeBuffer, ConcurrentBag<Task> tasks)
         {
             var badgesToDownload = badgeBuffer.ToArray();
 
@@ -126,7 +159,7 @@ namespace ConsoleApplication
                     await semaphore.WaitAsync();
                     try
                     {
-                        DownloadBadge(badgeName);
+                        await DownloadBadgeAsync(badgeName);
                     }
                     finally
                     {
@@ -136,7 +169,7 @@ namespace ConsoleApplication
             }
         }
 
-        private static void DownloadBadge(string badgeName)
+        private static async Task DownloadBadgeAsync(string badgeName)
         {
             string badgeUrl = $"http://images-eussl.habbo.com/c_images/album1584/{badgeName}.gif";
             string badgeFilePath = Path.Combine(BadgesDirectory, $"{badgeName}.gif");
@@ -146,17 +179,34 @@ namespace ConsoleApplication
                 return;
             }
 
-            using (WebClient webClient = new WebClient())
+            try
             {
-                webClient.Headers.Add("user-agent", CommonConfig.UserAgent);
-                try
+                using (var response = await httpClient.GetAsync(badgeUrl))
                 {
-                    webClient.DownloadFile(badgeUrl, badgeFilePath);
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"Downloading badge: {badgeName}.gif");
-                    Console.ForegroundColor = ConsoleColor.Gray;
+                    if (response.IsSuccessStatusCode)
+                    {
+                        using (var contentStream = await response.Content.ReadAsStreamAsync())
+                        using (var fileStream = new FileStream(badgeFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
+                        {
+                            await contentStream.CopyToAsync(fileStream);
+                        }
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"Downloading badge: {badgeName}.gif");
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Failed to download badge {badgeName}.gif. Status code: {response.StatusCode}");
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                    }
                 }
-                catch (Exception ex) { }
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"HTTP request failed for badge {badgeName}.gif: {ex.Message}");
+                Console.ForegroundColor = ConsoleColor.Gray;
             }
         }
     }

@@ -16,7 +16,7 @@ namespace ConsoleApplication
             }
 
             string[] lines = File.ReadAllLines(filePath);
-            string currentSection = null;
+            string? currentSection = null;
 
             foreach (string line in lines)
             {
@@ -26,7 +26,6 @@ namespace ConsoleApplication
                 {
                     continue;
                 }
-
 
                 if (trimmedLine.StartsWith("[") && trimmedLine.EndsWith("]"))
                 {
@@ -39,6 +38,7 @@ namespace ConsoleApplication
                 {
                     string key = trimmedLine.Substring(0, separatorIndex).Trim();
                     string value = trimmedLine.Substring(separatorIndex + 1).Trim();
+
                     string fullKey = currentSection != null ? $"{currentSection}:{key}" : key;
                     config[fullKey] = value;
                 }

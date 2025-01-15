@@ -64,10 +64,6 @@ namespace ConsoleApplication
                                 TextsDownloader.DownloadTexts();
                                 break;
 
-                            case "custfurni":
-                                CustomFurniDownloader.DownloadCustomFurni();
-                                break;
-
                             case "productdata":
                                 ProductDataDownloader.DownloadProductData();
                                 break;
@@ -81,7 +77,7 @@ namespace ConsoleApplication
                                 break;
 
                             case "badges":
-                                Badges.DownloadBadges();
+                                await Badges.DownloadBadgesAsync();
                                 break;
 
                             default:
