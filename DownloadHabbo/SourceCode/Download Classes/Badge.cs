@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace ConsoleApplication
 {
@@ -6,13 +7,14 @@ namespace ConsoleApplication
     {
         private const string BadgesDirectory = "./badges";
         private const string TempDirectory = "./temp";
-        private const int BufferSize = 1500;
+        private const int BufferSize = 5000;
         private static SemaphoreSlim semaphore = new SemaphoreSlim(100);
         private static HttpClient httpClient;
+        private static readonly object fileLock = new object();
 
         static Badges()
         {
-            httpClient = new HttpClient();
+            httpClient = new HttpClient(new HttpClientHandler { MaxConnectionsPerServer = 100 });
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent.Replace("User-Agent: ", ""));
         }
 
@@ -173,9 +175,12 @@ namespace ConsoleApplication
             string badgeUrl = $"http://images-eussl.habbo.com/c_images/album1584/{badgeName}.gif";
             string badgeFilePath = Path.Combine(BadgesDirectory, $"{badgeName}.gif");
 
-            if (File.Exists(badgeFilePath))
+            lock (fileLock)
             {
-                return;
+                if (File.Exists(badgeFilePath))
+                {
+                    return;
+                }
             }
 
             try
@@ -185,20 +190,20 @@ namespace ConsoleApplication
                     if (response.IsSuccessStatusCode)
                     {
                         using (var contentStream = await response.Content.ReadAsStreamAsync())
-                        using (var fileStream = new FileStream(badgeFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
                         {
-                            await contentStream.CopyToAsync(fileStream);
+                            lock (fileLock)
+                            {
+                                using (var fileStream = new FileStream(badgeFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
+                                {
+                                    contentStream.CopyTo(fileStream);
+                                }
+                            }
                         }
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine($"Downloading badge: {badgeName}.gif");
                         Console.ForegroundColor = ConsoleColor.Gray;
                     }
-                    else
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Failed to download badge {badgeName}.gif. Status code: {response.StatusCode}");
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                    }
+                    else {}
                 }
             }
             catch (HttpRequestException ex)
