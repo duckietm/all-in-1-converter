@@ -1,8 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     public static class CommonConfig
     {
@@ -24,7 +20,7 @@ namespace ConsoleApplication
                         switch (starupconsole[1].ToLower())
                         {
                             case "reception":
-                                ReceptionDownloader.DownloadReceptionImages();
+                                await ReceptionDownloader.DownloadReceptionImages();
                                 break;
 
                             case "furniture":
@@ -36,7 +32,7 @@ namespace ConsoleApplication
                                 break;
 
                             case "nitroclothes":
-                                Task.Run(async () => await NitroClothesDownloader.DownloadCustomClothesAsync()).Wait();
+                                await NitroClothesDownloader.DownloadCustomClothesAsync();
                                 break;
 
                             case "icons":
@@ -45,7 +41,7 @@ namespace ConsoleApplication
                                 break;
 
                             case "clothes":
-                                Task.Run(async () => await ClothesDownloader.DownloadClothesAsync()).Wait();
+                                await ClothesDownloader.DownloadClothesAsync();
                                 break;
 
                             case "mp3":
@@ -57,7 +53,7 @@ namespace ConsoleApplication
                                 break;
 
                             case "effects":
-                                Task.Run(async () => await EffectsDownloader.DownloadEffectsAsync()).Wait();
+                                await EffectsDownloader.DownloadEffectsAsync();
                                 break;
 
                             case "texts":

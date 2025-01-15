@@ -1,12 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Net;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     public static class ReceptionDownloader
     {
-        public static void DownloadReceptionImages()
+        private static readonly HttpClient httpClient = new HttpClient();
+
+        public static async Task DownloadReceptionImages()
         {
             Console.WriteLine("Starting Reception Download...");
 
@@ -24,38 +22,38 @@ namespace ConsoleApplication
             string externalVariablesPath = "./temp/external_variables.txt";
             Console.WriteLine("Downloading external variables");
 
-            using (WebClient webClient = new WebClient())
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+
+            var externalVariablesUrl = "https://www.habbo.com/gamedata/external_variables/";
+            var externalVariablesContent = await httpClient.GetStringAsync(externalVariablesUrl);
+            await File.WriteAllTextAsync(externalVariablesPath, externalVariablesContent);
+
+            Console.WriteLine("Let's start downloading!");
+            int downloadCount = 0;
+
+            using (StreamReader streamReader = new StreamReader(externalVariablesPath))
             {
-                webClient.Headers.Add($"User-Agent: {CommonConfig.UserAgent}");
-                webClient.DownloadFile("https://www.habbo.com/gamedata/external_variables/", externalVariablesPath);
-
-                Console.WriteLine("Let's start downloading!");
-                int downloadCount = 0;
-
-                using (StreamReader streamReader = new StreamReader(externalVariablesPath))
+                string line;
+                while ((line = await streamReader.ReadLineAsync()) != null)
                 {
-                    string line;
-                    while ((line = streamReader.ReadLine()) != null)
+                    if (line.Contains("reception/"))
                     {
-                        if (line.Contains("reception/"))
-                        {
-                            ProcessImageLine(line, "reception/", "./reception", "receptionurl", webClient, ref downloadCount);
-                        }
-                        if (line.Contains("catalogue/"))
-                        {
-                            ProcessImageLine(line, "catalogue/", "./reception/catalogue", "catalogurl", webClient, ref downloadCount);
-                        }
-                        if (line.Contains("web_promo_small/"))
-                        {
-                            ProcessImageLine(line, "web_promo_small/", "./reception/web_promo_small", "promosmallurl", webClient, ref downloadCount);
-                        }
+                        downloadCount = await ProcessImageLineAsync(line, "reception/", "./reception", "receptionurl", downloadCount);
+                    }
+                    if (line.Contains("catalogue/"))
+                    {
+                        downloadCount = await ProcessImageLineAsync(line, "catalogue/", "./reception/catalogue", "catalogurl", downloadCount);
+                    }
+                    if (line.Contains("web_promo_small/"))
+                    {
+                        downloadCount = await ProcessImageLineAsync(line, "web_promo_small/", "./reception/web_promo_small", "promosmallurl", downloadCount);
                     }
                 }
-
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Finished downloading {downloadCount} images");
-                Console.ForegroundColor = ConsoleColor.Gray;
             }
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"Finished downloading {downloadCount} images");
+            Console.ForegroundColor = ConsoleColor.Gray;
 
             if (Directory.Exists("./temp"))
             {
@@ -75,10 +73,10 @@ namespace ConsoleApplication
             }
         }
 
-        private static void ProcessImageLine(string line, string splitString, string saveDirectory, string configKey, WebClient webClient, ref int downloadCount)
+        private static async Task<int> ProcessImageLineAsync(string line, string splitString, string saveDirectory, string configKey, int downloadCount)
         {
             string[] parts = line.Split(new string[] { splitString }, StringSplitOptions.None);
-            if (parts.Length < 2) return;
+            if (parts.Length < 2) return downloadCount;
 
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
@@ -95,7 +93,7 @@ namespace ConsoleApplication
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine($"Skipping invalid file: {fileName}");
                     Console.ForegroundColor = ConsoleColor.Gray;
-                    return;
+                    return downloadCount;
                 }
 
                 string baseUrl = config[$"AppSettings:{configKey}"];
@@ -107,25 +105,26 @@ namespace ConsoleApplication
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine($"Skipping invalid URL: {fullUrl}");
                     Console.ForegroundColor = ConsoleColor.Gray;
-                    return;
+                    return downloadCount;
                 }
 
                 string filePath = Path.Combine(saveDirectory, fileName);
                 if (!File.Exists(filePath))
                 {
-                     int retryCount = 3;
+                    int retryCount = 3;
                     while (retryCount > 0)
                     {
                         try
                         {
-                            webClient.DownloadFile(fullUrl, filePath);
+                            var imageBytes = await httpClient.GetByteArrayAsync(fullUrl);
+                            await File.WriteAllBytesAsync(filePath, imageBytes);
                             Console.ForegroundColor = ConsoleColor.Green;
                             Console.WriteLine($"Downloading {fileName}");
                             Console.ForegroundColor = ConsoleColor.Gray;
                             downloadCount++;
                             break;
                         }
-                        catch (WebException ex)
+                        catch (HttpRequestException ex)
                         {
                             retryCount--;
                             Console.ForegroundColor = ConsoleColor.Red;
@@ -154,6 +153,8 @@ namespace ConsoleApplication
                 Console.WriteLine($"Error processing line: {parts[1]}: {ex.Message}");
                 Console.ForegroundColor = ConsoleColor.Gray;
             }
+
+            return downloadCount;
         }
     }
 }

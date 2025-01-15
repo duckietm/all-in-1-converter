@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 
-
 namespace ConsoleApplication
 {
     public static class Badges
