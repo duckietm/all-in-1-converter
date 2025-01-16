@@ -1,4 +1,7 @@
-﻿namespace ConsoleApplication
+﻿using System;
+using System.Threading.Tasks;
+
+namespace ConsoleApplication
 {
     public static class CommonConfig
     {
@@ -12,7 +15,17 @@
             Console.WriteLine();
             try
             {
+                // Split the input into parts and remove empty entries
                 string[] starupconsole = inputData.Split(new char[1] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                // Check if the input is empty
+                if (starupconsole.Length == 0)
+                {
+                    Console.WriteLine("No command entered. Type 'help' for a list of commands.");
+                    return;
+                }
+
+                // Process the command
                 switch (starupconsole[0].ToLower())
                 {
                     // Downloads 
