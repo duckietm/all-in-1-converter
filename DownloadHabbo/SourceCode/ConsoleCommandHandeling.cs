@@ -116,6 +116,10 @@ namespace ConsoleApplication
                                     await CompareProductData.Compare();
                                     break;
 
+                                case "clothes":
+                                    await CompareClothesData.Compare();
+                                    break;
+
                                 default:
                                     unknownCommand(inputData);
                                     break;
