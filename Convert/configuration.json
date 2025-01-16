@@ -4,7 +4,7 @@
 	"figuredata.load.url": "C:/Tools/DownloadHabbo/Compiled/clothes/figuredata.xml",
 	"furnidata.load.url": "C:/Tools/DownloadHabbo/Compiled/files/furnidata_xml.xml",
 	"productdata.load.url": "C:/Tools/DownloadHabbo/Compiled/files/productdata.txt",
-	"figuremap.load.url": "C:/Tools/DownloadHabbo/clothes/figuremap.xml",
+	"figuremap.load.url": "C:/Tools/DownloadHabbo/Compiled/clothes/figuremap.xml",
 	"effectmap.load.url": "C:/Tools/asset_default/effectmap.xml",
 	"dynamic.download.pet.url": "C:/Tools/asset_default/Pets/%className%.swf",
 	"dynamic.download.figure.url": "C:/Tools/DownloadHabbo/Compiled/clothes/%className%.swf",
