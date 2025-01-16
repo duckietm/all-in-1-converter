@@ -55,8 +55,8 @@ Look at the examples in the /merge-json (import) how to import.
 
 Also allows you to have multiple files in the import so you can have a nice track on what you merged example
 :
-added_atom_furnidata.json
-added_custom_winter_furnidata.json
+* added_atom_furnidata.json
+* added_custom_winter_furnidata.json
 
 Then all will be merged into your original furnidata this is the same for Productdata and Clothes, so look at the example files it is very simple !
 
