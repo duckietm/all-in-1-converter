@@ -45,8 +45,16 @@ Use the Converter:
 - yarn start:convert-swf - converts swf files from assets/bundle/${ type } to .nitro without needing furnidata file
 
 # Custom clothes / furni etc.
-In the Habbo_Downloader.exe.config you can change all the variables to set it to other languages, change download url's etc. etc.
+In the config.ini you can change all the variables to set it to other languages, change download url's etc. etc.
 Please always ask the owner of an hotel to use his or here assests !!!
+This will no also Rip Nitro files / Clothes, merge Furnidata / Productdata and clothes into your files.
+Look at the examples in the /merge-json (import) how to import.
+Also allows you to have multiple files in the import so you can have a nice track on what you merged example:
+added_atom_furnidata.json
+added_custom_winter_furnidata.json
+Then all will be merged into your original furnidata this is the same for Productdata and Clothes, so look at the example files it is very simple !
+So more Copy & Paste and way more easyer to combine stuff from other resources!
+
 
 # Credits
 - undeƒined for contributing
