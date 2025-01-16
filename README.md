@@ -57,7 +57,7 @@ So more Copy & Paste and way more easyer to combine stuff from other resources!
 
 
 # Credits
-- undeƒined for contributing
+- The whole habbo community.
 - Credits for the Converter : Nitro Team https://discord.gg/yCXcMqrT
 - AtlasOmega for "the Among Us effects" : Enable 880 until 903
 - Leet for the enables : Enable 500 until 688
