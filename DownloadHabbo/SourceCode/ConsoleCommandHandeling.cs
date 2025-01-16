@@ -12,75 +12,109 @@
             Console.WriteLine();
             try
             {
-                string[] starupconsole = inputData.Split(new char[1] { ' ' });
+                string[] starupconsole = inputData.Split(new char[1] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 switch (starupconsole[0].ToLower())
                 {
+                    // Downloads 
                     case "download":
                         Console.WriteLine("Starting Download...");
-                        switch (starupconsole[1].ToLower())
+                        if (starupconsole.Length > 1)
                         {
-                            case "reception":
-                                await ReceptionDownloader.DownloadReceptionImages();
-                                break;
+                            switch (starupconsole[1].ToLower())
+                            {
+                                case "reception":
+                                    await ReceptionDownloader.DownloadReceptionImages();
+                                    break;
 
-                            case "furniture":
-                                await FurnitureDownloader.DownloadFurnitureAsync();
-                                break;
+                                case "furniture":
+                                    await FurnitureDownloader.DownloadFurnitureAsync();
+                                    break;
 
-                            case "nitrofurniture":
-                                await NitroFurnitureDownloader.DownloadFurnitureAsync();
-                                break;
+                                case "nitrofurniture":
+                                    await NitroFurnitureDownloader.DownloadFurnitureAsync();
+                                    break;
 
-                            case "nitroclothes":
-                                await NitroClothesDownloader.DownloadCustomClothesAsync();
-                                break;
+                                case "nitroclothes":
+                                    await NitroClothesDownloader.DownloadCustomClothesAsync();
+                                    break;
 
-                            case "icons":
-                                await IconDownloader.DownloadIcons();
-                                break;
+                                case "icons":
+                                    await IconDownloader.DownloadIcons();
+                                    break;
 
-                            case "clothes":
-                                await ClothesDownloader.DownloadClothesAsync();
-                                break;
+                                case "clothes":
+                                    await ClothesDownloader.DownloadClothesAsync();
+                                    break;
 
-                            case "mp3":
-                                await Mp3Downloader.DownloadMp3sAsync();
-                                break;
+                                case "mp3":
+                                    await Mp3Downloader.DownloadMp3sAsync();
+                                    break;
 
-                            case "furnidata":
-                                await FurnidataDownloader.DownloadFurnidata();
-                                break;
+                                case "furnidata":
+                                    await FurnidataDownloader.DownloadFurnidata();
+                                    break;
 
-                            case "effects":
-                                await EffectsDownloader.DownloadEffectsAsync();
-                                break;
+                                case "effects":
+                                    await EffectsDownloader.DownloadEffectsAsync();
+                                    break;
 
-                            case "texts":
-                                await TextsDownloader.DownloadTextsAsync();
-                                break;
+                                case "texts":
+                                    await TextsDownloader.DownloadTextsAsync();
+                                    break;
 
-                            case "productdata":
-                                await ProductDataDownloader.DownloadProductDataAsync();
-                                break;
+                                case "productdata":
+                                    await ProductDataDownloader.DownloadProductDataAsync();
+                                    break;
 
-                            case "variables":
-                                await VariablesDownloader.DownloadVariablesAsync();
-                                break;
+                                case "variables":
+                                    await VariablesDownloader.DownloadVariablesAsync();
+                                    break;
 
-                            case "quests":
-                                await QuestsDownloader.DownloadQuestsAsync();
-                                break;
+                                case "quests":
+                                    await QuestsDownloader.DownloadQuestsAsync();
+                                    break;
 
-                            case "badges":
-                                await Badges.DownloadBadgesAsync();
-                                break;
+                                case "badges":
+                                    await Badges.DownloadBadgesAsync();
+                                    break;
 
-                            default:
-                                unknownCommand(inputData);
-                                break;
+                                default:
+                                    unknownCommand(inputData);
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Missing argument for 'download' command.");
                         }
                         break;
 
+                    // TOOLS
+                    case "merge":
+                        if (starupconsole.Length > 1)
+                        {
+                            switch (starupconsole[1].ToLower())
+                            {
+                                case "furnidata":
+                                    await CompareFurnidata.Compare();
+                                    break;
+
+                                case "productdata":
+                                    await CompareProductData.Compare();
+                                    break;
+
+                                default:
+                                    unknownCommand(inputData);
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Missing argument for 'merge' command.");
+                        }
+                        break;
+
+                    // Default
                     case "help":
                         HelpCommand.DisplayHelp();
                         break;

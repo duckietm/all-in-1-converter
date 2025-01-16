@@ -77,7 +77,9 @@
 
             string[] folders = {
                 "./effect", "./hof_furni", "./Nitro_hof_furni", "./quests", "./reception", "./reception/web_promo_small",
-                "./badges", "./icons", "./files", "./mp3", "./clothes", "./Custom_clothes"
+                "./badges", "./icons", "./files", "./mp3", "./clothes", "./Custom_clothes", "./merge-json",
+                "./merge-json/Original_Furnidata", "./merge-json/Import_Furnidata", "./merge-json/Merged_Furnidata",
+                "./merge-json/Original_Productdata", "./merge-json/Import_Productdata", "./merge-json/Merged_Productdata",
             };
 
             foreach (string folder in folders)
@@ -116,12 +118,13 @@
             Console.WriteLine("-> Download Variables                                                      ");
             Console.WriteLine("-> Download MP3                                                            ");
             Console.WriteLine("-> Version                                                                 ");
-            Console.WriteLine("                                                                           ");
-            Console.WriteLine("-> ############### Nitro Custom Downloads ###############                  ");
+            Console.WriteLine("-> ############### Nitro Custom Downloads #################                ");
             Console.WriteLine("-> Download nitroclothes                                                   ");
             Console.WriteLine("-> Download nitrofurniture                                                 ");
-            Console.WriteLine("                                                                           ");
-            Console.WriteLine("-> ############### General commands ###############                        ");
+            Console.WriteLine("-> ############### Hotel Tools ############################                ");
+            Console.WriteLine("-> Merge Furnidata                                                         ");
+            Console.WriteLine("-> Merge Productdata                                                       ");
+            Console.WriteLine("-> ############### General commands #######################                ");
             Console.WriteLine("-> Help                                                                    ");
             Console.WriteLine("-> Exit                                                                    ");
             Console.WriteLine();
