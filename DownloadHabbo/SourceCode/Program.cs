@@ -78,10 +78,13 @@
             string[] folders = {
                 "./effect", "./hof_furni", "./Nitro_hof_furni", "./quests", "./reception", "./reception/web_promo_small",
                 "./badges", "./icons", "./files", "./mp3", "./clothes", "./Custom_clothes", "./merge-json", "./Generate",
+                "./Compiler",
                 "./merge-json/Original_Furnidata", "./merge-json/Import_Furnidata", "./merge-json/Merged_Furnidata",
                 "./merge-json/Original_Productdata", "./merge-json/Import_Productdata", "./merge-json/Merged_Productdata",
                 "./merge-json/Original_ClothesData", "./merge-json/Import_ClothesData", "./merge-json/Merged_ClothesData",
                 "./Generate/Furnidata", "./Generate/Furniture", "./Generate/Output_SQL",
+                "./Compiler/compiled", "./Compiler/extracted", "./Compiler/compiled/furni", "./Compiler/extracted/clothing", "./Compiler/extracted/effects", "./Compiler/extracted/pets",
+                "./Compiler/compile", "./Compiler/compile/furni",
             };
 
             foreach (string folder in folders)
