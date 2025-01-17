@@ -131,6 +131,27 @@ namespace ConsoleApplication
                         }
                         break;
 
+                    // GENERATE
+                    case "generate":
+                        if (starupconsole.Length > 1)
+                        {
+                            switch (starupconsole[1].ToLower())
+                            {
+                                case "sql":
+                                    SQLGenerator.GenerateSQL();
+                                    break;
+
+                                default:
+                                    unknownCommand(inputData);
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Missing argument for 'merge' command.");
+                        }
+                        break;
+
                     // Default
                     case "help":
                         HelpCommand.DisplayHelp();
