@@ -1,7 +1,4 @@
 ﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.IO;
 
 namespace ConsoleApplication
 {
@@ -34,11 +31,20 @@ namespace ConsoleApplication
             List<string> itemsBaseSQL = new List<string>();
             List<string> catalogItemsSQL = new List<string>();
 
+            var furnitureFiles = Directory.GetFiles(furnitureDir, "*.nitro", SearchOption.AllDirectories);
+            var furnitureFileNames = new HashSet<string>(furnitureFiles.Select(file => Path.GetFileNameWithoutExtension(file)));
+
             var roomItems = furnidata["roomitemtypes"]["furnitype"];
             foreach (var item in roomItems)
             {
-                int id = startId++;
                 string classname = item["classname"].ToString();
+
+                if (!furnitureFileNames.Contains(classname))
+                {
+                    continue;
+                }
+
+                int id = startId++;
                 int width = item["xdim"].ToObject<int>();
                 int length = item["ydim"].ToObject<int>();
                 int offerId = item["offerid"].ToObject<int>();
@@ -55,8 +61,14 @@ VALUES ({id}, '{id}', {pageId}, {offerId}, 0, 99, '{classname}', 5, 0, 0, 1, 0, 
             var wallItems = furnidata["wallitemtypes"]["furnitype"];
             foreach (var item in wallItems)
             {
-                int id = startId++;
                 string classname = item["classname"].ToString();
+
+                if (!furnitureFileNames.Contains(classname))
+                {
+                    continue;
+                }
+
+                int id = startId++;
                 int offerId = item["offerid"].ToObject<int>();
 
                 itemsBaseSQL.Add($@"
