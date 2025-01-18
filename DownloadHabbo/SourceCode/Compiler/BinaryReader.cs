@@ -30,20 +30,14 @@ public class BinaryReader
     public short ReadShort()
     {
         byte[] bytes = ReadBytes(2);
-        if (BitConverter.IsLittleEndian)
-        {
-            Array.Reverse(bytes); // Convert to big-endian
-        }
+        if (BitConverter.IsLittleEndian) Array.Reverse(bytes);
         return BitConverter.ToInt16(bytes, 0);
     }
 
     public int ReadInt()
     {
         byte[] bytes = ReadBytes(4);
-        if (BitConverter.IsLittleEndian)
-        {
-            Array.Reverse(bytes); // Convert to big-endian
-        }
+        if (BitConverter.IsLittleEndian) Array.Reverse(bytes);
         return BitConverter.ToInt32(bytes, 0);
     }
 

@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using ICSharpCode.SharpZipLib.Zip.Compression;
+using System.IO.Compression;
 
 public class NitroBundle
 {
@@ -31,33 +31,16 @@ public class NitroBundle
         while (fileCount > 0)
         {
             int fileNameLength = binaryReader.ReadShort();
-            Console.WriteLine($"File Name Length: {fileNameLength}");
-
-            if (fileNameLength < 0 || fileNameLength > binaryReader.Remaining())
-            {
-                throw new InvalidDataException("Invalid file name length.");
-            }
-
-            byte[] fileNameBytes = binaryReader.ReadBytes(fileNameLength);
-            string fileName = Encoding.UTF8.GetString(fileNameBytes);
-            Console.WriteLine($"File Name: {fileName}");
+            string fileName = Encoding.UTF8.GetString(binaryReader.ReadBytes(fileNameLength));
 
             int fileLength = binaryReader.ReadInt();
-            Console.WriteLine($"File Length: {fileLength}");
-
-            if (fileLength < 0 || fileLength > binaryReader.Remaining())
-            {
-                throw new InvalidDataException("Invalid file length.");
-            }
-
             byte[] buffer = binaryReader.ReadBytes(fileLength);
-            Console.WriteLine($"Read {buffer.Length} bytes for file: {fileName}");
 
-            if (fileLength > 0) // Skip if file is empty
+            if (fileLength > 0)
             {
                 try
                 {
-                    byte[] decompressed = Inflate(buffer); // Use custom Inflate method
+                    byte[] decompressed = Inflate(buffer); // Custom Inflate method
 
                     if (fileName.EndsWith(".json"))
                     {
@@ -80,21 +63,22 @@ public class NitroBundle
 
     private static byte[] Inflate(byte[] data)
     {
-        var inflater = new Inflater();
-        inflater.SetInput(data);
+        Console.WriteLine($"Data Length: {data.Length}, Header: {data[0]:X2} {data[1]:X2}");
 
-        using var outputStream = new MemoryStream();
-        var buffer = new byte[4096];
-        while (!inflater.IsFinished)
+        if (data.Length < 2 || (data[0] != 0x78 && data[1] != 0x9C))
         {
-            int bytesRead = inflater.Inflate(buffer);
-            outputStream.Write(buffer, 0, bytesRead);
+            throw new InvalidDataException("Invalid ZLIB header or unsupported compression method.");
         }
 
+        using var inputStream = new MemoryStream(data, 2, data.Length - 2); // Skip ZLIB header
+        using var outputStream = new MemoryStream();
+        using (var deflateStream = new DeflateStream(inputStream, CompressionMode.Decompress))
+        {
+            deflateStream.CopyTo(outputStream);
+        }
         return outputStream.ToArray();
     }
 
     public object JsonFile => _jsonFile;
-
     public string BaseTexture => _baseTexture;
 }

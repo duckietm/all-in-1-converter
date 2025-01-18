@@ -4,50 +4,96 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 using System.Threading.Tasks;
+using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 
-namespace ConsoleApplication
+public class NitroBundler
 {
-    public class NitroBundler
+    private readonly Dictionary<string, byte[]> _files = new Dictionary<string, byte[]>();
+
+    // Add a file to the bundle
+    public void AddFile(string name, byte[] data)
     {
-        private readonly Dictionary<string, byte[]> _files = new Dictionary<string, byte[]>();
-
-        public void AddFile(string name, byte[] data)
+        if (string.IsNullOrWhiteSpace(name))
         {
-            _files[name] = data;
+            throw new ArgumentException("File name cannot be null or empty.", nameof(name));
         }
 
-        public async Task<byte[]> ToBufferAsync()
+        if (data == null || data.Length == 0)
+        {
+            throw new ArgumentException("File data cannot be null or empty.", nameof(data));
+        }
+
+        _files[name] = data;
+        Console.WriteLine($"Added file: {name}, Size: {data.Length} bytes");
+    }
+
+    // Generate the .nitro file buffer asynchronously
+    public async Task<byte[]> ToBufferAsync()
+    {
+        using var memoryStream = new MemoryStream();
+        using var binaryWriter = new BinaryWriter(memoryStream);
+
+        // Write the file count
+        binaryWriter.Write(ToBigEndian((short)_files.Count));
+        Console.WriteLine($"Writing total file count: {_files.Count}");
+
+        foreach (var file in _files)
+        {
+            string fileName = file.Key;
+            byte[] fileData = file.Value;
+
+            // Write the file name length and file name
+            byte[] fileNameBytes = Encoding.UTF8.GetBytes(fileName);
+            binaryWriter.Write(ToBigEndian((short)fileNameBytes.Length));
+            binaryWriter.Write(fileNameBytes);
+            Console.WriteLine($"Writing file name: {fileName}, Length: {fileNameBytes.Length}");
+
+            // Compress the file data
+            byte[] compressed = Compress(fileData);
+            Console.WriteLine($"Original Size: {fileData.Length}, Compressed Size: {compressed.Length}");
+
+            // Write the compressed file length and data
+            binaryWriter.Write(ToBigEndian(compressed.Length));
+            binaryWriter.Write(compressed);
+        }
+
+        return memoryStream.ToArray();
+    }
+
+    // Compress the file data using SharpZipLib (ZLIB Compression)
+    private static byte[] Compress(byte[] data)
+    {
+        try
         {
             using var memoryStream = new MemoryStream();
-            using var binaryWriter = new BinaryWriter(memoryStream);
-
-            binaryWriter.Write((short)_files.Count);
-
-            foreach (var file in _files)
+            using (var gzipStream = new System.IO.Compression.GZipStream(memoryStream, CompressionMode.Compress, true))
             {
-                string fileName = file.Key;
-                byte[] fileData = file.Value;
-
-                binaryWriter.Write((short)fileName.Length);
-                binaryWriter.Write(Encoding.UTF8.GetBytes(fileName));
-
-                byte[] compressed = Compress(fileData);
-
-                binaryWriter.Write(compressed.Length);
-                binaryWriter.Write(compressed);
+                gzipStream.Write(data, 0, data.Length);
             }
-
             return memoryStream.ToArray();
         }
-
-        private static byte[] Compress(byte[] data)
+        catch (Exception ex)
         {
-            using var memoryStream = new MemoryStream();
-            using (var deflateStream = new DeflateStream(memoryStream, CompressionMode.Compress))
-            {
-                deflateStream.Write(data, 0, data.Length);
-            }
-            return memoryStream.ToArray();
+            Console.WriteLine($"Compression failed: {ex.Message}");
+            throw;
         }
+    }
+
+
+
+    // Convert short to big-endian
+    private static byte[] ToBigEndian(short value)
+    {
+        byte[] bytes = BitConverter.GetBytes(value);
+        if (BitConverter.IsLittleEndian) Array.Reverse(bytes);
+        return bytes;
+    }
+
+    // Convert int to big-endian
+    private static byte[] ToBigEndian(int value)
+    {
+        byte[] bytes = BitConverter.GetBytes(value);
+        if (BitConverter.IsLittleEndian) Array.Reverse(bytes);
+        return bytes;
     }
 }
