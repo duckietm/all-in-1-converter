@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Habbo_Downloader.Compiler;
+using System;
 using System.Threading.Tasks;
 
 namespace ConsoleApplication
@@ -15,17 +16,14 @@ namespace ConsoleApplication
             Console.WriteLine();
             try
             {
-                // Split the input into parts and remove empty entries
                 string[] starupconsole = inputData.Split(new char[1] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-                // Check if the input is empty
                 if (starupconsole.Length == 0)
                 {
                     Console.WriteLine("No command entered. Type 'help' for a list of commands.");
                     return;
                 }
 
-                // Process the command
                 switch (starupconsole[0].ToLower())
                 {
                     // Downloads 
@@ -150,6 +148,15 @@ namespace ConsoleApplication
                         {
                             Console.WriteLine("Missing argument for 'merge' command.");
                         }
+                        break;
+
+                    // Compiler Part
+                    case "nitrofurnicompile":
+                        await NitroFurniCompile.Compile();
+                        break;
+
+                    case "nitrofurniextract":
+                        await NitroExtractor.Extract();
                         break;
 
                     // Default
