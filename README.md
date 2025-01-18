@@ -44,22 +44,29 @@ Use the Converter:
 - yarn start:extract - extracts .nitro from assets/extract/${ type } to the files within the .nitro so you can edit them 
 - yarn start:convert-swf - converts swf files from assets/bundle/${ type } to .nitro without needing furnidata file
 
-# Custom clothes / furni etc.
-In the config.ini you can change all the variables to set it to other languages, change download url's etc. etc.
+# What is new ?
+Blazing fast badge downloader for habbo badges.</br>
+Improved habbo classes for downloading all the rest</br>
+Added .nitro support so a easy way to download all furni / clothes from every retro (instruction in the config.ini what to do!)</br>
+Multi Merge option for easy backtrack of all your custom and easy intergrate all your needs for Furni and clothes (i have added examples in the merge directory)</br>
+A new written Compile and Decompile for all .nitro files</br>
+The Compiler works as followed when you want to edit .nitro files this are the steps ( i used the same logic as Laynester was doing ).</br>
+- Step 1 : place your .nitro files in the /Compiler/extract <= This can be Furni / Pets / Clothes / Effects
+- Step 2: In the download tool run the command : NitroFurniextract
+- Step 3: Now all the files are DeCompiled and ready to be edit in the /Compiler/extracted Directory
+- Step 4: When you are done Editing your files place all the directories you want to compile from the /Compiler/compile
+- Step 5: In the download tool run the command: NitroFurnicompile
+- And the last step: All your new .nitro files will be in /Compiler/compiled
 
-Please always ask the owner of an hotel to use his or here assests !!!
-
-This will no also Rip Nitro files / Clothes, merge Furnidata / Productdata and clothes into your files.
-
-Look at the examples in the /merge-json (import) how to import.
-
-Also allows you to have multiple files in the import so you can have a nice track on what you merged example
-:
-* added_atom_furnidata.json
-* added_custom_winter_furnidata.json
-
-Then all will be merged into your original furnidata this is the same for Productdata and Clothes, so look at the example files it is very simple !
-
+Also i changed the SQL-Generator to load variables from the .nitro furni
+- width
+- length
+- height
+  
+The SQL Furni generator, this will generate all the SQL's for you.</br>
+- Step 1 => just place all .nitro files into the Generate/Furniture that you want in the SQL
+- Step 2 => place the FurnitureData.json in the Generate/Furnidata
+- Last step : in the download tool run: Generate SQL
 So more Copy & Paste and way more easyer to combine stuff from other resources!
 
 
