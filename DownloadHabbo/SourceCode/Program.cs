@@ -64,43 +64,55 @@
             Console.BackgroundColor = ConsoleColor.Blue;
             Console.ForegroundColor = ConsoleColor.White;
             Thread.Sleep(2000);
+            Console.Clear();
         }
 
         private static void CheckAndCreateFolders()
         {
-            if (Directory.Exists("./temp"))
-            {
-                foreach (string path in Directory.GetFiles("./temp"))
-                    File.Delete(path);
-            }
             Console.WriteLine("Checking folders");
 
-            string[] folders = {
-                "./effect", "./hof_furni", "./Nitro_hof_furni", "./quests", "./reception", "./reception/web_promo_small",
-                "./badges", "./icons", "./files", "./mp3", "./clothes", "./Custom_clothes", "./merge-json", "./Generate",
-                "./Compiler",
-                "./merge-json/Original_Furnidata", "./merge-json/Import_Furnidata", "./merge-json/Merged_Furnidata",
-                "./merge-json/Original_Productdata", "./merge-json/Import_Productdata", "./merge-json/Merged_Productdata",
-                "./merge-json/Original_ClothesData", "./merge-json/Import_ClothesData", "./merge-json/Merged_ClothesData",
-                "./Generate/Furnidata", "./Generate/Furniture", "./Generate/Output_SQL",
-                "./Compiler/compiled", "./Compiler/compiled/furni",
-                "./Compiler/extracted", "./Compiler/extracted/clothing", "./Compiler/extracted/effects", "./Compiler/extracted/pets", "./Compiler/extracted/furni",
-                "./Compiler/extract", "./Compiler/extract/clothing", "./Compiler/extract/effects", "./Compiler/extract/pets", "./Compiler/extract/furni",
-                "./Compiler/compile", "./Compiler/compile/furni"
-            };
-                
-            foreach (string folder in folders)
+            string[] baseDirectories = { "./Compiler/compile", "./Compiler/compiled", "./Compiler/extract", "./Compiler/extracted" };
+            string[] subDirectories = { "furni", "clothing", "effects", "pets" };
+
+            string[] additionalFolders = {
+        "./effect", "./hof_furni", "./Nitro_hof_furni", "./quests", "./reception", "./reception/web_promo_small",
+        "./badges", "./icons", "./files", "./mp3", "./clothes", "./Custom_clothes", "./merge-json", "./Generate",
+        "./merge-json/Original_Furnidata", "./merge-json/Import_Furnidata", "./merge-json/Merged_Furnidata",
+        "./merge-json/Original_Productdata", "./merge-json/Import_Productdata", "./merge-json/Merged_Productdata",
+        "./merge-json/Original_ClothesData", "./merge-json/Import_ClothesData", "./merge-json/Merged_ClothesData",
+        "./Generate/Furnidata", "./Generate/Furniture", "./Generate/Output_SQL"
+    };
+
+            foreach (string baseDir in baseDirectories)
             {
-                if (!Directory.Exists(folder))
+                foreach (string subDir in subDirectories)
                 {
-                    Console.WriteLine($"We need to create the {folder} folder.");
-                    Directory.CreateDirectory(folder);
-                    Thread.Sleep(100);
-                    Console.WriteLine($"Created {folder} folder.");
+                    string fullPath = Path.Combine(baseDir, subDir);
+                    CreateDirectoryIfNotExists(fullPath);
                 }
             }
-        }
 
+            foreach (string folder in additionalFolders)
+            {
+                CreateDirectoryIfNotExists(folder);
+            }
+        }
+        private static void CreateDirectoryIfNotExists(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                Console.WriteLine($"Creating folder: {path}");
+                Directory.CreateDirectory(path);
+                Thread.Sleep(100); // Simulate processing delay
+                Console.WriteLine($"Created folder: {path}");
+            }
+            else
+            {
+                Console.WriteLine($"Folder already exists: {path}");
+            }
+
+            Console.Clear();
+        }
         private static void DisplayMainMenu()
         {
             Console.ResetColor();
@@ -111,28 +123,20 @@
             Console.ForegroundColor = ConsoleColor.Black;
             Console.BackgroundColor = ConsoleColor.Gray;
             Console.WriteLine("-> ############### Habbo Original Downloads ###############                ");
-            Console.WriteLine("-> Download Badges                                                         ");
-            Console.WriteLine("-> Download clothes                                                        ");
-            Console.WriteLine("-> Download Effects (Download the XML off all effects)                     ");
-            Console.WriteLine("-> Download Furnidata                                                      ");
-            Console.WriteLine("-> Download Furniture                                                      ");
-            Console.WriteLine("-> Download Icons                                                          ");
-            Console.WriteLine("-> Download MP3                                                            ");
-            Console.WriteLine("-> Download Productdata                                                    ");
-            Console.WriteLine("-> Download Quests                                                         ");
-            Console.WriteLine("-> Download Reception                                                      ");
-            Console.WriteLine("-> Download Texts                                                          ");
-            Console.WriteLine("-> Download Variables                                                      ");
-            Console.WriteLine("-> Download MP3                                                            ");
+            Console.WriteLine("-> Download Badges               -> Download clothes                       ");
+            Console.WriteLine("-> Download Effects              -> Download Furnidata                     ");
+            Console.WriteLine("-> Download Furnidata            -> Download Furniture                     ");
+            Console.WriteLine("-> Download Icons                -> Download MP3                           ");
+            Console.WriteLine("-> Download Productdata          -> Download Quests                        ");
+            Console.WriteLine("-> Download Reception            -> Download Texts                         ");
+            Console.WriteLine("-> Download Variables            -> Download MP3                           ");
             Console.WriteLine("-> Version                                                                 ");
             Console.WriteLine("-> ############### Nitro Custom Downloads #################                ");
-            Console.WriteLine("-> Download nitroclothes                                                   ");
-            Console.WriteLine("-> Download nitrofurniture                                                 ");
+            Console.WriteLine("-> Download nitroclothes         -> Download nitrofurniture                ");
             Console.WriteLine("-> ############### Hotel Tools ############################                ");
-            Console.WriteLine("-> Merge Clothes                                                           ");
-            Console.WriteLine("-> Merge Furnidata                                                         ");
-            Console.WriteLine("-> Merge Productdata                                                       ");
-            Console.WriteLine("-> Generate SQL                                                            ");
+            Console.WriteLine("-> Merge Clothes                 -> Merge Furnidata                        ");
+            Console.WriteLine("-> Merge Productdata             -> Generate SQL                           ");
+            Console.WriteLine("-> NitroFurnicompile             -> NitroFurniextract                      ");
             Console.WriteLine("-> ############### General commands #######################                ");
             Console.WriteLine("-> Help                                                                    ");
             Console.WriteLine("-> Exit                                                                    ");

@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.IO.Compression;
 
@@ -40,7 +38,7 @@ public class NitroBundle
             {
                 try
                 {
-                    byte[] decompressed = Inflate(buffer); // Custom Inflate method
+                    byte[] decompressed = Inflate(buffer);
 
                     if (fileName.EndsWith(".json"))
                     {
@@ -63,14 +61,12 @@ public class NitroBundle
 
     private static byte[] Inflate(byte[] data)
     {
-        Console.WriteLine($"Data Length: {data.Length}, Header: {data[0]:X2} {data[1]:X2}");
-
         if (data.Length < 2 || (data[0] != 0x78 && data[1] != 0x9C))
         {
             throw new InvalidDataException("Invalid ZLIB header or unsupported compression method.");
         }
 
-        using var inputStream = new MemoryStream(data, 2, data.Length - 2); // Skip ZLIB header
+        using var inputStream = new MemoryStream(data, 2, data.Length - 2);
         using var outputStream = new MemoryStream();
         using (var deflateStream = new DeflateStream(inputStream, CompressionMode.Decompress))
         {
