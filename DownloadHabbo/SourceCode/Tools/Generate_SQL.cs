@@ -40,6 +40,14 @@ namespace ConsoleApplication
 
             JObject furnidata = JObject.Parse(File.ReadAllText(furnidataPath));
 
+            var roomItems = furnidata["roomitemtypes"]["furnitype"]
+                .Select(item => item["classname"].ToString())
+                .ToHashSet();
+
+            var wallItems = furnidata["wallitemtypes"]["furnitype"]
+                .Select(item => item["classname"].ToString())
+                .ToHashSet();
+
             List<string> itemsBaseSQL = new List<string>();
             List<string> catalogItemsSQL = new List<string>();
 
@@ -56,10 +64,9 @@ namespace ConsoleApplication
                     Console.WriteLine($"Processing SWF file: {fileName}");
                     string extractedDir = Path.Combine(furnitureDir, $"{fileName}_extracted");
                     ExtractSWF(file, extractedDir, ffdecPath);
-                    ProcessExtractedSWF(extractedDir, furnidata, itemsBaseSQL, catalogItemsSQL, ref startId, pageId);
+                    ProcessExtractedSWF(extractedDir, furnidata, fileName, roomItems, wallItems, itemsBaseSQL, catalogItemsSQL, ref startId, pageId);
                     Console.WriteLine($"Completed processing SWF file: {fileName}");
 
-                    // Clean up extracted directory
                     if (Directory.Exists(extractedDir))
                     {
                         Directory.Delete(extractedDir, true);
@@ -69,7 +76,7 @@ namespace ConsoleApplication
                 else if (file.EndsWith(".nitro"))
                 {
                     Console.WriteLine($"Processing Nitro file: {fileName}");
-                    ProcessNitroFile(file, furnidata, itemsBaseSQL, catalogItemsSQL, ref startId, pageId);
+                    ProcessNitroFile(fileName, furnidata, roomItems, wallItems, itemsBaseSQL, catalogItemsSQL, ref startId, pageId);
                     Console.WriteLine($"Completed processing Nitro file: {fileName}");
                 }
             }
@@ -132,16 +139,17 @@ namespace ConsoleApplication
             };
 
             process.Start();
-
             process.StandardOutput.ReadToEnd();
             process.StandardError.ReadToEnd();
-
             process.WaitForExit();
         }
 
         private static void ProcessExtractedSWF(
             string extractedDir,
             JObject furnidata,
+            string fileName,
+            HashSet<string> roomItems,
+            HashSet<string> wallItems,
             List<string> itemsBaseSQL,
             List<string> catalogItemsSQL,
             ref int startId,
@@ -164,28 +172,90 @@ namespace ConsoleApplication
 
                     int interactionModesCount = CalculateInteractionModesCount(visualizationFilePath);
 
-                    var xmlContent = File.ReadAllText(logicFile);
-                    var xmlDoc = XDocument.Parse(xmlContent);
-                    var dimensions = xmlDoc.Element("objectData")?.Element("model")?.Element("dimensions");
-                    if (dimensions == null) throw new Exception("Missing <dimensions> in logic file.");
+                    var itemData = furnidata["roomitemtypes"]["furnitype"]
+                                   .Concat(furnidata["wallitemtypes"]["furnitype"])
+                                   .FirstOrDefault(item => item["classname"]?.ToString() == fileName);
 
-                    double x = double.TryParse(dimensions.Attribute("x")?.Value, out var xValue) ? xValue : 1.0;
-                    double y = double.TryParse(dimensions.Attribute("y")?.Value, out var yValue) ? yValue : 1.0;
-                    double z = double.TryParse(dimensions.Attribute("z")?.Value, out var zValue) ? zValue : 0.0;
+                    if (itemData == null)
+                    {
+                        Console.WriteLine($"Item data not found for: {fileName}");
+                        continue;
+                    }
 
+                    string classname = itemData["classname"]?.ToString();
+                    string type = roomItems.Contains(fileName) ? "s" : wallItems.Contains(fileName) ? "i" : "unknown";
+
+                    if (type == "unknown")
+                    {
+                        Console.WriteLine($"Skipping unknown type for SWF file: {fileName}");
+                        continue;
+                    }
+
+                    int spriteId = itemData["id"]?.ToObject<int>() ?? startId++;
+                    int offerId = itemData["offerid"]?.ToObject<int>() ?? -1; // Default to -1
                     int id = startId++;
 
                     itemsBaseSQL.Add($@"
 INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`)
-VALUES ({id}, {id}, '{typeAttribute}', '{typeAttribute}', {x}, {y}, {z}, '0', '0', '0', '0', '1', '1', '0', '1', '1', 's', 'default', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");
+VALUES ({id}, {spriteId}, '{classname}', '{classname}', 1, 1, 0.00, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', 'default', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");
 
                     catalogItemsSQL.Add($@"
 INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`)
-VALUES ({id}, '{id}', {pageId}, 0, 0, 99, '{typeAttribute}', 5, 0, 0, 1, 0, 0, '', '1', '0');");
+VALUES ({id}, '{spriteId}', {pageId}, {offerId}, 0, 99, '{classname}', 5, 0, 0, 1, 0, 0, '', '1', '0');");
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"Error processing SWF logic file {logicFile}: {ex.Message}");
                 }
+            }
+        }
+
+        private static void ProcessNitroFile(
+            string fileName,
+            JObject furnidata,
+            HashSet<string> roomItems,
+            HashSet<string> wallItems,
+            List<string> itemsBaseSQL,
+            List<string> catalogItemsSQL,
+            ref int startId,
+            int pageId)
+        {
+            try
+            {
+                var itemData = furnidata["roomitemtypes"]["furnitype"]
+                               .Concat(furnidata["wallitemtypes"]["furnitype"])
+                               .FirstOrDefault(item => item["classname"]?.ToString() == fileName);
+
+                if (itemData == null)
+                {
+                    Console.WriteLine($"Item data not found for: {fileName}");
+                    return;
+                }
+
+                string classname = itemData["classname"]?.ToString();
+                string type = roomItems.Contains(fileName) ? "s" : wallItems.Contains(fileName) ? "i" : "unknown";
+
+                if (type == "unknown")
+                {
+                    Console.WriteLine($"Skipping unknown type for Nitro file: {fileName}");
+                    return;
+                }
+
+                int spriteId = itemData["id"]?.ToObject<int>() ?? startId++;
+                int offerId = itemData["offerid"]?.ToObject<int>() ?? -1; // Default to -1
+                int id = startId++;
+
+                itemsBaseSQL.Add($@"
+INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`)
+VALUES ({id}, {spriteId}, '{classname}', '{classname}', 1, 1, 0.00, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', 'default', 1, '0', '0', '0', 0, 0, '0');");
+
+                catalogItemsSQL.Add($@"
+INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`)
+VALUES ({id}, '{spriteId}', {pageId}, {offerId}, 0, 99, '{classname}', 5, 0, 0, 1, 0, 0, '', '1', '0');");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing Nitro file {fileName}: {ex.Message}");
             }
         }
 
@@ -214,43 +284,6 @@ VALUES ({id}, '{id}', {pageId}, 0, 0, 99, '{typeAttribute}', 5, 0, 0, 1, 0, 0, '
             catch (Exception)
             {
                 return 1;
-            }
-        }
-
-        private static void ProcessNitroFile(
-            string filePath,
-            JObject furnidata,
-            List<string> itemsBaseSQL,
-            List<string> catalogItemsSQL,
-            ref int startId,
-            int pageId)
-        {
-            try
-            {
-                string classname = Path.GetFileNameWithoutExtension(filePath);
-                var itemData = furnidata["roomitemtypes"]?["furnitype"]?
-                    .FirstOrDefault(item => item["classname"]?.ToString() == classname);
-
-                if (itemData != null)
-                {
-                    int spriteId = itemData["id"]?.ToObject<int>() ?? startId++;
-                    int width = itemData["xdim"]?.ToObject<int>() ?? 1;
-                    int length = itemData["ydim"]?.ToObject<int>() ?? 1;
-                    double stackHeight = itemData["stack_height"]?.ToObject<double>() ?? 0.0;
-
-                    itemsBaseSQL.Add($@"
-INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`)
-VALUES ({startId}, {spriteId}, '{classname}', '{classname}', {width}, {length}, {stackHeight}, '0', '0', '0', '0', '1', '1', '0', '1', '1', 's', 'default', 1, '0', '0', '0', 0, 0, '0');");
-
-                    catalogItemsSQL.Add($@"
-INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`)
-VALUES ({startId}, '{spriteId}', {pageId}, 0, 0, 99, '{classname}', 5, 0, 0, 1, 0, 0, '', '1', '0');");
-
-                    startId++;
-                }
-            }
-            catch (Exception)
-            {
             }
         }
     }
