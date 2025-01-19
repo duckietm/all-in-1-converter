@@ -4,6 +4,19 @@
     {
         private static async Task Main(string[] args)
         {
+            if (!IsJavaAvailable())
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Java is not installed or not accessible from the command line.");
+                Console.WriteLine("Java is required for the SQL Generator to function properly.");
+                Console.WriteLine("Please download and install the latest version of Java from:");
+                Console.WriteLine("https://www.java.com/en/download/");
+                Console.ResetColor();
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+
             string configFilePath = "config.ini";
             Dictionary<string, string> config = IniFileParser.Parse(configFilePath);
 
@@ -25,6 +38,38 @@
                 }
 
                 await ConsoleCommandHandeling.InvokeCommand(input);
+            }
+
+            Console.WriteLine("Exiting the application...");
+            Console.WriteLine("Press any key to close the program.");
+            Console.ReadKey();
+        }
+
+        private static bool IsJavaAvailable()
+        {
+            try
+            {
+                System.Diagnostics.Process process = new System.Diagnostics.Process
+                {
+                    StartInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "java",
+                        Arguments = "-version",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+
+                process.Start();
+                process.WaitForExit();
+
+                return process.ExitCode == 0;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -75,13 +120,13 @@
             string[] subDirectories = { "furni", "clothing", "effects", "pets" };
 
             string[] additionalFolders = {
-        "./effect", "./hof_furni", "./Nitro_hof_furni", "./quests", "./reception", "./reception/web_promo_small",
-        "./badges", "./icons", "./files", "./mp3", "./clothes", "./Custom_clothes", "./merge-json", "./Generate",
-        "./merge-json/Original_Furnidata", "./merge-json/Import_Furnidata", "./merge-json/Merged_Furnidata",
-        "./merge-json/Original_Productdata", "./merge-json/Import_Productdata", "./merge-json/Merged_Productdata",
-        "./merge-json/Original_ClothesData", "./merge-json/Import_ClothesData", "./merge-json/Merged_ClothesData",
-        "./Generate/Furnidata", "./Generate/Furniture", "./Generate/Output_SQL"
-    };
+                "./effect", "./hof_furni", "./Nitro_hof_furni", "./quests", "./reception", "./reception/web_promo_small",
+                "./badges", "./icons", "./files", "./mp3", "./clothes", "./Custom_clothes", "./merge-json", "./Generate",
+                "./merge-json/Original_Furnidata", "./merge-json/Import_Furnidata", "./merge-json/Merged_Furnidata",
+                "./merge-json/Original_Productdata", "./merge-json/Import_Productdata", "./merge-json/Merged_Productdata",
+                "./merge-json/Original_ClothesData", "./merge-json/Import_ClothesData", "./merge-json/Merged_ClothesData",
+                "./Generate/Furnidata", "./Generate/Furniture", "./Generate/Output_SQL"
+            };
 
             foreach (string baseDir in baseDirectories)
             {
@@ -97,6 +142,7 @@
                 CreateDirectoryIfNotExists(folder);
             }
         }
+
         private static void CreateDirectoryIfNotExists(string path)
         {
             if (!Directory.Exists(path))
@@ -106,13 +152,8 @@
                 Thread.Sleep(100); // Simulate processing delay
                 Console.WriteLine($"Created folder: {path}");
             }
-            else
-            {
-                Console.WriteLine($"Folder already exists: {path}");
-            }
-
-            Console.Clear();
         }
+
         private static void DisplayMainMenu()
         {
             Console.ResetColor();
