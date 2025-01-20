@@ -24,7 +24,7 @@
                     return;
                 }
 
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
                 await DownloadFileAsync(productdataurl, "./files/productdata.txt", "productdata.txt");
 

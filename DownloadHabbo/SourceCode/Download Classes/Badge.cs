@@ -15,7 +15,7 @@ namespace ConsoleApplication
         static Badges()
         {
             httpClient = new HttpClient(new HttpClientHandler { MaxConnectionsPerServer = 100 });
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent.Replace("User-Agent: ", ""));
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent.Replace("User-Agent: ", ""));
         }
 
         public static async Task DownloadBadgesAsync()

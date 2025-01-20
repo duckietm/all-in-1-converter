@@ -8,7 +8,7 @@ namespace ConsoleApplication
 
         internal static async Task DownloadClothesAsync()
         {
-            httpClient.DefaultRequestHeaders.Add("user-agent", CommonConfig.UserAgent);
+            httpClient.DefaultRequestHeaders.Add("user-agent", UserAgentClass.UserAgent);
 
             try
             {

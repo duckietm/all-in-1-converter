@@ -33,7 +33,7 @@
                     return;
                 }
 
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
                 int retryCount = 3;
                 while (retryCount > 0)

@@ -39,7 +39,7 @@ namespace ConsoleApplication
                     File.Delete(tempFilePath);
                 }
 
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
                 await DownloadFileAsync(externaltexturl, tempFilePath, "external_texts.txt");
 

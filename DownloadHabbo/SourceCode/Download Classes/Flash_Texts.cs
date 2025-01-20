@@ -16,7 +16,7 @@
                 Directory.CreateDirectory("./files");
             }
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             Console.WriteLine("Saving external flash texts...");
 

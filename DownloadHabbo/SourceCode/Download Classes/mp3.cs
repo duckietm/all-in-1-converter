@@ -13,7 +13,7 @@
 
             Directory.CreateDirectory("./mp3");
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             string soundMachineUrl = config["AppSettings:soundmachineurl"];
             int mp3Number = 1;

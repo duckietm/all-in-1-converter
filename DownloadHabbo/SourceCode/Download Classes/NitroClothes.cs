@@ -26,7 +26,7 @@ namespace ConsoleApplication
                 return;
             }
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             try
             {

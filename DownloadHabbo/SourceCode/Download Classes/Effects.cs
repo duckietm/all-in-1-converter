@@ -12,7 +12,7 @@
             string externalVarsUrl = config["AppSettings:externalvarsurl"];
             string effectUrl = config["AppSettings:effecturl"];
 
-            httpClient.DefaultRequestHeaders.Add("User-Agent", CommonConfig.UserAgent);
+            httpClient.DefaultRequestHeaders.Add("User-Agent", UserAgentClass.UserAgent);
 
             try
             {
@@ -22,12 +22,31 @@
                 string releaseEffect = null;
                 foreach (string line in source.Split(Environment.NewLine.ToCharArray()))
                 {
-                    if (line.Contains("flash.client.url="))
+                    try
                     {
-                        releaseEffect = line.Substring(0, line.Length - 1).Split('/')[4];
-                        Console.ForegroundColor = ConsoleColor.Blue;
-                        Console.WriteLine("Downloading Effects version: " + releaseEffect);
-                        break;
+                        if (line.Contains("flash.client.url="))
+                        {
+                            string[] parts = line.Substring(0, line.Length - 1).Split('/');
+                            if (parts.Length > 4)
+                            {
+                                releaseEffect = parts[4];
+                                Console.ForegroundColor = ConsoleColor.Blue;
+                                Console.WriteLine("Downloading Effects version: " + releaseEffect);
+                                break;
+                            }
+                            else
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine("Error: Insufficient parts in URL to determine release effect.");
+                                return; // Exit gracefully
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Error processing line: {ex.Message}");
+                        return; // Exit gracefully
                     }
                 }
 

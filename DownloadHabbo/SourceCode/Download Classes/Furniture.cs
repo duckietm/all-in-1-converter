@@ -15,7 +15,7 @@ namespace ConsoleApplication
             string furnidataUrl = config["AppSettings:furnidataTXT"];
             string furnitureUrl = config["AppSettings:furnitureurl"];
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             Console.WriteLine("Furniture Download Started");
 

@@ -24,7 +24,7 @@ namespace ConsoleApplication
 
             string furnidataJsonPath = "./temp/furnidata.json";
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             try
             {

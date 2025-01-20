@@ -13,7 +13,7 @@
 
             Directory.CreateDirectory("./icons");
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(CommonConfig.UserAgent);
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             string catalogIconUrl = config["AppSettings:catalogiconurl"];
             int iconNumber = 1;
