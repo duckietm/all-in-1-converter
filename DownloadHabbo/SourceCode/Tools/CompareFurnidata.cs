@@ -1,8 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 
 namespace ConsoleApplication
 {
@@ -33,7 +29,6 @@ namespace ConsoleApplication
                 JObject originalJson = JObject.Parse(await File.ReadAllTextAsync(originalFilePath));
                 int totalImported = 0;
 
-                // Get all JSON files in the import directory
                 var importFiles = Directory.GetFiles(importDir, "*.json");
 
                 if (importFiles.Length == 0)
@@ -54,7 +49,6 @@ namespace ConsoleApplication
                     Console.WriteLine($"Imported {importedCount} items from {Path.GetFileName(importFile)}");
                 }
 
-                // Sort the merged JSON by "id" for both roomitemtypes and wallitemtypes
                 SortJsonByID(originalJson, "roomitemtypes");
                 SortJsonByID(originalJson, "wallitemtypes");
 
@@ -71,18 +65,25 @@ namespace ConsoleApplication
 
         private static int MergeJson(JObject originalJson, JObject importJson, string itemType)
         {
-            var originalItems = originalJson[itemType]["furnitype"].ToDictionary(item => item["classname"].ToString());
-            var importItems = importJson[itemType]["furnitype"].ToDictionary(item => item["classname"].ToString());
+            var originalItems = originalJson[itemType]["furnitype"]
+                .ToDictionary(item => item["classname"].ToString());
+
+            var processedImportKeys = new HashSet<string>();
 
             int importedCount = 0;
 
-            foreach (var importItem in importItems)
+            foreach (var importItem in importJson[itemType]["furnitype"])
             {
-                if (!originalItems.ContainsKey(importItem.Key))
+                var classname = importItem["classname"].ToString();
+
+                if (originalItems.ContainsKey(classname) || processedImportKeys.Contains(classname))
                 {
-                    ((JArray)originalJson[itemType]["furnitype"]).Add(importItem.Value);
-                    importedCount++;
+                    continue;
                 }
+
+                ((JArray)originalJson[itemType]["furnitype"]).Add(importItem);
+                processedImportKeys.Add(classname);
+                importedCount++;
             }
 
             return importedCount;
