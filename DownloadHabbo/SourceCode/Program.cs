@@ -61,7 +61,11 @@ namespace ConsoleApplication
             Console.BackgroundColor = ConsoleColor.Gray;
             Console.WriteLine("1. Habbo Original Downloads                                                ");
             Console.WriteLine("2. Nitro Custom Downloads                                                  ");
-            Console.WriteLine("3. Hotel Tools                                                             ");
+            Console.WriteLine("3. Hotel Tools                                                             ");            
+            Console.WriteLine("                                                                           ");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(" Type 1, 2 or 3 in the command to go to the required section               ");
+            Console.ForegroundColor = ConsoleColor.Black;
             Console.WriteLine("                                                                           ");
             Console.WriteLine("-> Help                                                                    ");
             Console.WriteLine("-> Version (Shows habbo version used for download assets)                  ");
