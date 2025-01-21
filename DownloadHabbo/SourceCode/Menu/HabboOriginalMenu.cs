@@ -26,6 +26,8 @@
                 Console.WriteLine("-> Download Texts                                                              ");
                 Console.WriteLine("-> Download Variables                                                          ");
                 Console.WriteLine("                                                                               ");
+                Console.WriteLine("-> Download All (this will download all that is required for confurting)       ");
+                Console.WriteLine("                                                                               ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                        ");
                 Console.ResetColor();
 
@@ -148,6 +150,18 @@
 
                 case "badges":
                     await Badges.DownloadBadgesAsync();
+                    break;
+
+                case "all":
+                    Console.WriteLine("Starting 'Download All'...");
+                    await ClothesDownloader.DownloadClothesAsync();
+                    await FurnidataDownloader.DownloadFurnidata();
+                    await ProductDataDownloader.DownloadProductDataAsync();
+                    await FurnitureDownloader.DownloadFurnitureAsync();
+                    await VariablesDownloader.DownloadVariablesAsync();
+                    await TextsDownloader.DownloadTextsAsync();
+                    await IconDownloader.DownloadIcons();
+                    Console.WriteLine("'Download All' completed.");
                     break;
 
                 default:
