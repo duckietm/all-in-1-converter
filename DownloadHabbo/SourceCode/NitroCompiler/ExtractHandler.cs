@@ -4,7 +4,7 @@ public static class ExtractHandler
 {
     public static string[] GetFiles(string folder)
     {
-        string fullPath = Path.Combine("Compiler", "extract", folder);
+        string fullPath = Path.Combine("NitroCompiler", "extract", folder);
 
         if (!Directory.Exists(fullPath))
         {

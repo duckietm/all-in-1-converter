@@ -1,4 +1,6 @@
-﻿namespace ConsoleApplication
+﻿using Habbo_Downloader.Compiler;
+
+namespace ConsoleApplication
 {
     public static class HotelToolsMenu
     {
@@ -17,6 +19,8 @@
                 Console.WriteLine("-> Merge Productdata                                                         ");
                 Console.WriteLine("-> Merge Clothes                                                             ");
                 Console.WriteLine("-> Generate SQL                                                              ");
+                Console.WriteLine("-> Decompile NitroFiles                                                      ");
+                Console.WriteLine("-> Compile NitroFiles                                                        ");
                 Console.WriteLine("                                                                             ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                      ");
                 Console.ResetColor();
@@ -73,6 +77,16 @@
                         {
                             Console.WriteLine("Missing argument for 'generate' command.");
                         }
+                        break;
+
+                    case "decompile":
+                        Console.WriteLine("DEBUG: Decompiling NitroFiles...");
+                        await NitroExtractor.Extract();
+                        break;
+
+                    case "compile":
+                        Console.WriteLine("DEBUG: Compiling NitroFiles...");
+                        await NitroFurniCompile.Compile();
                         break;
 
                     default:

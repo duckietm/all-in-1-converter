@@ -3,7 +3,7 @@ namespace ConsoleApplication
 {
     public static class CompiledHandler
     {
-        private static readonly string CompiledFolder = Path.Combine("Compiler", "compiled");
+        private static readonly string CompiledFolder = Path.Combine("NitroCompiler", "compiled");
 
         public static void ListFiles()
         {

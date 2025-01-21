@@ -10,7 +10,7 @@
 
         try
         {
-            string outputFolder = Path.Combine("Compiler", "extracted", folder, name);
+            string outputFolder = Path.Combine("NitroCompiler", "extracted", folder, name);
 
             if (!Directory.Exists(outputFolder))
             {

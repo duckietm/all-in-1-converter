@@ -12,8 +12,8 @@ namespace Habbo_Downloader.Compiler
             Console.WriteLine("Starting Nitro Assets Compilation...");
 
             // Define compile and output folders for different asset types
-            string baseCompilePath = Path.Combine("Compiler", "compile");
-            string baseOutputPath = Path.Combine("Compiler", "compiled");
+            string baseCompilePath = Path.Combine("NitroCompiler", "compile");
+            string baseOutputPath = Path.Combine("NitroCompiler", "compiled");
 
             // Asset categories to handle
             string[] assetTypes = { "furni", "clothing", "effects", "pets" };

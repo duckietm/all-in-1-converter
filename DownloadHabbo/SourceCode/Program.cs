@@ -91,7 +91,7 @@
 
         private static void CreateDirectories()
         {
-            string[] baseDirectories = { "./Compiler/compile", "./Compiler/compiled", "./Compiler/extract", "./Compiler/extracted" };
+            string[] baseDirectories = { "./NitroCompiler/compile", "./NitroCompiler/compiled", "./NitroCompiler/extract", "./NitroCompiler/extracted" };
             string[] subDirectories = { "furni", "clothing", "effects", "pets" };
 
             string[] additionalFolders = {
