@@ -9,7 +9,7 @@ Download all the swf's with the download tool : C:\Tools\DownloadHabbo\Habbo_Dow
 Download all the required assets
 
 ```cmd
-clothes
+download clothes
 download furnidata 
 download productdata
 download furniture
