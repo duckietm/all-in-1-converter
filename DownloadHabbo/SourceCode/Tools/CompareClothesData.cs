@@ -6,7 +6,7 @@ namespace ConsoleApplication
     {
         public static async Task Compare()
         {
-            string baseDir = Path.Combine(Directory.GetCurrentDirectory(), "merge-json");
+            string baseDir = Path.Combine(Directory.GetCurrentDirectory(), "Merge");
             string originalDir = Path.Combine(baseDir, "Original_ClothesData");
             string importDir = Path.Combine(baseDir, "Import_ClothesData");
             string mergedDir = Path.Combine(baseDir, "Merged_ClothesData");

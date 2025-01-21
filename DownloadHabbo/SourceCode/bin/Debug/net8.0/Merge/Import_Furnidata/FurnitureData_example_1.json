@@ -1,0 +1,39 @@
+{
+	"roomitemtypes": {
+		"furnitype": [
+			{
+				"id": 100000,
+				"classname": "This is a example",
+				"revision": 0,
+				"category": "unknown",
+				"defaultdir": 0,
+				"xdim": 1,
+				"ydim": 1,
+				"partcolors": {
+					"color": []
+				},
+				"name": "This is a example",
+				"description": "This is a example",
+				"adurl": "",
+				"offerid": 100000,
+				"buyout": true,
+				"rentofferid": -1,
+				"rentbuyout": false,
+				"bc": false,
+				"excludeddynamic": false,
+				"customparams": "0",
+				"specialtype": 1,
+				"canstandon": false,
+				"cansiton": false,
+				"canlayon": false,
+				"furniline": "",
+				"environment": "",
+				"rare": false
+			}
+		]
+	},
+	"wallitemtypes": {
+		"furnitype": [
+		]
+	}
+}

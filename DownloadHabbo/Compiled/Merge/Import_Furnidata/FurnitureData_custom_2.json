@@ -1,0 +1,68 @@
+{
+	"roomitemtypes": {
+		"furnitype": [
+			{
+				"id": 100001,
+				"classname": "hobba_bb21_bubble",
+				"revision": 0,
+				"category": "unknown",
+				"defaultdir": 0,
+				"xdim": 1,
+				"ydim": 1,
+				"partcolors": {
+					"color": []
+				},
+				"name": "hobba_bb21_bubble",
+				"description": "hobba_bb21_bubble",
+				"adurl": "",
+				"offerid": 100001,
+				"buyout": true,
+				"rentofferid": -1,
+				"rentbuyout": false,
+				"bc": false,
+				"excludeddynamic": false,
+				"customparams": "0",
+				"specialtype": 1,
+				"canstandon": false,
+				"cansiton": false,
+				"canlayon": false,
+				"furniline": "",
+				"environment": "",
+				"rare": false
+			},
+			{
+				"id": 100002,
+				"classname": "hobba_bb21_countdown",
+				"revision": 0,
+				"category": "unknown",
+				"defaultdir": 0,
+				"xdim": 1,
+				"ydim": 1,
+				"partcolors": {
+					"color": []
+				},
+				"name": "hobba_bb21_countdown",
+				"description": "hobba_bb21_countdown",
+				"adurl": "",
+				"offerid": 100002,
+				"buyout": true,
+				"rentofferid": -1,
+				"rentbuyout": false,
+				"bc": false,
+				"excludeddynamic": false,
+				"customparams": "0",
+				"specialtype": 1,
+				"canstandon": false,
+				"cansiton": false,
+				"canlayon": false,
+				"furniline": "",
+				"environment": "",
+				"rare": false
+			}
+		]
+	},
+	"wallitemtypes": {
+		"furnitype": [
+		]
+	}
+}
