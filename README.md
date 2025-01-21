@@ -9,13 +9,11 @@ Download all the swf's with the download tool : C:\Tools\DownloadHabbo\Habbo_Dow
 Download all the required assets
 
 ```cmd
-download clothes
-download furnidata 
-download productdata
-download furniture
-download variables
-download texts
-download icons
+Go to : C:\Repo\all-in-1-converter\DownloadHabbo\Compiled
+Check the config.ini to make sure you have selected the right language
+Run the : Habbo Downloader.exe
+Select option : 1
+type : Download All
 ```
 This will download all that is required.
 
