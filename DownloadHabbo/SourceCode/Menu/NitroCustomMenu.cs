@@ -16,8 +16,8 @@ namespace ConsoleApplication
                 Console.WriteLine("                          Nitro Custom Downloads                           ");
                 Console.ForegroundColor = ConsoleColor.Black;
                 Console.BackgroundColor = ConsoleColor.Gray;
-                Console.WriteLine("-> NitroFurniture                                                          ");
-                Console.WriteLine("-> NitroClothes                                                            ");
+                Console.WriteLine("-> Download NitroFurniture                                                 ");
+                Console.WriteLine("-> Download NitroClothes                                                   ");
                 Console.WriteLine("                                                                           ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                    ");
                 Console.ResetColor();

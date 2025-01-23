@@ -66,14 +66,26 @@ namespace ConsoleApplication
 
         private static int MergeJson(JObject originalJson, JObject importJson, string itemType, ref bool replaceAll, ref bool skipAll)
         {
+            // Extract dictionaries of items from original and import JSON
             var originalItems = originalJson[itemType]["product"].ToDictionary(item => item["code"].ToString());
-            var importItems = importJson[itemType]["product"].ToDictionary(item => item["code"].ToString());
 
+            // Use a HashSet to track processed keys in the imported JSON for deduplication
+            HashSet<string> processedKeys = new HashSet<string>();
             int importedCount = 0;
 
-            foreach (var importItem in importItems)
+            foreach (var importItem in importJson[itemType]["product"])
             {
-                if (originalItems.ContainsKey(importItem.Key))
+                string importKey = importItem["code"].ToString();
+
+                // Skip duplicates within the imported JSON
+                if (processedKeys.Contains(importKey))
+                {
+                    continue;
+                }
+                processedKeys.Add(importKey);
+
+                // Check if the key exists in the original JSON
+                if (originalItems.ContainsKey(importKey))
                 {
                     if (skipAll)
                     {
@@ -81,8 +93,8 @@ namespace ConsoleApplication
                     }
                     else if (!replaceAll)
                     {
-                        string code = importItem.Key;
-                        string description = importItem.Value["description"]?.ToString() ?? "No description";
+                        string code = importKey;
+                        string description = importItem["description"]?.ToString() ?? "No description";
 
                         Console.WriteLine("Would you like to replace the:");
                         Console.WriteLine($"Furniture code: {code}");
@@ -94,7 +106,7 @@ namespace ConsoleApplication
                         switch (response)
                         {
                             case "Y":
-                                 break;
+                                break;
                             case "A":
                                 replaceAll = true;
                                 break;
@@ -103,20 +115,22 @@ namespace ConsoleApplication
                             case "Z":
                                 skipAll = true;
                                 continue;
-                            default:   
+                            default:
                                 Console.WriteLine("Invalid input. Skipping this entry.");
                                 continue;
                         }
                     }
 
+                    // Replace the original item with the imported item
                     var originalArray = (JArray)originalJson[itemType]["product"];
-                    var duplicateIndex = originalArray.IndexOf(originalArray.First(item => item["code"].ToString() == importItem.Key));
-                    originalArray[duplicateIndex] = importItem.Value;
+                    var duplicateIndex = originalArray.IndexOf(originalArray.First(item => item["code"].ToString() == importKey));
+                    originalArray[duplicateIndex] = importItem;
                     importedCount++;
                 }
                 else
                 {
-                    ((JArray)originalJson[itemType]["product"]).Add(importItem.Value);
+                    // Add the new item to the original JSON
+                    ((JArray)originalJson[itemType]["product"]).Add(importItem);
                     importedCount++;
                 }
             }
