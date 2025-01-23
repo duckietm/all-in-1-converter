@@ -1,0 +1,64 @@
+﻿using System.Xml.Linq;
+using System.Text.Json;
+
+namespace Habbo_Downloader.Tools
+{
+    public static class IndexMapper
+    {
+        public static async Task<IndexData> ParseIndexFileAsync(string indexFilePath)
+        {
+            try
+            {
+                string indexContent = await File.ReadAllTextAsync(indexFilePath);
+
+                XElement root = XElement.Parse(indexContent);
+
+                return MapIndexXML(root);
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error parsing _index.bin: {ex.Message}");
+                return null;
+            }
+            finally
+            {
+                Console.ResetColor();
+            }
+        }
+
+        private static IndexData MapIndexXML(XElement root)
+        {
+            if (root == null) return null;
+
+            return new IndexData
+            {
+                Name = root.Attribute("type")?.Value,
+                VisualizationType = root.Attribute("visualization")?.Value,
+                LogicType = root.Attribute("logic")?.Value
+            };
+        }
+
+        public static string GenerateJson(IndexData indexData)
+        {
+            var json = new
+            {
+                name = indexData.Name,
+                logicType = indexData.LogicType,
+                visualizationType = indexData.VisualizationType
+            };
+
+            return JsonSerializer.Serialize(json, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+        }
+    }
+
+    public class IndexData
+    {
+        public string Name { get; set; }
+        public string VisualizationType { get; set; }
+        public string LogicType { get; set; }
+    }
+}
