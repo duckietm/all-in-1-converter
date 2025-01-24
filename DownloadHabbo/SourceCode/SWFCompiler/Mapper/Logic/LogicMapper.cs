@@ -32,18 +32,21 @@ public static class LogicMapper
             };
         }
 
-        // Map maskType, credits, and soundSample
         output.MaskType = logicElement.Element("mask")?.Attribute("type")?.Value;
         output.Credits = logicElement.Element("credits")?.Attribute("value")?.Value;
 
-        var soundSampleElement = logicElement.Element("soundSample");
-        if (soundSampleElement != null)
+        var soundElement = logicElement.Element("sound");
+        if (soundElement != null)
         {
-            output.SoundSample = new SoundSample
+            var sampleElement = soundElement.Element("sample");
+            if (sampleElement != null)
             {
-                Id = int.TryParse(soundSampleElement.Attribute("id")?.Value, out var id) ? id : 0,
-                NoPitch = soundSampleElement.Attribute("noPitch")?.Value == "true"
-            };
+                output.SoundSample = new SoundSample
+                {
+                    Id = int.TryParse(sampleElement.Attribute("id")?.Value, out var id) ? id : 0,
+                    NoPitch = sampleElement.Attribute("nopitch")?.Value == "true"
+                };
+            }
         }
 
         // Map planet systems

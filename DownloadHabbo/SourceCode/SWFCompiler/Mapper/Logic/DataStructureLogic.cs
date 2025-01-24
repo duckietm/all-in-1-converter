@@ -20,8 +20,21 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
         [JsonPropertyName("action")]
         public ActionData Action { get; set; }
 
+        private List<AssetLogicPlanetSystem> _planetSystems = new List<AssetLogicPlanetSystem>();
+
+        [JsonIgnore]
+        public List<AssetLogicPlanetSystem> PlanetSystems
+        {
+            get => _planetSystems;
+            set => _planetSystems = value ?? new List<AssetLogicPlanetSystem>();
+        }
+
         [JsonPropertyName("planetSystems")]
-        public List<AssetLogicPlanetSystem> PlanetSystems { get; set; } = new List<AssetLogicPlanetSystem>();
+        public List<AssetLogicPlanetSystem> PlanetSystemsSerializable
+        {
+            get => _planetSystems.Count > 0 ? _planetSystems : null;
+            set => _planetSystems = value ?? new List<AssetLogicPlanetSystem>();
+        }
 
         private List<ParticleSystem> _particleSystems = new List<ParticleSystem>();
 
