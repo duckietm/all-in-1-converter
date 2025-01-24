@@ -1,5 +1,6 @@
 ﻿using Habbo_Downloader.Tools;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -43,8 +44,8 @@ namespace Habbo_Downloader.Compiler
                     await FfdecExtractor.ExtractBinaryDataAsync(swfFile, binaryOutputPath);
                     await FfdecExtractor.ExtractImageAsync(swfFile, imageOutputPath);
 
+                    // Process index file
                     string[] indexFiles = Directory.GetFiles(binaryOutputPath, "*_index.bin", SearchOption.TopDirectoryOnly);
-
                     if (indexFiles.Length == 0)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
@@ -65,9 +66,39 @@ namespace Habbo_Downloader.Compiler
                         continue;
                     }
 
+                    // Process assets file
+                    string[] assetsFiles = Directory.GetFiles(binaryOutputPath, "*_assets.bin", SearchOption.TopDirectoryOnly);
+                    AssetsMapper.AssetData assetData = null;
+
+                    if (assetsFiles.Length > 0)
+                    {
+                        string assetsFilePath = assetsFiles[0];
+                        Console.WriteLine($"Using assets file: {assetsFilePath}");
+                        assetData = await AssetsMapper.ParseAssetsFileAsync(assetsFilePath);
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"No *_assets.bin file found in {binaryOutputPath}. Continuing without assets.");
+                        Console.ResetColor();
+                    }
+
+                    // Combine data into JSON
+                    var combinedJson = new
+                    {
+                        name = indexData.Name, // Use lowercase property name
+                        logicType = indexData.LogicType, // Use lowercase property name
+                        visualizationType = indexData.VisualizationType, // Use lowercase property name
+                        assets = assetData?.Assets.Any() == true ? assetData.Assets : null
+                    };
+
                     // Generate {name}.json
                     string jsonOutputPath = Path.Combine(fileOutputDirectory, fileName + ".json");
-                    string jsonContent = IndexMapper.GenerateJson(indexData);
+                    string jsonContent = System.Text.Json.JsonSerializer.Serialize(combinedJson, new System.Text.Json.JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault
+                    });
                     await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
 
                     Console.WriteLine($"Generated {fileName}.json -> {jsonOutputPath}");

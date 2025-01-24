@@ -1,5 +1,6 @@
 ﻿using System.Xml.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Habbo_Downloader.Tools
 {
@@ -57,8 +58,13 @@ namespace Habbo_Downloader.Tools
 
     public class IndexData
     {
+        [JsonPropertyName("name")]
         public string Name { get; set; }
+
+        [JsonPropertyName("visualizationType")]
         public string VisualizationType { get; set; }
+
+        [JsonPropertyName("logicType")]
         public string LogicType { get; set; }
     }
 }
