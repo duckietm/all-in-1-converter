@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
 {
@@ -20,13 +21,13 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
         public ActionData Action { get; set; }
 
         [JsonPropertyName("planetSystems")]
-        public List<AssetLogicPlanetSystem> PlanetSystems { get; set; }
+        public List<AssetLogicPlanetSystem> PlanetSystems { get; set; } = new List<AssetLogicPlanetSystem>();
 
         [JsonPropertyName("particleSystems")]
-        public List<ParticleSystem> ParticleSystems { get; set; }
+        public List<ParticleSystem> ParticleSystems { get; set; } = new List<ParticleSystem>();
 
         [JsonPropertyName("customVars")]
-        public CustomVars CustomVars { get; set; }
+        public CustomVars CustomVars { get; set; } = new CustomVars();
     }
 
     public class AssetLogicModel
@@ -34,8 +35,24 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
         [JsonPropertyName("dimensions")]
         public AssetDimension Dimensions { get; set; }
 
+        // Private backing field for directions
+        private List<int> _directions = new List<int>();
+
+        // Public property with custom serialization logic
+        [JsonIgnore]
+        public List<int> Directions
+        {
+            get => _directions;
+            set => _directions = value ?? new List<int>();
+        }
+
+        // Custom property to conditionally serialize directions
         [JsonPropertyName("directions")]
-        public List<int> Directions { get; set; }
+        public List<int> DirectionsSerializable
+        {
+            get => _directions.Count > 0 ? _directions : null;
+            set => _directions = value ?? new List<int>();
+        }
     }
 
     public class AssetDimension
@@ -116,7 +133,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
         public string BgColor { get; set; }
 
         [JsonPropertyName("emitters")]
-        public List<ParticleSystemEmitter> Emitters { get; set; }
+        public List<ParticleSystemEmitter> Emitters { get; set; } = new List<ParticleSystemEmitter>();
     }
 
     public class ParticleSystemEmitter
@@ -137,7 +154,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
         public int? ParticlesPerFrame { get; set; }
 
         [JsonPropertyName("burstPulse")]
-        public int? BurstPulse { get; set; }
+        public int BurstPulse { get; set; } = 1; // Default to 1 if not present
 
         [JsonPropertyName("fuseTime")]
         public int? FuseTime { get; set; }
@@ -146,7 +163,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
         public ParticleSystemSimulation Simulation { get; set; }
 
         [JsonPropertyName("particles")]
-        public List<ParticleSystemParticle> Particles { get; set; }
+        public List<ParticleSystemParticle> Particles { get; set; } = new List<ParticleSystemParticle>();
     }
 
     public class ParticleSystemSimulation
@@ -173,21 +190,21 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
     public class ParticleSystemParticle
     {
         [JsonPropertyName("isEmitter")]
-        public bool? IsEmitter { get; set; }
+        public bool IsEmitter { get; set; }
 
         [JsonPropertyName("lifeTime")]
         public int? LifeTime { get; set; }
 
         [JsonPropertyName("fade")]
-        public bool? Fade { get; set; }
+        public bool Fade { get; set; }
 
         [JsonPropertyName("frames")]
-        public List<string> Frames { get; set; }
+        public List<string> Frames { get; set; } = new List<string>();
     }
 
     public class CustomVars
     {
         [JsonPropertyName("variables")]
-        public List<string> Variables { get; set; }
+        public List<string> Variables { get; set; } = new List<string>();
     }
 }

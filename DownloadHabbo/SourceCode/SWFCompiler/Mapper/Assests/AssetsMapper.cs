@@ -6,14 +6,12 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 {
     public static class AssetsMapper
     {
-        public static async Task<AssetData> ParseAssetsFileAsync(string assetsFilePath, Dictionary<string, string> imageSources = null)
+        public static async Task<Dictionary<string, Asset>> ParseAssetsFileAsync(string assetsFilePath, Dictionary<string, string> imageSources = null)
         {
             try
             {
                 string assetsContent = await File.ReadAllTextAsync(assetsFilePath);
-
                 XElement root = XElement.Parse(assetsContent);
-
                 return MapAssetsXML(root, imageSources);
             }
             catch (Exception ex)
@@ -28,16 +26,16 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             }
         }
 
-        private static AssetData MapAssetsXML(XElement root, Dictionary<string, string> imageSources = null)
+        private static Dictionary<string, Asset> MapAssetsXML(XElement root, Dictionary<string, string> imageSources = null)
         {
             if (root == null) return null;
 
-            var output = new AssetData();
+            var output = new Dictionary<string, Asset>();
 
             var assetElements = root.Elements("asset");
             foreach (var assetElement in assetElements)
             {
-                MapAssetXML(assetElement, output.Assets, imageSources);
+                MapAssetXML(assetElement, output, imageSources);
             }
 
             return output;
@@ -79,11 +77,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             output[lowercaseName] = asset;
         }
 
-        public class AssetData
-        {
-            public Dictionary<string, Asset> Assets { get; set; } = new();
-        }
-
         public class Asset
         {
             [JsonPropertyName("x")]
@@ -102,39 +95,15 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             public bool FlipV { get; set; }
         }
 
-        public class AssetConverter : JsonConverter<AssetsMapper.Asset>
-        {
-            public override AssetsMapper.Asset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-            {
-                throw new NotImplementedException(); // Reading is not required in this scenario
-            }
-
-            public override void Write(Utf8JsonWriter writer, AssetsMapper.Asset value, JsonSerializerOptions options)
-            {
-                writer.WriteStartObject();
-
-                writer.WriteNumber("x", value.X);
-                writer.WriteNumber("y", value.Y);
-
-                if (!string.IsNullOrEmpty(value.Source))
-                {
-                    writer.WriteString("source", value.Source);
-                }
-
-                writer.WriteEndObject();
-            }
-        }
-
-        public static string SerializeToJson(AssetData assetData)
+        public static string SerializeToJson(Dictionary<string, Asset> assets)
         {
             var options = new JsonSerializerOptions
             {
                 WriteIndented = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, // Ignore null properties globally
-                Converters = { new AssetConverter() } // Use custom converter for Asset
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             };
 
-            return JsonSerializer.Serialize(assetData, options);
+            return JsonSerializer.Serialize(assets, options);
         }
     }
 }

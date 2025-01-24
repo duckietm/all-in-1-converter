@@ -4,6 +4,7 @@ using Habbo_Downloader.SWFCompiler.Mapper.Logic;
 using Habbo_Downloader.Tools;
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Xml.Linq;
 
 namespace Habbo_Downloader.Compiler
@@ -67,7 +68,7 @@ namespace Habbo_Downloader.Compiler
 
                     // Process assets file
                     string[] assetsFiles = Directory.GetFiles(binaryOutputPath, "*_assets.bin", SearchOption.TopDirectoryOnly);
-                    AssetsMapper.AssetData assetData = null;
+                    Dictionary<string, AssetsMapper.Asset> assetData = null;
 
                     if (assetsFiles.Length > 0)
                     {
@@ -105,19 +106,19 @@ namespace Habbo_Downloader.Compiler
                     // Combine data into JSON
                     var combinedJson = new
                     {
-                        name = indexData.Name, // Use lowercase property name
-                        logicType = indexData.LogicType, // Use lowercase property name
-                        visualizationType = indexData.VisualizationType, // Use lowercase property name
-                        assets = assetData != null ? JsonSerializer.Deserialize<Dictionary<string, object>>(AssetsMapper.SerializeToJson(assetData)) : null,
-                        logic = logicData // Include logic data if available
+                        name = indexData.Name,
+                        logicType = indexData.LogicType,
+                        visualizationType = indexData.VisualizationType,
+                        assets = assetData,
+                        logic = logicData
                     };
 
                     // Generate {name}.json
                     string jsonOutputPath = Path.Combine(fileOutputDirectory, fileName + ".json");
-                    string jsonContent = System.Text.Json.JsonSerializer.Serialize(combinedJson, new System.Text.Json.JsonSerializerOptions
+                    string jsonContent = JsonSerializer.Serialize(combinedJson, new JsonSerializerOptions
                     {
                         WriteIndented = true,
-                        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault
+                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
                     });
                     await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
 
