@@ -23,11 +23,37 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
         [JsonPropertyName("planetSystems")]
         public List<AssetLogicPlanetSystem> PlanetSystems { get; set; } = new List<AssetLogicPlanetSystem>();
 
+        private List<ParticleSystem> _particleSystems = new List<ParticleSystem>();
+
+        [JsonIgnore]
+        public List<ParticleSystem> ParticleSystems
+        {
+            get => _particleSystems;
+            set => _particleSystems = value ?? new List<ParticleSystem>();
+        }
+
         [JsonPropertyName("particleSystems")]
-        public List<ParticleSystem> ParticleSystems { get; set; } = new List<ParticleSystem>();
+        public List<ParticleSystem> ParticleSystemsSerializable
+        {
+            get => _particleSystems.Count > 0 ? _particleSystems : null;
+            set => _particleSystems = value ?? new List<ParticleSystem>();
+        }
+
+        private CustomVars _customVars = new CustomVars();
+
+        [JsonIgnore]
+        public CustomVars CustomVars
+        {
+            get => _customVars;
+            set => _customVars = value ?? new CustomVars();
+        }
 
         [JsonPropertyName("customVars")]
-        public CustomVars CustomVars { get; set; } = new CustomVars();
+        public CustomVars CustomVarsSerializable
+        {
+            get => _customVars.Variables.Count > 0 ? _customVars : null;
+            set => _customVars = value ?? new CustomVars();
+        }
     }
 
     public class AssetLogicModel
@@ -35,10 +61,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
         [JsonPropertyName("dimensions")]
         public AssetDimension Dimensions { get; set; }
 
-        // Private backing field for directions
         private List<int> _directions = new List<int>();
 
-        // Public property with custom serialization logic
         [JsonIgnore]
         public List<int> Directions
         {
@@ -46,7 +70,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
             set => _directions = value ?? new List<int>();
         }
 
-        // Custom property to conditionally serialize directions
         [JsonPropertyName("directions")]
         public List<int> DirectionsSerializable
         {
@@ -81,11 +104,36 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
 
     public class ActionData
     {
+        private string _link;
+        private int? _startState;
+
+        [JsonIgnore]
+        public string Link
+        {
+            get => _link;
+            set => _link = value;
+        }
+
+        [JsonIgnore]
+        public int? StartState
+        {
+            get => _startState;
+            set => _startState = value;
+        }
+
         [JsonPropertyName("link")]
-        public string Link { get; set; }
+        public string LinkSerializable
+        {
+            get => !string.IsNullOrEmpty(_link) ? _link : null;
+            set => _link = value;
+        }
 
         [JsonPropertyName("startState")]
-        public int? StartState { get; set; }
+        public int? StartStateSerializable
+        {
+            get => _startState.HasValue ? _startState : null;
+            set => _startState = value;
+        }
     }
 
     public class AssetLogicPlanetSystem
@@ -154,7 +202,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
         public int? ParticlesPerFrame { get; set; }
 
         [JsonPropertyName("burstPulse")]
-        public int BurstPulse { get; set; } = 1; // Default to 1 if not present
+        public int BurstPulse { get; set; } = 1;
 
         [JsonPropertyName("fuseTime")]
         public int? FuseTime { get; set; }
@@ -204,7 +252,20 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
 
     public class CustomVars
     {
+        private List<string> _variables = new List<string>();
+
+        [JsonIgnore]
+        public List<string> Variables
+        {
+            get => _variables;
+            set => _variables = value ?? new List<string>();
+        }
+
         [JsonPropertyName("variables")]
-        public List<string> Variables { get; set; } = new List<string>();
+        public List<string> VariablesSerializable
+        {
+            get => _variables.Count > 0 ? _variables : null;
+            set => _variables = value ?? new List<string>();
+        }
     }
 }

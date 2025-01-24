@@ -27,8 +27,8 @@ public static class LogicMapper
         {
             output.Action = new ActionData
             {
-                Link = actionElement.Element("link")?.Value,
-                StartState = int.TryParse(actionElement.Element("startState")?.Value, out var startState) ? startState : (int?)null
+                Link = actionElement.Attribute("link")?.Value,
+                StartState = int.TryParse(actionElement.Attribute("startState")?.Value, out var startState) ? startState : (int?)null
             };
         }
 
@@ -47,7 +47,7 @@ public static class LogicMapper
         }
 
         // Map planet systems
-        var planetSystemElement = logicElement.Element("planetsystem"); // Corrected to lowercase "planetsystem"
+        var planetSystemElement = logicElement.Element("planetsystem");
         if (planetSystemElement != null)
         {
             output.PlanetSystems = MapPlanetSystem.MapPlanetSystems(planetSystemElement.Elements("object"));
@@ -61,13 +61,10 @@ public static class LogicMapper
         }
 
         // Map custom variables
-        var customVarsElement = logicElement.Element("customVars");
+        var customVarsElement = logicElement.Element("customvars");
         if (customVarsElement != null)
         {
-            output.CustomVars = new CustomVars
-            {
-                Variables = customVarsElement.Elements("variable").Select(v => v.Value).ToList()
-            };
+            output.CustomVars = MapCustomVars(customVarsElement);
         }
 
         return output;
@@ -96,8 +93,27 @@ public static class LogicMapper
             .Select(id => id.Value)
             .ToList();
 
-        if (directions.Count == 0) return new List<int>();
+        if (directions.Count == 0) directions.Add(0);
 
         return directions;
+    }
+
+    private static CustomVars MapCustomVars(XElement customVarsElement)
+    {
+        if (customVarsElement == null) return null;
+
+        var customVars = new CustomVars();
+
+        var variableElements = customVarsElement.Elements("variable");
+        foreach (var variableElement in variableElements)
+        {
+            var name = variableElement.Attribute("name")?.Value;
+            if (!string.IsNullOrEmpty(name))
+            {
+                customVars.Variables.Add(name);
+            }
+        }
+
+        return customVars;
     }
 }
