@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 
 namespace Habbo_Downloader.Tools
 {
@@ -22,8 +20,6 @@ namespace Habbo_Downloader.Tools
 
         private static async Task RunFfdecCommandAsync(string command)
         {
-            Console.WriteLine($"Running FFDEC Command: java -jar {ToolsDirectory} {command}");
-
             var process = new Process
             {
                 StartInfo = new ProcessStartInfo

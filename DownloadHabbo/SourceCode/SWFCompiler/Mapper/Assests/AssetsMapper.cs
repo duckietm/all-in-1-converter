@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
 
-namespace Habbo_Downloader.Tools
+namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 {
     public static class AssetsMapper
     {
@@ -86,12 +86,13 @@ namespace Habbo_Downloader.Tools
 
         public class Asset
         {
-            [JsonPropertyName("x")] 
+            [JsonPropertyName("x")]
             public int X { get; set; }
 
             [JsonPropertyName("y")]
             public int Y { get; set; }
 
+            [JsonPropertyName("source")]
             public string? Source { get; set; }
 
             [JsonIgnore]
@@ -101,34 +102,36 @@ namespace Habbo_Downloader.Tools
             public bool FlipV { get; set; }
         }
 
-        public class AssetConverter : JsonConverter<Asset>
+        public class AssetConverter : JsonConverter<AssetsMapper.Asset>
         {
-            public override Asset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            public override AssetsMapper.Asset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                throw new NotImplementedException();
+                throw new NotImplementedException(); // Reading is not required in this scenario
             }
 
-            public override void Write(Utf8JsonWriter writer, Asset value, JsonSerializerOptions options)
+            public override void Write(Utf8JsonWriter writer, AssetsMapper.Asset value, JsonSerializerOptions options)
             {
                 writer.WriteStartObject();
+
+                writer.WriteNumber("x", value.X);
+                writer.WriteNumber("y", value.Y);
 
                 if (!string.IsNullOrEmpty(value.Source))
                 {
                     writer.WriteString("source", value.Source);
                 }
-                writer.WriteNumber("x", value.X);
-                writer.WriteNumber("y", value.Y);
 
                 writer.WriteEndObject();
             }
         }
+
         public static string SerializeToJson(AssetData assetData)
         {
             var options = new JsonSerializerOptions
             {
                 WriteIndented = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                Converters = { new AssetConverter() }
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, // Ignore null properties globally
+                Converters = { new AssetConverter() } // Use custom converter for Asset
             };
 
             return JsonSerializer.Serialize(assetData, options);

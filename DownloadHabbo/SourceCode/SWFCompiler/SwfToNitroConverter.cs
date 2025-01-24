@@ -1,9 +1,10 @@
-﻿using Habbo_Downloader.Tools;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Habbo_Downloader.SWFCompiler.Mapper.Assests;
+using Habbo_Downloader.SWFCompiler.Mapper.Index;
+using Habbo_Downloader.SWFCompiler.Mapper.Logic;
+using Habbo_Downloader.Tools;
+
+using System.Text.Json;
+using System.Xml.Linq;
 
 namespace Habbo_Downloader.Compiler
 {
@@ -16,10 +17,8 @@ namespace Habbo_Downloader.Compiler
         {
             try
             {
-                // Ensure the output directory exists
                 Directory.CreateDirectory(OutputDirectory);
 
-                // Get all SWF files in the import directory
                 string[] swfFiles = Directory.GetFiles(ImportDirectory, "*.swf", SearchOption.TopDirectoryOnly);
 
                 if (swfFiles.Length == 0)
@@ -83,13 +82,34 @@ namespace Habbo_Downloader.Compiler
                         Console.ResetColor();
                     }
 
+                    // Process logic file
+                    string[] logicFiles = Directory.GetFiles(binaryOutputPath, "*_logic.bin", SearchOption.TopDirectoryOnly);
+                    AssetLogicData logicData = null;
+
+                    if (logicFiles.Length > 0)
+                    {
+                        string logicFilePath = logicFiles[0];
+                        Console.WriteLine($"Using logic file: {logicFilePath}");
+
+                        string logicContent = await File.ReadAllTextAsync(logicFilePath);
+                        XElement logicElement = XElement.Parse(logicContent);
+                        logicData = LogicMapper.MapLogicXml(logicElement);
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"No *_logic.bin file found in {binaryOutputPath}. Continuing without logic.");
+                        Console.ResetColor();
+                    }
+
                     // Combine data into JSON
                     var combinedJson = new
                     {
                         name = indexData.Name, // Use lowercase property name
                         logicType = indexData.LogicType, // Use lowercase property name
                         visualizationType = indexData.VisualizationType, // Use lowercase property name
-                        assets = assetData?.Assets.Any() == true ? assetData.Assets : null
+                        assets = assetData != null ? JsonSerializer.Deserialize<Dictionary<string, object>>(AssetsMapper.SerializeToJson(assetData)) : null,
+                        logic = logicData // Include logic data if available
                     };
 
                     // Generate {name}.json

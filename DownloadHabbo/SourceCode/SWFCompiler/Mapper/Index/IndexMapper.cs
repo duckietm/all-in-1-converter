@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Habbo_Downloader.Tools
+namespace Habbo_Downloader.SWFCompiler.Mapper.Index
 {
     public static class IndexMapper
     {
@@ -58,13 +58,13 @@ namespace Habbo_Downloader.Tools
 
     public class IndexData
     {
-        [JsonPropertyName("name")]
+        [JsonPropertyName("name")] // Specify lowercase JSON property name
         public string Name { get; set; }
 
-        [JsonPropertyName("visualizationType")]
+        [JsonPropertyName("visualizationType")] // Specify lowercase JSON property name
         public string VisualizationType { get; set; }
 
-        [JsonPropertyName("logicType")]
+        [JsonPropertyName("logicType")] // Specify lowercase JSON property name
         public string LogicType { get; set; }
     }
 }
