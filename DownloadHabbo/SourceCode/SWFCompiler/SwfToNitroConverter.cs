@@ -106,7 +106,7 @@ namespace Habbo_Downloader.Compiler
 
                     // Process visualizations file
                     string[] visualizationFiles = Directory.GetFiles(binaryOutputPath, "*_visualization.bin", SearchOption.TopDirectoryOnly);
-                    VisualizationsMapper.VisualizationData visualizationData = null;
+                    List<Visualization> visualizations = null;
 
                     if (visualizationFiles.Length > 0)
                     {
@@ -115,7 +115,7 @@ namespace Habbo_Downloader.Compiler
 
                         string visualizationContent = await File.ReadAllTextAsync(visualizationFilePath);
                         XElement visualizationElement = XElement.Parse(visualizationContent);
-                        visualizationData = VisualizationsMapper.MapVisualizationsXml(visualizationElement);
+                        visualizations = VisualizationsMapper.MapVisualizationsXml(visualizationElement);
                     }
                     else
                     {
@@ -132,7 +132,7 @@ namespace Habbo_Downloader.Compiler
                         visualizationType = indexData.VisualizationType,
                         assets = assetData,
                         logic = logicData,
-                        visualizations = visualizationData
+                        visualizations = visualizations
                     };
 
                     // Generate {name}.json
