@@ -33,6 +33,11 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] // Exclude if empty
         public Dictionary<int, Animation> Animations { get; set; } = new();
 
+        [JsonPropertyOrder(6)]
+        [JsonPropertyName("colors")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] // Exclude if empty
+        public Dictionary<int, Color> Colors { get; set; } = new();
+
         public Visualization(XElement xml)
         {
             Size = int.TryParse(xml.Attribute("size")?.Value, out int size) ? size : 0;
@@ -42,6 +47,12 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
             Layers = ParseLayers(xml.Element("layers"));
             Directions = ParseDirections(xml.Element("directions"));
             Animations = ParseAnimations(xml.Element("animations"));
+            Colors = ParseColors(xml.Element("colors"));
+
+            if (Animations != null && Animations.Count == 0)
+            {
+                Animations = null;
+            }
         }
 
         private Dictionary<int, Layer> ParseLayers(XElement layersElement)
@@ -85,10 +96,26 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
                 if (int.TryParse(animationElement.Attribute("id")?.Value, out int id))
                 {
                     var animation = new Animation(animationElement);
-                    animations[id] = animation;
+                    return animations.Count == 0 ? null : animations;
                 }
             }
             return animations;
+        }
+
+        private Dictionary<int, Color> ParseColors(XElement colorsElement)
+        {
+            var colors = new Dictionary<int, Color>();
+            if (colorsElement == null) return colors;
+
+            foreach (var colorElement in colorsElement.Elements("color"))
+            {
+                if (int.TryParse(colorElement.Attribute("id")?.Value, out int id))
+                {
+                    var color = new Color(colorElement);
+                    colors[id] = color;
+                }
+            }
+            return colors;
         }
     }
 

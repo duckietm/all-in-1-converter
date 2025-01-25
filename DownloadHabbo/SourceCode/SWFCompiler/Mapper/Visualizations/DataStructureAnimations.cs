@@ -32,8 +32,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
             }
             return animationLayers;
         }
-
-        public bool ShouldSerialize() => Layers.Count > 0;
     }
 
     public class AnimationLayer

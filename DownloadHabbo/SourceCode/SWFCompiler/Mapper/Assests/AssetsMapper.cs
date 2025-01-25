@@ -61,18 +61,18 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                 FlipV = assetElement.Attribute("flipV")?.Value == "1"
             };
 
-            if (imageSources != null)
+            if (asset.Source != null)
             {
-                if (asset.Source != null && imageSources.ContainsKey(asset.Source))
+                var sourceKey = asset.Source.ToLowerInvariant();
+                if (output.ContainsKey(sourceKey))
                 {
-                    asset.Source = imageSources[asset.Source];
-                }
-
-                if (imageSources.ContainsKey(name))
-                {
-                    asset.Source = imageSources[name];
+                    var sourceAsset = output[sourceKey];
+                    asset.X = asset.X == 0 ? sourceAsset.X : asset.X;
+                    asset.Y = asset.Y == 0 ? sourceAsset.Y : asset.Y;
                 }
             }
+
+            Console.WriteLine($"Mapped asset: {lowercaseName}, x: {asset.X}, y: {asset.Y}, source: {asset.Source}");
 
             output[lowercaseName] = asset;
         }
@@ -81,6 +81,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
         {
             [JsonPropertyOrder(0)]
             [JsonPropertyName("source")]
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
             public string? Source { get; set; }
 
             [JsonPropertyOrder(1)]
@@ -110,7 +111,48 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             };
 
+            options.Converters.Add(new AssetConverter());
+
             return JsonSerializer.Serialize(assets, options);
+        }
+    }
+
+    public class AssetConverter : JsonConverter<AssetsMapper.Asset>
+    {
+        public override AssetsMapper.Asset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Write(Utf8JsonWriter writer, AssetsMapper.Asset value, JsonSerializerOptions options)
+        {
+            writer.WriteStartObject();
+
+            if (value.Source != null)
+            {
+                writer.WritePropertyName("source");
+                writer.WriteStringValue(value.Source);
+            }
+
+            writer.WritePropertyName("x");
+            writer.WriteNumberValue(value.X);
+
+            writer.WritePropertyName("y");
+            writer.WriteNumberValue(value.Y);
+
+            if (value.FlipH)
+            {
+                writer.WritePropertyName("flipH");
+                writer.WriteBooleanValue(value.FlipH);
+            }
+
+            if (value.FlipV)
+            {
+                writer.WritePropertyName("flipV");
+                writer.WriteBooleanValue(value.FlipV);
+            }
+
+            writer.WriteEndObject();
         }
     }
 }

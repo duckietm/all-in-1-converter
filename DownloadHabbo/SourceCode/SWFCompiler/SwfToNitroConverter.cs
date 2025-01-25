@@ -137,11 +137,16 @@ namespace Habbo_Downloader.Compiler
 
                     // Generate {name}.json
                     string jsonOutputPath = Path.Combine(fileOutputDirectory, fileName + ".json");
-                    string jsonContent = JsonSerializer.Serialize(combinedJson, new JsonSerializerOptions
+
+                    var options = new JsonSerializerOptions
                     {
                         WriteIndented = true,
                         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
-                    });
+                    };
+
+                    options.Converters.Add(new AssetConverter());
+
+                    string jsonContent = JsonSerializer.Serialize(combinedJson, options);
                     await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
 
                     Console.WriteLine($"Generated {fileName}.json -> {jsonOutputPath}");
