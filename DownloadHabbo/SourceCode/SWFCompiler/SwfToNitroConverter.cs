@@ -1,6 +1,7 @@
 ﻿using Habbo_Downloader.SWFCompiler.Mapper.Assests;
 using Habbo_Downloader.SWFCompiler.Mapper.Index;
 using Habbo_Downloader.SWFCompiler.Mapper.Logic;
+using Habbo_Downloader.SWFCompiler.Mapper.Visualizations;
 using Habbo_Downloader.Tools;
 
 using System.Text.Json;
@@ -103,6 +104,26 @@ namespace Habbo_Downloader.Compiler
                         Console.ResetColor();
                     }
 
+                    // Process visualizations file
+                    string[] visualizationFiles = Directory.GetFiles(binaryOutputPath, "*_visualization.bin", SearchOption.TopDirectoryOnly);
+                    VisualizationsMapper.VisualizationData visualizationData = null;
+
+                    if (visualizationFiles.Length > 0)
+                    {
+                        string visualizationFilePath = visualizationFiles[0];
+                        Console.WriteLine($"Using visualization file: {visualizationFilePath}");
+
+                        string visualizationContent = await File.ReadAllTextAsync(visualizationFilePath);
+                        XElement visualizationElement = XElement.Parse(visualizationContent);
+                        visualizationData = VisualizationsMapper.MapVisualizationsXml(visualizationElement);
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"No *_visualization.bin file found in {binaryOutputPath}. Continuing without visualization.");
+                        Console.ResetColor();
+                    }
+
                     // Combine data into JSON
                     var combinedJson = new
                     {
@@ -110,7 +131,8 @@ namespace Habbo_Downloader.Compiler
                         logicType = indexData.LogicType,
                         visualizationType = indexData.VisualizationType,
                         assets = assetData,
-                        logic = logicData
+                        logic = logicData,
+                        visualizations = visualizationData
                     };
 
                     // Generate {name}.json
