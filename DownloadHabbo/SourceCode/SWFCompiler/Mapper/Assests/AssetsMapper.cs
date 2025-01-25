@@ -79,19 +79,26 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
         public class Asset
         {
-            [JsonPropertyName("x")]
-            public int X { get; set; }
-
-            [JsonPropertyName("y")]
-            public int Y { get; set; }
-
+            [JsonPropertyOrder(0)]
             [JsonPropertyName("source")]
             public string? Source { get; set; }
 
-            [JsonIgnore]
+            [JsonPropertyOrder(1)]
+            [JsonPropertyName("x")]
+            public int X { get; set; }
+
+            [JsonPropertyOrder(2)]
+            [JsonPropertyName("y")]
+            public int Y { get; set; }
+
+            [JsonPropertyOrder(3)]
+            [JsonPropertyName("flipH")]
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public bool FlipH { get; set; }
 
-            [JsonIgnore]
+            [JsonPropertyOrder(4)]
+            [JsonPropertyName("flipV")]
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public bool FlipV { get; set; }
         }
 
