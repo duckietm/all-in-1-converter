@@ -30,12 +30,12 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
 
         [JsonPropertyOrder(5)]
         [JsonPropertyName("animations")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] // Exclude if empty
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public Dictionary<int, Animation> Animations { get; set; } = new();
 
         [JsonPropertyOrder(6)]
         [JsonPropertyName("colors")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] // Exclude if empty
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public Dictionary<int, Color> Colors { get; set; } = new();
 
         public Visualization(XElement xml)
@@ -64,8 +64,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
             {
                 if (int.TryParse(layerElement.Attribute("id")?.Value, out int id))
                 {
-                    var layer = new Layer(layerElement);
-                    layers[id] = layer;
+                    layers[id] = new Layer(layerElement);
                 }
             }
             return layers;
@@ -95,8 +94,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
             {
                 if (int.TryParse(animationElement.Attribute("id")?.Value, out int id))
                 {
-                    var animation = new Animation(animationElement);
-                    return animations.Count == 0 ? null : animations;
+                    animations[id] = new Animation(animationElement);
                 }
             }
             return animations;
@@ -111,8 +109,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
             {
                 if (int.TryParse(colorElement.Attribute("id")?.Value, out int id))
                 {
-                    var color = new Color(colorElement);
-                    colors[id] = color;
+                    colors[id] = new Color(colorElement);
                 }
             }
             return colors;

@@ -10,7 +10,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         public int Id { get; set; }
 
         [JsonPropertyName("layers")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] // Exclude if empty
         public Dictionary<int, ColorLayer> Layers { get; set; } = new();
 
         public Color(XElement xml)
@@ -40,16 +40,17 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         public int Id { get; set; }
 
         [JsonPropertyName("color")]
-        public int Color { get; set; }
+        public int Color { get; set; } // Changed to int
 
         public ColorLayer(XElement xml)
         {
             Id = int.TryParse(xml.Attribute("id")?.Value, out int id) ? id : 0;
 
+            // Parse the hexadecimal color string and convert it to a decimal integer
             string hexColor = xml.Attribute("color")?.Value;
             if (!string.IsNullOrEmpty(hexColor))
             {
-                Color = Convert.ToInt32(hexColor, 16);
+                Color = Convert.ToInt32(hexColor, 16); // Convert hex to decimal
             }
         }
     }

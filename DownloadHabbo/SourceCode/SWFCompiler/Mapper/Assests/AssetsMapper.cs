@@ -71,9 +71,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     asset.Y = asset.Y == 0 ? sourceAsset.Y : asset.Y;
                 }
             }
-
-            Console.WriteLine($"Mapped asset: {lowercaseName}, x: {asset.X}, y: {asset.Y}, source: {asset.Source}");
-
             output[lowercaseName] = asset;
         }
 

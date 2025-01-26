@@ -56,7 +56,6 @@ namespace Habbo_Downloader.Compiler
                     }
 
                     string indexFilePath = indexFiles[0];
-                    Console.WriteLine($"Using index file: {indexFilePath}");
 
                     var indexData = await IndexMapper.ParseIndexFileAsync(indexFilePath);
                     if (indexData == null)
@@ -91,8 +90,6 @@ namespace Habbo_Downloader.Compiler
                     if (logicFiles.Length > 0)
                     {
                         string logicFilePath = logicFiles[0];
-                        Console.WriteLine($"Using logic file: {logicFilePath}");
-
                         string logicContent = await File.ReadAllTextAsync(logicFilePath);
                         XElement logicElement = XElement.Parse(logicContent);
                         logicData = LogicMapper.MapLogicXml(logicElement);
@@ -111,8 +108,6 @@ namespace Habbo_Downloader.Compiler
                     if (visualizationFiles.Length > 0)
                     {
                         string visualizationFilePath = visualizationFiles[0];
-                        Console.WriteLine($"Using visualization file: {visualizationFilePath}");
-
                         string visualizationContent = await File.ReadAllTextAsync(visualizationFilePath);
                         XElement visualizationElement = XElement.Parse(visualizationContent);
                         visualizations = VisualizationsMapper.MapVisualizationsXml(visualizationElement);
@@ -124,7 +119,6 @@ namespace Habbo_Downloader.Compiler
                         Console.ResetColor();
                     }
 
-                    // Combine data into JSON
                     var combinedJson = new
                     {
                         name = indexData.Name,

@@ -5,7 +5,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
 {
     public static class VisualizationsMapper
     {
-        private static readonly HashSet<int> ExcludedSizes = new() { 32 }; // Exclude size 32
+        private static readonly HashSet<int> ExcludedSizes = new() { 32 };
 
         public static List<Visualization> MapVisualizationsXml(XElement root)
         {
@@ -13,16 +13,12 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
 
             var visualizations = new List<Visualization>();
 
-            var graphicsElements = root.Elements("graphics");
-            foreach (var graphicsElement in graphicsElements)
+            foreach (var graphicsElement in root.Elements("graphics"))
             {
-                var visualizationElements = graphicsElement.Elements("visualization");
-                foreach (var visualizationElement in visualizationElements)
+                foreach (var visualizationElement in graphicsElement.Elements("visualization"))
                 {
-                    // Parse visualization
                     var visualization = new Visualization(visualizationElement);
 
-                    // Include only if size is not 32
                     if (!ExcludedSizes.Contains(visualization.Size))
                     {
                         visualizations.Add(visualization);
