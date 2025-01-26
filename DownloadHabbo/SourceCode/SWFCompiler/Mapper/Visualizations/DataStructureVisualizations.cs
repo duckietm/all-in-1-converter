@@ -126,6 +126,18 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Z { get; set; }
 
+        [JsonPropertyName("x")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? X { get; set; }
+
+        [JsonPropertyName("y")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? Y { get; set; }
+
+        [JsonPropertyName("tag")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string Tag { get; set; }
+
         [JsonPropertyName("ignoreMouse")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public bool? IgnoreMouse { get; set; }
@@ -134,6 +146,9 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         {
             Ink = xml.Attribute("ink")?.Value;
             Z = int.TryParse(xml.Attribute("z")?.Value, out int z) ? z : (int?)null;
+            X = int.TryParse(xml.Attribute("x")?.Value, out int x) ? x : (int?)null;
+            Y = int.TryParse(xml.Attribute("y")?.Value, out int y) ? y : (int?)null;
+            Tag = xml.Attribute("tag")?.Value;
             IgnoreMouse = xml.Attribute("ignoreMouse")?.Value == "1" ? true : (bool?)null;
         }
     }

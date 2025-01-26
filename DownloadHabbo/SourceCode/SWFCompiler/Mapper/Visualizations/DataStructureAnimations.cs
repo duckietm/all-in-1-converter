@@ -10,6 +10,22 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         [JsonIgnore]
         public int Id { get; set; }
 
+        [JsonPropertyName("transitionTo")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? TransitionTo { get; set; }
+
+        [JsonPropertyName("transitionFrom")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? TransitionFrom { get; set; }
+
+        [JsonPropertyName("immediateChangeFrom")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public string ImmediateChangeFrom { get; set; }
+
+        [JsonPropertyName("randomStart")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool? RandomStart { get; set; }
+
         [JsonPropertyName("layers")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public Dictionary<int, AnimationLayer> Layers { get; set; } = new();
@@ -17,6 +33,10 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         public Animation(XElement xml)
         {
             Id = int.TryParse(xml.Attribute("id")?.Value, out int id) ? id : 0;
+            TransitionTo = int.TryParse(xml.Attribute("transitionTo")?.Value, out int transitionTo) ? transitionTo : (int?)null;
+            TransitionFrom = int.TryParse(xml.Attribute("transitionFrom")?.Value, out int transitionFrom) ? transitionFrom : (int?)null;
+            ImmediateChangeFrom = xml.Attribute("immediateChangeFrom")?.Value;
+            RandomStart = xml.Attribute("randomStart")?.Value == "1" ? true : (bool?)null;
             Layers = ParseAnimationLayers(xml);
         }
 
@@ -36,12 +56,27 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
 
     public class AnimationLayer
     {
+        [JsonPropertyName("loopCount")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? LoopCount { get; set; }
+
+        [JsonPropertyName("frameRepeat")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? FrameRepeat { get; set; }
+
+        [JsonPropertyName("random")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? Random { get; set; }
+
         [JsonPropertyName("frameSequences")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public Dictionary<int, FrameSequence> FrameSequences { get; set; } = new();
 
         public AnimationLayer(XElement xml)
         {
+            LoopCount = int.TryParse(xml.Attribute("loopCount")?.Value, out int loopCount) ? loopCount : (int?)null;
+            FrameRepeat = int.TryParse(xml.Attribute("frameRepeat")?.Value, out int frameRepeat) ? frameRepeat : (int?)null;
+            Random = int.TryParse(xml.Attribute("random")?.Value, out int random) ? random : (int?)null;
             FrameSequences = ParseFrameSequences(xml);
 
             if (FrameSequences.Count == 0)
