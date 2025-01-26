@@ -122,6 +122,9 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string Ink { get; set; }
 
+        [JsonPropertyName("alpha")]
+        public int? Alpha { get; set; } // Always included, even if 0
+
         [JsonPropertyName("z")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public int? Z { get; set; }
@@ -145,6 +148,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         public Layer(XElement xml)
         {
             Ink = xml.Attribute("ink")?.Value;
+            Alpha = int.TryParse(xml.Attribute("alpha")?.Value, out int alpha) ? alpha : null;
             Z = int.TryParse(xml.Attribute("z")?.Value, out int z) ? z : (int?)null;
             X = int.TryParse(xml.Attribute("x")?.Value, out int x) ? x : (int?)null;
             Y = int.TryParse(xml.Attribute("y")?.Value, out int y) ? y : (int?)null;
