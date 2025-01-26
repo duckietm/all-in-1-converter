@@ -2,8 +2,10 @@
 using Habbo_Downloader.SWFCompiler.Mapper.Index;
 using Habbo_Downloader.SWFCompiler.Mapper.Logic;
 using Habbo_Downloader.SWFCompiler.Mapper.Visualizations;
+using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
 using Habbo_Downloader.Tools;
 
+using System.Drawing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
@@ -119,6 +121,23 @@ namespace Habbo_Downloader.Compiler
                         Console.ResetColor();
                     }
 
+                    var imageFiles = Directory.GetFiles(imageOutputPath, "*.png", SearchOption.TopDirectoryOnly);
+                    var images = new Dictionary<string, Bitmap>();
+                    foreach (var imageFile in imageFiles)
+                    {
+                        string imageName = Path.GetFileNameWithoutExtension(imageFile);
+                        images[imageName] = new Bitmap(imageFile);
+                    }
+
+                    var (spriteSheetPath, spriteSheetData) = SpriteSheetMapper.GenerateSpriteSheet(images, fileOutputDirectory, fileName);
+
+                    if (spriteSheetPath == null || spriteSheetData == null)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"No images found to generate spritesheet for {fileName}. Skipping spritesheet generation.");
+                        Console.ResetColor();
+                    }
+
                     var combinedJson = new
                     {
                         name = indexData.Name,
@@ -126,7 +145,8 @@ namespace Habbo_Downloader.Compiler
                         visualizationType = indexData.VisualizationType,
                         assets = assetData,
                         logic = logicData,
-                        visualizations = visualizations
+                        visualizations = visualizations,
+                        spriteSheet = spriteSheetData
                     };
 
                     // Generate {name}.json
