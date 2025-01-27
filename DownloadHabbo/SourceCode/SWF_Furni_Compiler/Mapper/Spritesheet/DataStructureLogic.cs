@@ -77,22 +77,16 @@ namespace Habbo_Downloader.SWFCompiler.Mapper
     {
         public List<SwfTag> SymbolTags()
         {
-            // Implement logic to extract symbol tags from the SWF file
-            // For now, return a placeholder list
             return new List<SwfTag>();
         }
 
         public List<ImageTag> ImageTags()
         {
-            // Implement logic to extract image tags from the SWF file
-            // For now, return a placeholder list
             return new List<ImageTag>();
         }
 
         public string GetDocumentClass()
         {
-            // Implement logic to get the document class from the SWF file
-            // For now, return a placeholder string
             return "DocumentClass";
         }
     }
@@ -114,7 +108,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper
                 documentClass = ConvertToSnakeCase(documentClass);
             }
 
-            // Collect names and tags from symbol tags
             foreach (var tag in tagList)
             {
                 names.AddRange(tag.Names);
@@ -124,7 +117,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper
             var imageBundle = new ImageBundle();
             var imageTags = habboAssetSWF.ImageTags();
 
-            // Process image tags
             foreach (var imageTag in imageTags)
             {
                 if (tags.Contains(imageTag.CharacterId))
@@ -174,9 +166,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper
 
         private static async Task<SpriteSheetData> PackImages(string documentClass, ImageBundle imageBundle, bool convertCase)
         {
-            // Implement the logic to pack images into a sprite sheet
-            // This will depend on your specific requirements and libraries
-            // For now, return a placeholder SpriteSheetData object
             return new SpriteSheetData
             {
                 Frames = new Dictionary<string, FrameData>(),

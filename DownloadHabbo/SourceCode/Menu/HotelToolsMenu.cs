@@ -21,7 +21,7 @@ namespace ConsoleApplication
                 Console.WriteLine("-> Generate SQL                                                              ");
                 Console.WriteLine("-> Decompile NitroFiles                                                      ");
                 Console.WriteLine("-> Compile NitroFiles                                                        ");
-                Console.WriteLine("-> Convert SWF to Nitro                                                      ");
+                Console.WriteLine("-> SWFFurnitoNitro                                                           ");
                 Console.WriteLine("                                                                             ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                      ");
                 Console.ResetColor();
@@ -90,9 +90,9 @@ namespace ConsoleApplication
                         await NitroFurniCompile.Compile();
                         break;
 
-                    case "swftonitro":
+                    case "swffurnitonitro":
                         Console.WriteLine("DEBUG: Converting SWF to Nitro...");
-                        await SwfToNitroConverter.ConvertSwfFilesAsync();
+                        await SWF_Furni_To_Nitro.ConvertSwfFilesAsync();
                         break;
 
                     default:

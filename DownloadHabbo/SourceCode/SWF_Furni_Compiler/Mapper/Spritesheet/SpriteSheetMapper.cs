@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 {
@@ -90,12 +92,10 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
             public float Y { get; set; } = 0.5f; // Default pivot (center)
         }
 
-        // Custom JSON converter for RectData
         public class RectDataConverter : JsonConverter<RectData>
         {
             public override RectData Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                // Implement deserialization logic if needed
                 throw new NotImplementedException();
             }
 
@@ -122,6 +122,11 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
             }
         }
 
+        private static string RemoveNumericPrefix(string name)
+        {
+            return Regex.Replace(name, @"^\d+_", "");
+        }
+
         public static (string ImagePath, SpriteSheetData SpriteData) GenerateSpriteSheet(
             Dictionary<string, Bitmap> images,
             string outputDirectory,
@@ -132,20 +137,16 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
         {
             if (images == null || images.Count == 0) return (null, null);
 
-            // Calculate the number of images per row
             int imagesPerRow = (int)Math.Ceiling((double)images.Count / numRows);
 
-            // Calculate the maximum width and height for each row
             int maxRowWidth = 0;
             int maxRowHeight = 0;
 
-            // Group images into rows
             var imageGroups = images.Values
                 .Select((image, index) => new { Image = image, Index = index })
                 .GroupBy(x => x.Index / imagesPerRow)
                 .ToList();
 
-            // Calculate the total width and height of the sprite sheet
             foreach (var group in imageGroups)
             {
                 int rowWidth = group.Sum(image => image.Image.Width);
@@ -158,7 +159,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
             int totalWidth = maxRowWidth;
             int totalHeight = maxRowHeight * numRows;
 
-            // Check if the sprite sheet exceeds the maximum dimensions
             if (totalWidth > maxWidth || totalHeight > maxHeight)
             {
                 throw new InvalidOperationException(
@@ -194,10 +194,10 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                     var image = imageItem.Image;
                     var key = images.Keys.ElementAt(imageIndex);
 
-                    // Draw the image on the sprite sheet
+                    var cleanedKey = RemoveNumericPrefix(key);
+
                     graphics.DrawImage(image, new Point(currentX, currentY));
 
-                    // Update the frame data for the sprite sheet
                     var frameData = new FrameData
                     {
                         Frame = new RectData
@@ -228,19 +228,15 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                         }
                     };
 
-                    spriteSheetData.Frames[key] = frameData;
+                    spriteSheetData.Frames[cleanedKey] = frameData;
 
-                    // Update the current position
                     currentX += image.Width;
                     rowHeight = Math.Max(rowHeight, image.Height);
                     imageIndex++;
                 }
-
-                // Move to the next row
                 currentY += rowHeight;
             }
 
-            // Save the sprite sheet
             string imagePath = Path.Combine(outputDirectory, $"{name}.png");
             spriteSheet.Save(imagePath, ImageFormat.Png);
 
