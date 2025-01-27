@@ -61,18 +61,20 @@ public class NitroBundle
 
     private static byte[] Inflate(byte[] data)
     {
-        if (data.Length < 2 || (data[0] != 0x78 && data[1] != 0x9C))
+        try
         {
-            throw new InvalidDataException("Invalid ZLIB header or unsupported compression method.");
+            using var inputStream = new MemoryStream(data);
+            using var outputStream = new MemoryStream();
+            using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
+            {
+                gzipStream.CopyTo(outputStream);
+            }
+            return outputStream.ToArray();
         }
-
-        using var inputStream = new MemoryStream(data, 2, data.Length - 2);
-        using var outputStream = new MemoryStream();
-        using (var deflateStream = new DeflateStream(inputStream, CompressionMode.Decompress))
+        catch (Exception ex)
         {
-            deflateStream.CopyTo(outputStream);
+            throw new InvalidDataException($"Decompression failed: {ex.Message}");
         }
-        return outputStream.ToArray();
     }
 
     public object JsonFile => _jsonFile;
