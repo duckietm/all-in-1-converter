@@ -100,7 +100,8 @@
                 "./Merge/Original_Furnidata", "./merge/Import_Furnidata", "./merge/Merged_Furnidata",
                 "./Merge/Original_Productdata", "./Merge/Import_Productdata", "./Merge/Merged_Productdata",
                 "./Merge/Original_ClothesData", "./Merge/Import_ClothesData", "./Merge/Merged_ClothesData",
-                "./Generate/Furnidata", "./Generate/Furniture", "./Generate/Output_SQL"
+                "./Generate/Furnidata", "./Generate/Furniture", "./Generate/Output_SQL",
+                "./SWFCompiler", "./SWFCompiler/nitro", "./SWFCompiler/import", "./SWFCompiler/import/furniture"
             };
 
             try
