@@ -3,6 +3,7 @@ using Habbo_Downloader.SWFCompiler.Mapper.Index;
 using Habbo_Downloader.SWFCompiler.Mapper.Logic;
 using Habbo_Downloader.SWFCompiler.Mapper.Visualizations;
 using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
+using Habbo_Downloader.SWFCompiler.Mapper;
 using Habbo_Downloader.Tools;
 
 using System.Drawing;
@@ -121,49 +122,104 @@ namespace Habbo_Downloader.Compiler
                         Console.ResetColor();
                     }
 
-                    var imageFiles = Directory.GetFiles(imageOutputPath, "*.png", SearchOption.TopDirectoryOnly);
+                    var imageFiles = Directory.GetFiles(imageOutputPath, "*.*", SearchOption.TopDirectoryOnly);
                     var images = new Dictionary<string, Bitmap>();
+
                     foreach (var imageFile in imageFiles)
                     {
                         string imageName = Path.GetFileNameWithoutExtension(imageFile);
+                        string format = ImageHeaderRecognizer.RecognizeImageHeader(imageFile);
+                        if (format != "png")
+                        {
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"Skipping unsupported image format: {imageFile}");
+                            Console.ResetColor();
+                            continue;
+                        }
+
+                        if (imageName.StartsWith("sh_") || imageName.Contains("_32_"))
+                        {
+                            continue;
+                        }
+
                         images[imageName] = new Bitmap(imageFile);
                     }
 
-                    var (spriteSheetPath, spriteSheetData) = SpriteSheetMapper.GenerateSpriteSheet(images, fileOutputDirectory, fileName);
-
-                    if (spriteSheetPath == null || spriteSheetData == null)
+                    try
                     {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"No images found to generate spritesheet for {fileName}. Skipping spritesheet generation.");
+                        // Generate sprite sheet
+                        var (spriteSheetPath, spriteSheetData) = SpriteSheetMapper.GenerateSpriteSheet(
+                            images,
+                            fileOutputDirectory,
+                            fileName,
+                            numRows: 10,
+                            maxWidth: 10240,
+                            maxHeight: 7000
+                        );
+
+                        if (spriteSheetPath == null || spriteSheetData == null)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"No images found to generate spritesheet for {fileName}. Skipping spritesheet generation.");
+                            Console.ResetColor();
+                            continue;
+                        }
+
+                        var spriteBundle = new SpriteBundle
+                        {
+                            Spritesheet = spriteSheetData,
+                            ImageData = new ImageData
+                            {
+                                Name = $"{fileName}.png",
+                                Buffer = await File.ReadAllBytesAsync(spriteSheetPath)
+                            }
+                        };
+
+                        spriteBundle.Spritesheet.Meta = new SpriteSheetMapper.MetaData
+                        {
+                            Image = spriteBundle.ImageData.Name,
+                            Format = "RGBA8888", // Add format
+                            Size = spriteSheetData.Meta.Size,
+                            Scale = 1.0f // Add scale
+                        };
+
+                        // Generate {name}.json
+                        string jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
+
+                        var options = new JsonSerializerOptions
+                        {
+                            WriteIndented = true,
+                            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
+                        };
+
+                        // Add the custom RectDataConverter
+                        options.Converters.Add(new SpriteSheetMapper.RectDataConverter());
+
+                        // Add other converters if needed
+                        options.Converters.Add(new AssetConverter());
+
+                        var combinedJson = new
+                        {
+                            name = indexData.Name,
+                            logicType = indexData.LogicType,
+                            visualizationType = indexData.VisualizationType,
+                            assets = assetData,
+                            logic = logicData,
+                            visualizations = visualizations,
+                            spritesheet = spriteBundle.Spritesheet
+                        };
+
+                        string jsonContent = JsonSerializer.Serialize(combinedJson, options);
+                        await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
+
+                        Console.WriteLine($"Generated {fileName}.json -> {jsonOutputPath}");
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Error generating sprite sheet for {fileName}: {ex.Message}");
                         Console.ResetColor();
                     }
-
-                    var combinedJson = new
-                    {
-                        name = indexData.Name,
-                        logicType = indexData.LogicType,
-                        visualizationType = indexData.VisualizationType,
-                        assets = assetData,
-                        logic = logicData,
-                        visualizations = visualizations,
-                        spriteSheet = spriteSheetData
-                    };
-
-                    // Generate {name}.json
-                    string jsonOutputPath = Path.Combine(fileOutputDirectory, fileName + ".json");
-
-                    var options = new JsonSerializerOptions
-                    {
-                        WriteIndented = true,
-                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
-                    };
-
-                    options.Converters.Add(new AssetConverter());
-
-                    string jsonContent = JsonSerializer.Serialize(combinedJson, options);
-                    await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
-
-                    Console.WriteLine($"Generated {fileName}.json -> {jsonOutputPath}");
                 }
 
                 Console.WriteLine("All SWF files have been converted successfully.");
@@ -177,6 +233,21 @@ namespace Habbo_Downloader.Compiler
             {
                 Console.ResetColor();
             }
+        }
+
+
+        // SpriteBundle class
+        public class SpriteBundle
+        {
+            public SpriteSheetMapper.SpriteSheetData Spritesheet { get; set; }
+            public ImageData ImageData { get; set; }
+        }
+
+        // ImageData class
+        public class ImageData
+        {
+            public string Name { get; set; }
+            public byte[] Buffer { get; set; }
         }
     }
 }
