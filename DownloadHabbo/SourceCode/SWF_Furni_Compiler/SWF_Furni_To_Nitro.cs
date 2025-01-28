@@ -231,7 +231,8 @@ namespace Habbo_Downloader.Compiler
                         var options = new JsonSerializerOptions
                         {
                             WriteIndented = true,
-                            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
+                            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+                            NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals // Add this line
                         };
 
                         options.Converters.Add(new SpriteSheetMapper.RectDataConverter());
@@ -250,9 +251,6 @@ namespace Habbo_Downloader.Compiler
 
                         string jsonContent = JsonSerializer.Serialize(combinedJson, options);
                         await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
-
-                        // Bundle the files into a .nitro file
-                        await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory);
                         nitroFilesGenerated++;
                     }
                     catch (InvalidOperationException ex)
