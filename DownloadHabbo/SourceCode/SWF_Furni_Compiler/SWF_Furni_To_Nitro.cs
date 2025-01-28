@@ -251,6 +251,7 @@ namespace Habbo_Downloader.Compiler
 
                         string jsonContent = JsonSerializer.Serialize(combinedJson, options);
                         await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
+                        await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory);
                         nitroFilesGenerated++;
                     }
                     catch (InvalidOperationException ex)
