@@ -128,119 +128,144 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
         }
 
         public static (string ImagePath, SpriteSheetData SpriteData) GenerateSpriteSheet(
-            Dictionary<string, Bitmap> images,
-            string outputDirectory,
-            string name,
-            int numRows = 10,
-            int maxWidth = 10240,
-            int maxHeight = 7000)
+    Dictionary<string, Bitmap> images,
+    string outputDirectory,
+    string name,
+    int maxRowWidth = 1024,
+    int maxSheetHeight = 7000)
         {
             if (images == null || images.Count == 0) return (null, null);
-
-            int imagesPerRow = (int)Math.Ceiling((double)images.Count / numRows);
-
-            int maxRowWidth = 0;
-            int maxRowHeight = 0;
-
-            var imageGroups = images.Values
-                .Select((image, index) => new { Image = image, Index = index })
-                .GroupBy(x => x.Index / imagesPerRow)
-                .ToList();
-
-            foreach (var group in imageGroups)
-            {
-                int rowWidth = group.Sum(image => image.Image.Width);
-                int rowHeight = group.Max(image => image.Image.Height);
-
-                if (rowWidth > maxRowWidth) maxRowWidth = rowWidth;
-                if (rowHeight > maxRowHeight) maxRowHeight = rowHeight;
-            }
-
-            int totalWidth = maxRowWidth;
-            int totalHeight = maxRowHeight * numRows;
-
-            if (totalWidth > maxWidth || totalHeight > maxHeight)
-            {
-                throw new InvalidOperationException(
-                    $"Sprite sheet dimensions ({totalWidth}x{totalHeight}) exceed the maximum allowed dimensions ({maxWidth}x{maxHeight}). " +
-                    "Reduce the number of images or adjust the maximum dimensions."
-                );
-            }
-
-            // Create the sprite sheet
-            var spriteSheet = new Bitmap(totalWidth, totalHeight);
-            using var graphics = Graphics.FromImage(spriteSheet);
-            graphics.Clear(Color.Transparent);
 
             var spriteSheetData = new SpriteSheetData
             {
                 Meta = new MetaData
                 {
                     Image = $"{name}.png",
-                    Size = new SizeData { Width = totalWidth, Height = totalHeight }
+                    Size = new SizeData { Width = 0, Height = 0 } // Will be updated later
                 }
             };
 
             int currentY = 0;
-            int imageIndex = 0;
+            int totalWidth = 0;
+            int totalHeight = 0;
 
-            foreach (var group in imageGroups)
+            var imageList = images.ToList();
+            var spriteSheet = new Bitmap(maxRowWidth, maxSheetHeight);
+            using var graphics = Graphics.FromImage(spriteSheet);
+            graphics.Clear(Color.Transparent);
+
+            for (int i = 0; i < imageList.Count;)
             {
                 int currentX = 0;
                 int rowHeight = 0;
 
-                foreach (var imageItem in group)
+                // Check if the current image is wider than 800 pixels
+                if (imageList[i].Value.Width > 800)
                 {
-                    var image = imageItem.Image;
-                    var key = images.Keys.ElementAt(imageIndex);
+                    // Place the image on its own row
+                    var image = imageList[i].Value;
+                    var key = imageList[i].Key;
 
-                    var cleanedKey = RemoveNumericPrefix(key);
+                    // Ensure the image fits within the maximum row width
+                    if (image.Width > maxRowWidth)
+                    {
+                        throw new InvalidOperationException(
+                            $"Image '{key}' width ({image.Width}) exceeds the maximum row width ({maxRowWidth})."
+                        );
+                    }
 
                     graphics.DrawImage(image, new Point(currentX, currentY));
 
-                    var frameData = new FrameData
-                    {
-                        Frame = new RectData
-                        {
-                            X = currentX,
-                            Y = currentY,
-                            Width = image.Width,
-                            Height = image.Height
-                        },
-                        Rotated = false,
-                        Trimmed = false,
-                        SpriteSourceSize = new RectData
-                        {
-                            X = 0,
-                            Y = 0,
-                            Width = image.Width,
-                            Height = image.Height
-                        },
-                        SourceSize = new SizeData
-                        {
-                            Width = image.Width,
-                            Height = image.Height
-                        },
-                        Pivot = new PivotData
-                        {
-                            X = 0.5f,
-                            Y = 0.5f
-                        }
-                    };
+                    var frameData = CreateFrameData(currentX, currentY, image);
+                    spriteSheetData.Frames[RemoveNumericPrefix(key)] = frameData;
 
-                    spriteSheetData.Frames[cleanedKey] = frameData;
+                    rowHeight = image.Height;
+                    currentY += rowHeight;
+                    totalWidth = Math.Max(totalWidth, image.Width);
+                    totalHeight += rowHeight;
 
-                    currentX += image.Width;
-                    rowHeight = Math.Max(rowHeight, image.Height);
-                    imageIndex++;
+                    i++; // Move to the next image
                 }
-                currentY += rowHeight;
+                else
+                {
+                    // Place smaller images on the same row until the row width exceeds maxRowWidth
+                    while (i < imageList.Count && currentX + imageList[i].Value.Width <= maxRowWidth)
+                    {
+                        var image = imageList[i].Value;
+                        var key = imageList[i].Key;
+
+                        graphics.DrawImage(image, new Point(currentX, currentY));
+
+                        var frameData = CreateFrameData(currentX, currentY, image);
+                        spriteSheetData.Frames[RemoveNumericPrefix(key)] = frameData;
+
+                        currentX += image.Width;
+                        rowHeight = Math.Max(rowHeight, image.Height);
+                        i++; // Move to the next image
+                    }
+
+                    currentY += rowHeight;
+                    totalWidth = Math.Max(totalWidth, currentX);
+                    totalHeight += rowHeight;
+                }
+
+                // Check if the total height exceeds the maximum allowed height
+                if (totalHeight > maxSheetHeight)
+                {
+                    throw new InvalidOperationException(
+                        $"Sprite sheet height ({totalHeight}) exceeds the maximum allowed height ({maxSheetHeight}). " +
+                        "Reduce the number of images or adjust the maximum dimensions."
+                    );
+                }
+            }
+
+            // Update the sprite sheet dimensions
+            spriteSheetData.Meta.Size = new SizeData { Width = totalWidth, Height = totalHeight };
+
+            // Crop the sprite sheet to the actual dimensions
+            var croppedSpriteSheet = new Bitmap(totalWidth, totalHeight);
+            using (var croppedGraphics = Graphics.FromImage(croppedSpriteSheet))
+            {
+                croppedGraphics.DrawImage(spriteSheet, new Rectangle(0, 0, totalWidth, totalHeight));
             }
 
             string imagePath = Path.Combine(outputDirectory, $"{name}.png");
-            spriteSheet.Save(imagePath, ImageFormat.Png);
+            croppedSpriteSheet.Save(imagePath, ImageFormat.Png);
 
             return (imagePath, spriteSheetData);
+        }
+
+        private static FrameData CreateFrameData(int x, int y, Bitmap image)
+        {
+            return new FrameData
+            {
+                Frame = new RectData
+                {
+                    X = x,
+                    Y = y,
+                    Width = image.Width,
+                    Height = image.Height
+                },
+                Rotated = false,
+                Trimmed = false,
+                SpriteSourceSize = new RectData
+                {
+                    X = 0,
+                    Y = 0,
+                    Width = image.Width,
+                    Height = image.Height
+                },
+                SourceSize = new SizeData
+                {
+                    Width = image.Width,
+                    Height = image.Height
+                },
+                Pivot = new PivotData
+                {
+                    X = 0.5f,
+                    Y = 0.5f
+                }
+            };
         }
     }
 }

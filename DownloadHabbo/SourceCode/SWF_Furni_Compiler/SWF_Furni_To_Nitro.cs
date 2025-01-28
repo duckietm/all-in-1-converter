@@ -62,10 +62,8 @@ namespace Habbo_Downloader.Compiler
                     string fileName = Path.GetFileNameWithoutExtension(swfFile);
                     string nitroFilePath = Path.Combine(OutputDirectory, $"{fileName}.nitro");
 
-                    // Skip if .nitro file already exists
                     if (File.Exists(nitroFilePath))
                     {
-                        Console.WriteLine($"Skipping {fileName}.nitro as it is already processed.");
                         continue;
                     }
 
@@ -194,10 +192,9 @@ namespace Habbo_Downloader.Compiler
                             images,
                             fileOutputDirectory,
                             fileName,
-                            numRows: 10,
-                            maxWidth: 10240,
-                            maxHeight: 7000
-                        );
+                            maxRowWidth: 3072,
+                            maxSheetHeight: 7000
+                            );
 
                         if (spriteSheetPath == null || spriteSheetData == null)
                         {
