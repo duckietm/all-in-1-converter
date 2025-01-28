@@ -79,7 +79,16 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
             {
                 if (int.TryParse(directionElement.Attribute("id")?.Value, out int id))
                 {
-                    directions[id] = new object();
+                    var layers = new Dictionary<int, Layer>();
+                    foreach (var layerElement in directionElement.Elements("layer"))
+                    {
+                        if (int.TryParse(layerElement.Attribute("id")?.Value, out int layerId))
+                        {
+                            layers[layerId] = new Layer(layerElement);
+                        }
+                    }
+
+                    directions[id] = new { layers = layers };
                 }
             }
             return directions;

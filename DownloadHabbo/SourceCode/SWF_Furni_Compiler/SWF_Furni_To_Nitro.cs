@@ -123,7 +123,6 @@ namespace Habbo_Downloader.Compiler
                         Console.ResetColor();
                     }
 
-                    // Process logic file
                     string[] logicFiles = Directory.GetFiles(
                         Path.Combine(binaryOutputPath, "binaryData"),
                         "*_logic.bin",
