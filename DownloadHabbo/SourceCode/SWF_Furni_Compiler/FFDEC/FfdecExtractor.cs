@@ -6,15 +6,9 @@ namespace Habbo_Downloader.Tools
     {
         private const string ToolsDirectory = @"Tools\ffdec\ffdec.jar";
 
-        public static async Task ExtractBinaryDataAsync(string swfFilePath, string outputDirectory)
+        public static async Task ExtractSWFAsync(string swfFilePath, string outputDirectory)
         {
-            string command = $"-export binaryData \"{outputDirectory}\" \"{swfFilePath}\"";
-            await RunFfdecCommandAsync(command);
-        }
-
-        public static async Task ExtractImageAsync(string swfFilePath, string outputDirectory)
-        {
-            string command = $"-export image \"{outputDirectory}\" \"{swfFilePath}\"";
+            string command = $"-export binaryData,image \"{outputDirectory}\" \"{swfFilePath}\"";
             await RunFfdecCommandAsync(command);
         }
 

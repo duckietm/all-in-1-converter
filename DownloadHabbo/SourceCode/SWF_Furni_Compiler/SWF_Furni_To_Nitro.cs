@@ -67,19 +67,23 @@ namespace Habbo_Downloader.Compiler
                         continue;
                     }
 
+                    // Create the output directory for this SWF file
                     string fileOutputDirectory = Path.Combine(OutputDirectory, fileName);
-
                     Directory.CreateDirectory(fileOutputDirectory);
 
-                    string binaryOutputPath = Path.Combine(fileOutputDirectory, fileName + "_binaryData");
-                    string imageOutputPath = Path.Combine(fileOutputDirectory, fileName + "_images");
+                    // Define the binary and image output paths
+                    string binaryOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}_binaryData");
+                    string imageOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}_binaryData");
 
                     Console.WriteLine($"Decompiling SWF: {fileName}...");
-                    await FfdecExtractor.ExtractBinaryDataAsync(swfFile, binaryOutputPath);
-                    await FfdecExtractor.ExtractImageAsync(swfFile, imageOutputPath);
+                    await FfdecExtractor.ExtractSWFAsync(swfFile, binaryOutputPath);
 
                     // Process index file
-                    string[] indexFiles = Directory.GetFiles(binaryOutputPath, "*_index.bin", SearchOption.TopDirectoryOnly);
+                    string[] indexFiles = Directory.GetFiles(
+                        Path.Combine(binaryOutputPath, "binaryData"),
+                        "*_index.bin",
+                        SearchOption.TopDirectoryOnly
+                     );
                     if (indexFiles.Length == 0)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
@@ -100,7 +104,11 @@ namespace Habbo_Downloader.Compiler
                     }
 
                     // Process assets file
-                    string[] assetsFiles = Directory.GetFiles(binaryOutputPath, "*_assets.bin", SearchOption.TopDirectoryOnly);
+                    string[] assetsFiles = Directory.GetFiles(
+                        Path.Combine(binaryOutputPath, "binaryData"),
+                        "*_assets.bin",
+                        SearchOption.TopDirectoryOnly
+                     );
                     Dictionary<string, AssetsMapper.Asset> assetData = null;
 
                     if (assetsFiles.Length > 0)
@@ -116,7 +124,11 @@ namespace Habbo_Downloader.Compiler
                     }
 
                     // Process logic file
-                    string[] logicFiles = Directory.GetFiles(binaryOutputPath, "*_logic.bin", SearchOption.TopDirectoryOnly);
+                    string[] logicFiles = Directory.GetFiles(
+                        Path.Combine(binaryOutputPath, "binaryData"),
+                        "*_logic.bin",
+                        SearchOption.TopDirectoryOnly
+                     );
                     AssetLogicData logicData = null;
 
                     if (logicFiles.Length > 0)
@@ -133,8 +145,12 @@ namespace Habbo_Downloader.Compiler
                         Console.ResetColor();
                     }
 
-                    // Process visualizations file
-                    string[] visualizationFiles = Directory.GetFiles(binaryOutputPath, "*_visualization.bin", SearchOption.TopDirectoryOnly);
+                    // Process visualizations file                    
+                    string[] visualizationFiles = Directory.GetFiles(
+                        Path.Combine(binaryOutputPath, "binaryData"),
+                        "*_visualization.bin",
+                        SearchOption.TopDirectoryOnly
+                     );
                     List<Visualization> visualizations = null;
 
                     if (visualizationFiles.Length > 0)
@@ -151,7 +167,12 @@ namespace Habbo_Downloader.Compiler
                         Console.ResetColor();
                     }
 
-                    var imageFiles = Directory.GetFiles(imageOutputPath, "*.*", SearchOption.TopDirectoryOnly);
+                    var imageFiles = Directory.GetFiles(
+                        Path.Combine(imageOutputPath, "images"),
+                        "*.*",
+                        SearchOption.TopDirectoryOnly
+                     );
+
                     var images = new Dictionary<string, Bitmap>();
 
                     foreach (var imageFile in imageFiles)
@@ -271,6 +292,7 @@ namespace Habbo_Downloader.Compiler
                 Console.ResetColor();
             }
         }
+
         private static async Task BundleNitroFileAsync(string outputDirectory, string fileName, string nitroOutputDirectory)
         {
             var nitroBundler = new NitroBundler();
