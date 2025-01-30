@@ -9,6 +9,9 @@ using System.Drawing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
+using System.Text.RegularExpressions;
+using static Habbo_Downloader.Compiler.SWF_Furni_To_Nitro;
+using Habbo_Downloader.SWFCompiler.Mapper;
 
 namespace Habbo_Downloader.Compiler
 {
@@ -21,30 +24,16 @@ namespace Habbo_Downloader.Compiler
         {
             try
             {
-                // Prompt the user for input
                 Console.WriteLine("Do you want (H) Hof_Furni or (I) Imported furniture? (Default is H):");
                 string input = Console.ReadLine()?.Trim().ToUpper();
 
-                if (string.IsNullOrEmpty(input) || input == "H")
-                {
-                    ImportDirectory = @"hof_furni";
-                    Console.WriteLine("You selected Hof_Furni (default).");
-                }
-                else if (input == "I")
-                {
-                    ImportDirectory = @"SWFCompiler\import\furniture";
-                    Console.WriteLine("You selected Imported furniture.");
-                }
-                else
-                {
-                    ImportDirectory = @"hof_furni";
-                    Console.WriteLine("Invalid input. Defaulting to Hof_Furni.");
-                }
+                ImportDirectory = string.IsNullOrEmpty(input) || input == "H"
+                    ? @"hof_furni"
+                    : input == "I" ? @"SWFCompiler\import\furniture" : @"hof_furni";
 
                 Console.WriteLine($"DEBUG: Converting SWF to Nitro from source {ImportDirectory}");
 
                 Directory.CreateDirectory(OutputDirectory);
-
                 string[] swfFiles = Directory.GetFiles(ImportDirectory, "*.swf", SearchOption.TopDirectoryOnly);
 
                 if (swfFiles.Length == 0)
@@ -54,7 +43,6 @@ namespace Habbo_Downloader.Compiler
                 }
 
                 Console.WriteLine($"We have found {swfFiles.Length} SWF files.");
-
                 int nitroFilesGenerated = 0;
 
                 foreach (string swfFile in swfFiles)
@@ -62,74 +50,62 @@ namespace Habbo_Downloader.Compiler
                     string fileName = Path.GetFileNameWithoutExtension(swfFile);
                     string nitroFilePath = Path.Combine(OutputDirectory, $"{fileName}.nitro");
 
-                    if (File.Exists(nitroFilePath))
-                    {
-                        continue;
-                    }
+                    if (File.Exists(nitroFilePath)) continue;
 
-                    // Create the output directory for this SWF file
                     string fileOutputDirectory = Path.Combine(OutputDirectory, fileName);
                     Directory.CreateDirectory(fileOutputDirectory);
 
-                    // Define the binary and image output paths
                     string binaryOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}_binaryData");
-                    string imageOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}_binaryData");
 
                     Console.WriteLine($"Decompiling SWF: {fileName}...");
                     await FfdecExtractor.ExtractSWFAsync(swfFile, binaryOutputPath);
 
-                    // Process index file
-                    string[] indexFiles = Directory.GetFiles(
-                        Path.Combine(binaryOutputPath, "binaryData"),
-                        "*_index.bin",
-                        SearchOption.TopDirectoryOnly
-                     );
-                    if (indexFiles.Length == 0)
+                    if (!Directory.Exists(Path.Combine(binaryOutputPath, "binaryData")))
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"No *_index.bin file found in {binaryOutputPath}. Skipping this SWF file.");
+                        Console.WriteLine($"Error: Extraction failed for {fileName}. No binaryData folder found.");
                         Console.ResetColor();
                         continue;
                     }
 
-                    string indexFilePath = indexFiles[0];
+                    Console.WriteLine("✅ Extraction completed successfully.");
 
-                    var indexData = await IndexMapper.ParseIndexFileAsync(indexFilePath);
+                    string csvFilePath = Path.Combine(binaryOutputPath, "symbolClass", "symbols.csv");
+                    Dictionary<string, string> imageSources = await AssetsMapper.LoadImageSourcesFromCSV(csvFilePath);
+
+                    IndexData indexData = null;
+                    AssetLogicData logicData = null;
+                    List<Visualization> visualizations = null;
+                    SpriteBundle spriteBundle = null;
+                    Dictionary<string, AssetsMapper.Asset> assetData = null;
+
+                    string[] indexFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_index.bin", SearchOption.TopDirectoryOnly);
+                    if (indexFiles.Length > 0)
+                    {
+                        string indexFilePath = indexFiles[0];
+                        indexData = await IndexMapper.ParseIndexFileAsync(indexFilePath);
+                    }
+
                     if (indexData == null)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Failed to parse {indexFilePath}. Skipping...");
+                        Console.WriteLine($"Failed to parse index file for {fileName}. Skipping...");
                         Console.ResetColor();
                         continue;
                     }
 
-                    // Process assets file
-                    string[] assetsFiles = Directory.GetFiles(
-                        Path.Combine(binaryOutputPath, "binaryData"),
-                        "*_assets.bin",
-                        SearchOption.TopDirectoryOnly
-                     );
-                    Dictionary<string, AssetsMapper.Asset> assetData = null;
+                    string[] assetsFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_assets.bin", SearchOption.TopDirectoryOnly);
+                    string[] manifestFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_manifest.bin", SearchOption.TopDirectoryOnly);
 
-                    if (assetsFiles.Length > 0)
+                    if (assetsFiles.Length > 0 && manifestFiles.Length > 0)
                     {
                         string assetsFilePath = assetsFiles[0];
-                        assetData = await AssetsMapper.ParseAssetsFileAsync(assetsFilePath);
-                    }
-                    else
-                    {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"No *_assets.bin file found in {binaryOutputPath}. Continuing without assets.");
-                        Console.ResetColor();
+                        string manifestFilePath = manifestFiles[0];
+
+                        assetData = await AssetsMapper.ParseAssetsFileAsync(assetsFilePath, imageSources, manifestFilePath);
                     }
 
-                    string[] logicFiles = Directory.GetFiles(
-                        Path.Combine(binaryOutputPath, "binaryData"),
-                        "*_logic.bin",
-                        SearchOption.TopDirectoryOnly
-                     );
-                    AssetLogicData logicData = null;
-
+                    string[] logicFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_logic.bin", SearchOption.TopDirectoryOnly);
                     if (logicFiles.Length > 0)
                     {
                         string logicFilePath = logicFiles[0];
@@ -137,21 +113,8 @@ namespace Habbo_Downloader.Compiler
                         XElement logicElement = XElement.Parse(logicContent);
                         logicData = LogicMapper.MapLogicXml(logicElement);
                     }
-                    else
-                    {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"No *_logic.bin file found in {binaryOutputPath}. Continuing without logic.");
-                        Console.ResetColor();
-                    }
 
-                    // Process visualizations file                    
-                    string[] visualizationFiles = Directory.GetFiles(
-                        Path.Combine(binaryOutputPath, "binaryData"),
-                        "*_visualization.bin",
-                        SearchOption.TopDirectoryOnly
-                     );
-                    List<Visualization> visualizations = null;
-
+                    string[] visualizationFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_visualization.bin", SearchOption.TopDirectoryOnly);
                     if (visualizationFiles.Length > 0)
                     {
                         string visualizationFilePath = visualizationFiles[0];
@@ -159,72 +122,33 @@ namespace Habbo_Downloader.Compiler
                         XElement visualizationElement = XElement.Parse(visualizationContent);
                         visualizations = VisualizationsMapper.MapVisualizationsXml(visualizationElement);
                     }
-                    else
+
+                    string imageOutputPath = Path.Combine(binaryOutputPath, "images");
+                    var images = Directory.GetFiles(imageOutputPath, "*.png", SearchOption.TopDirectoryOnly)
+                        .Where(f => !Regex.IsMatch(Path.GetFileNameWithoutExtension(f), @"(_assets|_manifest|_index|_visualization|_logic)$", RegexOptions.IgnoreCase))
+                        .ToDictionary(f => Path.GetFileNameWithoutExtension(f), f => new Bitmap(f));
+
+                    if (images.Count == 0)
                     {
                         Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"No *_visualization.bin file found in {binaryOutputPath}. Continuing without visualization.");
+                        Console.WriteLine($"⚠️ WARNING: No valid images found to generate spritesheet for {fileName}. Skipping spritesheet generation.");
                         Console.ResetColor();
-                    }
-
-                    var imageFiles = Directory.GetFiles(
-                        Path.Combine(imageOutputPath, "images"),
-                        "*.*",
-                        SearchOption.TopDirectoryOnly
-                     );
-
-                    var images = new Dictionary<string, Bitmap>();
-
-                    foreach (var imageFile in imageFiles)
-                    {
-                        string imageName = Path.GetFileNameWithoutExtension(imageFile);
-                        string format = ImageHeaderRecognizer.RecognizeImageHeader(imageFile);
-                        if (format != "png")
-                        {
-                            Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"Skipping unsupported image format: {imageFile}");
-                            Console.ResetColor();
-                            continue;
-                        }
-
-                        if (imageName.StartsWith("sh_") || imageName.Contains("_32_"))
-                        {
-                            continue;
-                        }
-
-                        try
-                        {
-                            using (var bitmap = new Bitmap(imageFile))
-                            {
-                                images[imageName] = new Bitmap(bitmap);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine($"Error loading image {imageFile}: {ex.Message}");
-                            Console.ResetColor();
-                        }
+                        continue;
                     }
 
                     try
                     {
-                        var (spriteSheetPath, spriteSheetData) = SpriteSheetMapper.GenerateSpriteSheet(
-                            images,
-                            fileOutputDirectory,
-                            fileName,
-                            maxRowWidth: 3072,
-                            maxSheetHeight: 7000
-                            );
+                        var (spriteSheetPath, spriteSheetData) = SpriteSheetMapper.GenerateSpriteSheet(images, fileOutputDirectory, fileName);
 
                         if (spriteSheetPath == null || spriteSheetData == null)
                         {
                             Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"No images found to generate spritesheet for {fileName}. Skipping spritesheet generation.");
+                            Console.WriteLine($"⚠️ WARNING: Spritesheet generation skipped for {fileName}.");
                             Console.ResetColor();
                             continue;
                         }
 
-                        var spriteBundle = new SpriteBundle
+                        spriteBundle = new SpriteBundle
                         {
                             Spritesheet = spriteSheetData,
                             ImageData = new ImageData
@@ -233,50 +157,33 @@ namespace Habbo_Downloader.Compiler
                                 Buffer = await File.ReadAllBytesAsync(spriteSheetPath)
                             }
                         };
-
-                        spriteBundle.Spritesheet.Meta = new SpriteSheetMapper.MetaData
-                        {
-                            Image = spriteBundle.ImageData.Name,
-                            Format = "RGBA8888",
-                            Size = spriteSheetData.Meta.Size,
-                            Scale = 1.0f
-                        };
-
-                        // Generate {name}.json
-                        string jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
-
-                        var options = new JsonSerializerOptions
-                        {
-                            WriteIndented = true,
-                            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
-                            NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals // Add this line
-                        };
-
-                        options.Converters.Add(new SpriteSheetMapper.RectDataConverter());
-                        options.Converters.Add(new AssetConverter());
-
-                        var combinedJson = new
-                        {
-                            name = indexData.Name,
-                            logicType = indexData.LogicType,
-                            visualizationType = indexData.VisualizationType,
-                            assets = assetData,
-                            logic = logicData,
-                            visualizations = visualizations,
-                            spritesheet = spriteBundle.Spritesheet
-                        };
-
-                        string jsonContent = JsonSerializer.Serialize(combinedJson, options);
-                        await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
-                        await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory);
-                        nitroFilesGenerated++;
                     }
-                    catch (InvalidOperationException ex)
+                    catch (Exception ex)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Error generating sprite sheet for {fileName}: {ex.Message}");
+                        Console.WriteLine($"❌ ERROR: Spritesheet generation failed for {fileName}: {ex.Message}");
                         Console.ResetColor();
+                        continue;
                     }
+
+                    var combinedJson = new
+                    {
+                        name = indexData?.Name ?? "unknown",
+                        logicType = indexData?.LogicType ?? "default",
+                        visualizationType = indexData?.VisualizationType ?? "default",
+                        assets = assetData ?? new Dictionary<string, AssetsMapper.Asset>(),
+                        logic = logicData ?? new AssetLogicData(),
+                        visualizations = visualizations ?? new List<Visualization>(),
+                        spritesheet = spriteBundle?.Spritesheet ?? new SpriteSheetData()
+                    };
+
+                    string jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
+                    string jsonContent = JsonSerializer.Serialize(combinedJson, new JsonSerializerOptions { WriteIndented = true });
+
+                    await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
+                    await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory);
+
+                    nitroFilesGenerated++;
                 }
 
                 Console.WriteLine($"All SWF files have been converted. {nitroFilesGenerated} nitro files were generated.");
@@ -291,6 +198,40 @@ namespace Habbo_Downloader.Compiler
                 Console.ResetColor();
             }
         }
+
+        private static async Task<List<string>> ParseManifestFileAsync(string manifestFilePath)
+        {
+            if (!File.Exists(manifestFilePath))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"❌ ERROR: Manifest file not found: {manifestFilePath}");
+                Console.ResetColor();
+                return new List<string>();
+            }
+
+            try
+            {
+                string manifestContent = await File.ReadAllTextAsync(manifestFilePath);
+                XElement manifestElement = XElement.Parse(manifestContent);
+
+                var assetOrder = manifestElement
+                    .Descendants("asset")
+                    .Where(a => a.Attribute("mimeType")?.Value == "image/png")  // Extract only image assets
+                    .Select(a => a.Attribute("name")?.Value.ToLowerInvariant())
+                    .ToList();
+
+                Console.WriteLine("✅ Successfully parsed manifest order.");
+                return assetOrder;
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"❌ ERROR: Failed to parse manifest file: {ex.Message}");
+                Console.ResetColor();
+                return new List<string>();
+            }
+        }
+
 
         private static async Task BundleNitroFileAsync(string outputDirectory, string fileName, string nitroOutputDirectory)
         {
@@ -313,14 +254,12 @@ namespace Habbo_Downloader.Compiler
             // Write the nitro file
             await File.WriteAllBytesAsync(nitroFilePath, nitroData);
 
-            // Clean up the temporary directory
-            Directory.Delete(outputDirectory, recursive: true);
             Console.WriteLine($"Generated {fileName}.nitro -> {nitroFilePath}");
         }
 
         public class SpriteBundle
         {
-            public SpriteSheetMapper.SpriteSheetData Spritesheet { get; set; }
+            public SpriteSheetData Spritesheet { get; set; }
             public ImageData ImageData { get; set; }
         }
 
