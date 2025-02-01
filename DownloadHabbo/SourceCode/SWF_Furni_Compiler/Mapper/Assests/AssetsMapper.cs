@@ -5,46 +5,7 @@ using System.Xml.Linq;
 namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 {
     public static class AssetsMapper
-    {
-        public static async Task<Dictionary<string, string>> LoadImageSourcesFromCSV(string csvFilePath)
-        {
-            var imageSources = new Dictionary<string, string>();
-
-            try
-            {
-                if (!File.Exists(csvFilePath))
-                {
-                    Console.WriteLine($"❌ Error: CSV file not found: {csvFilePath}");
-                    return imageSources; // Return empty dictionary if missing
-                }
-
-                string[] lines = await File.ReadAllLinesAsync(csvFilePath);
-
-                Console.WriteLine("\n🔍 DEBUG: Parsing Symbols CSV for Image Sources...");
-
-                foreach (var line in lines)
-                {
-                    var parts = line.Split(';');
-                    if (parts.Length < 2) continue;
-
-                    string id = parts[0].Trim();
-                    string name = parts[1].Trim();
-
-                    if (!imageSources.ContainsKey(name))
-                    {
-                        imageSources[name] = id;
-                        Console.WriteLine($"✅ Mapped: ID {id} -> {name}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error reading CSV: {ex.Message}");
-            }
-
-            return imageSources;
-        }
-
+    {        
         public static async Task<Dictionary<string, Asset>> ParseAssetsFileAsync(
     string assetsFilePath, Dictionary<string, string> imageSources, string manifestFilePath)
         {

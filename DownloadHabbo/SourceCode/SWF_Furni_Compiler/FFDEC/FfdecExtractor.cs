@@ -15,21 +15,24 @@ namespace Habbo_Downloader.Tools
             // Ensure output directory is clean
             ClearOutputDirectory(outputDirectory);
 
-            // Extract SWF assets (images, binary data, and symbolClass)
-            string commandImages = $"-export image,binarydata,symbolClass \"{outputDirectory}\" \"{swfFilePath}\"";
-            await RunFfdecCommandAsync(commandImages);
+            // First command: extract assets, binary data, and symbolClass CSV.
+            string commandExport = $"-export image,binarydata,symbolClass \"{outputDirectory}\" \"{swfFilePath}\"";
+            await RunFfdecCommandAsync(commandExport);
+
+            // Second command: export the SWF structure as XML for debugging.
+            string debugXmlPath = Path.Combine(outputDirectory, "debug.xml");
+            string commandXml = $"-swf2xml \"{swfFilePath}\" \"{debugXmlPath}\"";
+            await RunFfdecCommandAsync(commandXml);
 
             // Remove unnecessary images (e.g., _32_ variants)
             RemoveUnwantedImages(outputDirectory, "_32_");
 
-            // Parse assets before rebuilding images
-            string csvFile = Path.Combine(outputDirectory, "symbolClass", "symbols.csv");
-            var assetMappings = await AssetsMapper.LoadImageSourcesFromCSV(csvFile);
+            // Parse Debug.xml for asset mappings
+            var assetMappings = DebugXmlParser.ParseDebugXml(debugXmlPath);
 
-            // Rebuild images AFTER asset sources are mapped
-            await RebuildImagesAsync(outputDirectory, csvFile, assetMappings);
+            // Rebuild images using the asset mappings from Debug.xml
+            await RebuildImagesAsync(outputDirectory, assetMappings);
         }
-
         private static async Task RunFfdecCommandAsync(string command)
         {
             var process = new Process
@@ -110,66 +113,9 @@ namespace Habbo_Downloader.Tools
             }
         }
 
-        public static async Task<Dictionary<string, string>> RebuildImagesAsync(string imageDir, string csvFile, Dictionary<string, string> imageSources)
+        public static async Task<Dictionary<string, string>> RebuildImagesAsync(string imageDir, Dictionary<string, string> assetMappings)
         {
-            var assetMappings = new Dictionary<string, string>();
-
-            if (!File.Exists(csvFile))
-            {
-                Console.WriteLine($"CSV not found: {csvFile}");
-                return assetMappings;
-            }
-
-            // Find the manifest file dynamically.
-            var manifestFiles = Directory.GetFiles(Path.Combine(imageDir, "binaryData"), "*_manifest.bin", SearchOption.TopDirectoryOnly);
-            if (manifestFiles.Length == 0)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ ERROR: Manifest file not found in {Path.Combine(imageDir, "binaryData")}");
-                Console.ResetColor();
-                return assetMappings;
-            }
-
-            string manifestFilePath = manifestFiles[0];
-            var manifestOrder = await ParseManifestFileAsync(manifestFilePath);
-
-            // Build mapping dictionaries from the CSV.
-            var lines = await File.ReadAllLinesAsync(csvFile);
-            var idToNamesMap = new Dictionary<string, List<string>>();
-            var nameToCsvLineMap = new Dictionary<string, string>();
-
-            foreach (var line in lines)
-            {
-                var parts = line.Split(';');
-                if (parts.Length < 2)
-                    continue;
-
-                string id = parts[0].Trim();
-                string name = parts[1].Trim();
-
-                // Ignore unwanted rows.
-                if (id == "0" || name == "*" || name.Contains("_32_"))
-                    continue;
-
-                if (!idToNamesMap.ContainsKey(id))
-                {
-                    idToNamesMap[id] = new List<string>();
-                }
-                idToNamesMap[id].Add(name);
-                nameToCsvLineMap[name] = line;
-            }
-
-            // Reorder the CSV lines based on the manifest order.
-            var orderedCsvLines = new List<string>();
-            foreach (var assetName in manifestOrder)
-            {
-                if (nameToCsvLineMap.ContainsKey(assetName))
-                {
-                    orderedCsvLines.Add(nameToCsvLineMap[assetName]);
-                }
-            }
-
-            await File.WriteAllLinesAsync(csvFile, orderedCsvLines);
+            var outputMappings = new Dictionary<string, string>();
 
             // Move all PNG files to a temporary folder for processing.
             string tmpDir = Path.Combine(imageDir, "tmp");
@@ -197,18 +143,18 @@ namespace Habbo_Downloader.Tools
             string targetImagesFolder = Path.Combine(imageDir, "images");
             Directory.CreateDirectory(targetImagesFolder);
 
-            // Process each group of asset names for a given ID.
-            foreach (var kvp in idToNamesMap)
+            // Process each asset mapping
+            foreach (var kvp in assetMappings)
             {
-                string id = kvp.Key;
-                List<string> requestedNames = kvp.Value;
+                string tag = kvp.Key;
+                string name = kvp.Value;
 
-                // Locate the original file using the ID as key.
-                fileLookup.TryGetValue(id, out string? originalFilePath);
+                // Locate the original file using the tag as key.
+                fileLookup.TryGetValue(tag, out string? originalFilePath);
                 if (originalFilePath == null)
                 {
                     var possibleMatches = tmpFiles
-                        .Where(f => Path.GetFileNameWithoutExtension(f).StartsWith(id + "_", StringComparison.OrdinalIgnoreCase))
+                        .Where(f => Path.GetFileNameWithoutExtension(f).StartsWith(tag + "_", StringComparison.OrdinalIgnoreCase))
                         .ToList();
 
                     if (possibleMatches.Count > 0)
@@ -218,48 +164,27 @@ namespace Habbo_Downloader.Tools
                 }
                 if (originalFilePath == null)
                 {
-                    // No file found for this ID.
+                    // No file found for this tag.
                     continue;
                 }
 
                 string originalExt = Path.GetExtension(originalFilePath);
-                // Choose the preferred asset name.
-                string preferredName = requestedNames.FirstOrDefault(n => n.Contains("0_0")) ?? requestedNames[0];
-
-                // Helper function to clean up asset names.
-                string CleanName(string name)
-                {
-                    string cleaned = name;
-                    if (cleaned.StartsWith($"{id}_"))
-                    {
-                        cleaned = cleaned.Substring(id.Length + 1);
-                    }
-                    cleaned = Regex.Replace(cleaned, "(_{2,})", "_");
-                    return cleaned;
-                }
-
-                string preferredCleanName = CleanName(preferredName);
-                string sourceFilePath = Path.Combine(targetImagesFolder, $"{preferredCleanName}{originalExt}");
+                string sourceFilePath = Path.Combine(targetImagesFolder, $"{name}{originalExt}");
 
                 // Copy the source file once.
                 try
                 {
                     File.Copy(originalFilePath, sourceFilePath, overwrite: false);
+                    outputMappings[name] = sourceFilePath;
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"❌ Failed to copy {originalFilePath} to {sourceFilePath}: {ex.Message}");
                     continue;
                 }
-
-                // Update mapping for each asset name for this ID.
-                foreach (var name in requestedNames)
-                {
-                    assetMappings[name] = preferredCleanName;
-                }
             }
 
-            return assetMappings;
+            return outputMappings;
         }
     }
 }

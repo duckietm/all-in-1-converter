@@ -70,8 +70,8 @@ namespace Habbo_Downloader.Compiler
 
                     Console.WriteLine("✅ Extraction completed successfully.");
 
-                    string csvFilePath = Path.Combine(binaryOutputPath, "symbolClass", "symbols.csv");
-                    Dictionary<string, string> imageSources = await AssetsMapper.LoadImageSourcesFromCSV(csvFilePath);
+                    string debugXmlPath = Path.Combine(binaryOutputPath, "debug.xml");
+                    var imageSources = DebugXmlParser.ParseDebugXml(debugXmlPath);
 
                     IndexData indexData = null;
                     AssetLogicData logicData = null;
