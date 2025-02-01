@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using System.IO;
 using Habbo_Downloader.SWFCompiler.Mapper.Assests;
+using System.Xml.Linq;
 
 namespace Habbo_Downloader.Tools
 {
@@ -11,21 +12,21 @@ namespace Habbo_Downloader.Tools
 
         public static async Task ExtractSWFAsync(string swfFilePath, string outputDirectory)
         {
-            // 1️⃣ 🔥 **Ensure output directory is clean**
+            // Ensure output directory is clean
             ClearOutputDirectory(outputDirectory);
 
-            // 2️⃣ 🏗 **Extract SWF assets (images, binary data, and symbolClass)**
+            // Extract SWF assets (images, binary data, and symbolClass)
             string commandImages = $"-export image,binarydata,symbolClass \"{outputDirectory}\" \"{swfFilePath}\"";
             await RunFfdecCommandAsync(commandImages);
 
-            // 3️⃣ 🗑 **Remove unnecessary images (e.g., _32_ variants)**
+            // Remove unnecessary images (e.g., _32_ variants)
             RemoveUnwantedImages(outputDirectory, "_32_");
 
-            // 4️⃣ 📄 **Parse assets before rebuilding images**
+            // Parse assets before rebuilding images
             string csvFile = Path.Combine(outputDirectory, "symbolClass", "symbols.csv");
             var assetMappings = await AssetsMapper.LoadImageSourcesFromCSV(csvFile);
 
-            // 5️⃣ 🎨 **Rebuild images AFTER asset sources are mapped**
+            // Rebuild images AFTER asset sources are mapped
             await RebuildImagesAsync(outputDirectory, csvFile, assetMappings);
         }
 
@@ -66,7 +67,6 @@ namespace Habbo_Downloader.Tools
                         Console.WriteLine($"❌ Error deleting {file}: {ex.Message}");
                     }
                 }
-                Console.WriteLine("✅ Cleared old PNG files from output directory.");
             }
         }
 
@@ -75,6 +75,38 @@ namespace Habbo_Downloader.Tools
             foreach (var file in Directory.GetFiles(imageDir, $"*{pattern}*.png", SearchOption.AllDirectories))
             {
                 File.Delete(file);
+            }
+        }
+
+        private static async Task<List<string>> ParseManifestFileAsync(string manifestFilePath)
+        {
+            if (!File.Exists(manifestFilePath))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"❌ ERROR: Manifest file not found: {manifestFilePath}");
+                Console.ResetColor();
+                return new List<string>();
+            }
+
+            try
+            {
+                string manifestContent = await File.ReadAllTextAsync(manifestFilePath);
+                XElement manifestElement = XElement.Parse(manifestContent);
+
+                var assetOrder = manifestElement
+                    .Descendants("asset")
+                    .Where(a => a.Attribute("mimeType")?.Value == "image/png")
+                    .Select(a => $"pura_mdl1_{a.Attribute("name")?.Value.ToLowerInvariant()}")
+                    .ToList();
+
+                return assetOrder;
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"❌ ERROR: Failed to parse manifest file: {ex.Message}");
+                Console.ResetColor();
+                return new List<string>();
             }
         }
 
@@ -88,17 +120,34 @@ namespace Habbo_Downloader.Tools
                 return assetMappings;
             }
 
+            // Find the manifest file dynamically.
+            var manifestFiles = Directory.GetFiles(Path.Combine(imageDir, "binaryData"), "*_manifest.bin", SearchOption.TopDirectoryOnly);
+            if (manifestFiles.Length == 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"❌ ERROR: Manifest file not found in {Path.Combine(imageDir, "binaryData")}");
+                Console.ResetColor();
+                return assetMappings;
+            }
+
+            string manifestFilePath = manifestFiles[0];
+            var manifestOrder = await ParseManifestFileAsync(manifestFilePath);
+
+            // Build mapping dictionaries from the CSV.
             var lines = await File.ReadAllLinesAsync(csvFile);
             var idToNamesMap = new Dictionary<string, List<string>>();
+            var nameToCsvLineMap = new Dictionary<string, string>();
 
             foreach (var line in lines)
             {
                 var parts = line.Split(';');
-                if (parts.Length < 2) continue;
+                if (parts.Length < 2)
+                    continue;
 
                 string id = parts[0].Trim();
                 string name = parts[1].Trim();
 
+                // Ignore unwanted rows.
                 if (id == "0" || name == "*" || name.Contains("_32_"))
                     continue;
 
@@ -107,8 +156,22 @@ namespace Habbo_Downloader.Tools
                     idToNamesMap[id] = new List<string>();
                 }
                 idToNamesMap[id].Add(name);
+                nameToCsvLineMap[name] = line;
             }
 
+            // Reorder the CSV lines based on the manifest order.
+            var orderedCsvLines = new List<string>();
+            foreach (var assetName in manifestOrder)
+            {
+                if (nameToCsvLineMap.ContainsKey(assetName))
+                {
+                    orderedCsvLines.Add(nameToCsvLineMap[assetName]);
+                }
+            }
+
+            await File.WriteAllLinesAsync(csvFile, orderedCsvLines);
+
+            // Move all PNG files to a temporary folder for processing.
             string tmpDir = Path.Combine(imageDir, "tmp");
             if (Directory.Exists(tmpDir))
             {
@@ -117,7 +180,6 @@ namespace Habbo_Downloader.Tools
             Directory.CreateDirectory(tmpDir);
 
             var allPngFiles = Directory.GetFiles(imageDir, "*.png", SearchOption.AllDirectories);
-
             foreach (var file in allPngFiles)
             {
                 string relativePath = Path.GetRelativePath(imageDir, file);
@@ -135,18 +197,18 @@ namespace Habbo_Downloader.Tools
             string targetImagesFolder = Path.Combine(imageDir, "images");
             Directory.CreateDirectory(targetImagesFolder);
 
+            // Process each group of asset names for a given ID.
             foreach (var kvp in idToNamesMap)
             {
                 string id = kvp.Key;
                 List<string> requestedNames = kvp.Value;
 
+                // Locate the original file using the ID as key.
                 fileLookup.TryGetValue(id, out string? originalFilePath);
-
                 if (originalFilePath == null)
                 {
                     var possibleMatches = tmpFiles
-                        .Where(f => Path.GetFileNameWithoutExtension(f)
-                            .StartsWith(id + "_", StringComparison.OrdinalIgnoreCase))
+                        .Where(f => Path.GetFileNameWithoutExtension(f).StartsWith(id + "_", StringComparison.OrdinalIgnoreCase))
                         .ToList();
 
                     if (possibleMatches.Count > 0)
@@ -154,62 +216,49 @@ namespace Habbo_Downloader.Tools
                         originalFilePath = possibleMatches[0];
                     }
                 }
-
                 if (originalFilePath == null)
                 {
+                    // No file found for this ID.
                     continue;
                 }
 
                 string originalExt = Path.GetExtension(originalFilePath);
-                string? firstNewFilePath = null;
+                // Choose the preferred asset name.
+                string preferredName = requestedNames.FirstOrDefault(n => n.Contains("0_0")) ?? requestedNames[0];
 
-                for (int i = 0; i < requestedNames.Count; i++)
+                // Helper function to clean up asset names.
+                string CleanName(string name)
                 {
-                    string cleanName = requestedNames[i];
-
-                    if (cleanName.StartsWith($"{id}_"))
+                    string cleaned = name;
+                    if (cleaned.StartsWith($"{id}_"))
                     {
-                        cleanName = cleanName.Substring(id.Length + 1);
+                        cleaned = cleaned.Substring(id.Length + 1);
                     }
+                    cleaned = Regex.Replace(cleaned, "(_{2,})", "_");
+                    return cleaned;
+                }
 
-                    cleanName = Regex.Replace(cleanName, "(_{2,})", "_");
+                string preferredCleanName = CleanName(preferredName);
+                string sourceFilePath = Path.Combine(targetImagesFolder, $"{preferredCleanName}{originalExt}");
 
-                    string newFilePath = Path.Combine(targetImagesFolder, $"{cleanName}{originalExt}");
+                // Copy the source file once.
+                try
+                {
+                    File.Copy(originalFilePath, sourceFilePath, overwrite: false);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Failed to copy {originalFilePath} to {sourceFilePath}: {ex.Message}");
+                    continue;
+                }
 
-                    if (i == 0)
-                    {
-                        try
-                        {
-                            File.Copy(originalFilePath, newFilePath, overwrite: false);
-                            firstNewFilePath = newFilePath;
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"❌ Failed to copy {originalFilePath} to {newFilePath}: {ex.Message}");
-                        }
-                    }
-                    else
-                    {
-                        if (firstNewFilePath != null && File.Exists(firstNewFilePath))
-                        {
-                            try
-                            {
-                                File.Copy(firstNewFilePath, newFilePath, overwrite: false);
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine($"❌ Copy failed for {newFilePath}: {ex.Message}");
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine($"❌ Could not duplicate {id}. No source file found.");
-                        }
-                    }
-
-                    assetMappings[id] = cleanName;
+                // Update mapping for each asset name for this ID.
+                foreach (var name in requestedNames)
+                {
+                    assetMappings[name] = preferredCleanName;
                 }
             }
+
             return assetMappings;
         }
     }
