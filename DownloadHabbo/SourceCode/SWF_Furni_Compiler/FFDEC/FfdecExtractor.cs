@@ -1,8 +1,11 @@
-﻿using System.Diagnostics;
-using System.Text.RegularExpressions;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using Habbo_Downloader.SWFCompiler.Mapper.Assests;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Habbo_Downloader.SWFCompiler.Mapper.Assests;
 
 namespace Habbo_Downloader.Tools
 {
@@ -27,12 +30,13 @@ namespace Habbo_Downloader.Tools
             // Remove unnecessary images (e.g., _32_ variants)
             RemoveUnwantedImages(outputDirectory, "_32_");
 
-            // Parse Debug.xml for asset mappings
+            // Parse Debug.xml for asset mappings.
             var assetMappings = DebugXmlParser.ParseDebugXml(debugXmlPath);
 
-            // Rebuild images using the asset mappings from Debug.xml
+            // Rebuild images using the asset mappings from Debug.xml.
             await RebuildImagesAsync(outputDirectory, assetMappings);
         }
+
         private static async Task RunFfdecCommandAsync(string command)
         {
             var process = new Process
@@ -81,43 +85,11 @@ namespace Habbo_Downloader.Tools
             }
         }
 
-        private static async Task<List<string>> ParseManifestFileAsync(string manifestFilePath)
-        {
-            if (!File.Exists(manifestFilePath))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ ERROR: Manifest file not found: {manifestFilePath}");
-                Console.ResetColor();
-                return new List<string>();
-            }
-
-            try
-            {
-                string manifestContent = await File.ReadAllTextAsync(manifestFilePath);
-                XElement manifestElement = XElement.Parse(manifestContent);
-
-                var assetOrder = manifestElement
-                    .Descendants("asset")
-                    .Where(a => a.Attribute("mimeType")?.Value == "image/png")
-                    .Select(a => $"pura_mdl1_{a.Attribute("name")?.Value.ToLowerInvariant()}")
-                    .ToList();
-
-                return assetOrder;
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ ERROR: Failed to parse manifest file: {ex.Message}");
-                Console.ResetColor();
-                return new List<string>();
-            }
-        }
-
         public static async Task<Dictionary<string, string>> RebuildImagesAsync(string imageDir, Dictionary<string, string> assetMappings)
         {
             var outputMappings = new Dictionary<string, string>();
 
-            // Move all PNG files to a temporary folder for processing.
+            // Move all PNG files to a temporary folder.
             string tmpDir = Path.Combine(imageDir, "tmp");
             if (Directory.Exists(tmpDir))
             {
@@ -125,6 +97,7 @@ namespace Habbo_Downloader.Tools
             }
             Directory.CreateDirectory(tmpDir);
 
+            Console.WriteLine("\nDEBUG: Files in temporary directory:");
             var allPngFiles = Directory.GetFiles(imageDir, "*.png", SearchOption.AllDirectories);
             foreach (var file in allPngFiles)
             {
@@ -132,54 +105,46 @@ namespace Habbo_Downloader.Tools
                 string destinationPath = Path.Combine(tmpDir, relativePath);
                 Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
                 File.Move(file, destinationPath);
+                Console.WriteLine("  " + relativePath);
             }
+            Console.WriteLine($"DEBUG: Total {allPngFiles.Length} files found in temporary directory.");
 
+            // Build a lookup dictionary: key = file name (without extension), value = full path.
             string[] tmpFiles = Directory.GetFiles(tmpDir, "*.png", SearchOption.AllDirectories);
             var fileLookup = tmpFiles.ToDictionary(
                 f => Path.GetFileNameWithoutExtension(f),
-                f => f
-            );
+                f => f);
 
+            // Prepare the target folder where files will be copied.
             string targetImagesFolder = Path.Combine(imageDir, "images");
             Directory.CreateDirectory(targetImagesFolder);
 
-            // Process each asset mapping
+            // Process each asset mapping from Debug.xml.
             foreach (var kvp in assetMappings)
             {
-                string tag = kvp.Key;
-                string name = kvp.Value;
+                string tag = kvp.Key;   // the key from Debug.xml (object name)
+                string name = kvp.Value; // the corresponding source name
 
-                // Locate the original file using the tag as key.
-                fileLookup.TryGetValue(tag, out string? originalFilePath);
-                if (originalFilePath == null)
+                // Try to locate the file in the temporary folder.
+                if (!fileLookup.TryGetValue(tag, out string? originalFilePath))
                 {
-                    var possibleMatches = tmpFiles
-                        .Where(f => Path.GetFileNameWithoutExtension(f).StartsWith(tag + "_", StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-
-                    if (possibleMatches.Count > 0)
-                    {
-                        originalFilePath = possibleMatches[0];
-                    }
-                }
-                if (originalFilePath == null)
-                {
-                    // No file found for this tag.
+                    Console.WriteLine($"WARNING: No file found for tag '{tag}'.");
                     continue;
                 }
 
                 string originalExt = Path.GetExtension(originalFilePath);
+                // The file should be renamed using the source name from Debug.xml.
                 string sourceFilePath = Path.Combine(targetImagesFolder, $"{name}{originalExt}");
 
-                // Copy the source file once.
                 try
                 {
                     File.Copy(originalFilePath, sourceFilePath, overwrite: false);
                     outputMappings[name] = sourceFilePath;
+                    Console.WriteLine($"Copied file for '{name}' (from tag '{tag}').");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"❌ Failed to copy {originalFilePath} to {sourceFilePath}: {ex.Message}");
+                    Console.WriteLine($"Failed to copy {originalFilePath} to {sourceFilePath}: {ex.Message}");
                     continue;
                 }
             }

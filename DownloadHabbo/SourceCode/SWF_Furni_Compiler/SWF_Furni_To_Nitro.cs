@@ -4,7 +4,6 @@ using Habbo_Downloader.SWFCompiler.Mapper.Logic;
 using Habbo_Downloader.SWFCompiler.Mapper.Visualizations;
 using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
 using Habbo_Downloader.Tools;
-
 using System.Drawing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -102,71 +101,20 @@ namespace Habbo_Downloader.Compiler
                         string assetsFilePath = assetsFiles[0];
                         string manifestFilePath = manifestFiles[0];
 
-                        assetData = await AssetsMapper.ParseAssetsFileAsync(assetsFilePath, imageSources, manifestFilePath);
+                        assetData = await AssetsMapper.ParseAssetsFileAsync(
+                            assetsFilePath,
+                            imageSources,
+                            manifestFilePath,
+                            debugXmlPath,
+                            fileOutputDirectory
+                        );
                     }
 
-                    string[] logicFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_logic.bin", SearchOption.TopDirectoryOnly);
-                    if (logicFiles.Length > 0)
-                    {
-                        string logicFilePath = logicFiles[0];
-                        string logicContent = await File.ReadAllTextAsync(logicFilePath);
-                        XElement logicElement = XElement.Parse(logicContent);
-                        logicData = LogicMapper.MapLogicXml(logicElement);
-                    }
+                    // Generate the two CSV files inside the SWF extraction directory
+                    await AssetsMapper.WriteAssetAndImageMappingsAsync(assetData, debugXmlPath, fileOutputDirectory);
 
-                    string[] visualizationFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_visualization.bin", SearchOption.TopDirectoryOnly);
-                    if (visualizationFiles.Length > 0)
-                    {
-                        string visualizationFilePath = visualizationFiles[0];
-                        string visualizationContent = await File.ReadAllTextAsync(visualizationFilePath);
-                        XElement visualizationElement = XElement.Parse(visualizationContent);
-                        visualizations = VisualizationsMapper.MapVisualizationsXml(visualizationElement);
-                    }
-
-                    string imageOutputPath = Path.Combine(binaryOutputPath, "images");
-                    var images = Directory.GetFiles(imageOutputPath, "*.png", SearchOption.TopDirectoryOnly)
-                        .Where(f => !Regex.IsMatch(Path.GetFileNameWithoutExtension(f), @"(_assets|_manifest|_index|_visualization|_logic)$", RegexOptions.IgnoreCase))
-                        .ToDictionary(f => Path.GetFileNameWithoutExtension(f), f => new Bitmap(f));
-
-                    if (images.Count == 0)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"⚠️ WARNING: No valid images found to generate spritesheet for {fileName}. Skipping spritesheet generation.");
-                        Console.ResetColor();
-                        continue;
-                    }
-
-                    try
-                    {
-                        var (spriteSheetPath, spriteSheetData) = SpriteSheetMapper.GenerateSpriteSheet(images, fileOutputDirectory, fileName);
-
-                        if (spriteSheetPath == null || spriteSheetData == null)
-                        {
-                            Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"⚠️ WARNING: Spritesheet generation skipped for {fileName}.");
-                            Console.ResetColor();
-                            continue;
-                        }
-
-                        spriteBundle = new SpriteBundle
-                        {
-                            Spritesheet = spriteSheetData,
-                            ImageData = new ImageData
-                            {
-                                Name = $"{fileName}.png",
-                                Buffer = await File.ReadAllBytesAsync(spriteSheetPath)
-                            }
-                        };
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"❌ ERROR: Spritesheet generation failed for {fileName}: {ex.Message}");
-                        Console.ResetColor();
-                        continue;
-                    }
-
-                    var combinedJson = new
+                    string jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
+                    string jsonContent = JsonSerializer.Serialize(new
                     {
                         name = indexData?.Name ?? "unknown",
                         logicType = indexData?.LogicType ?? "default",
@@ -175,10 +123,7 @@ namespace Habbo_Downloader.Compiler
                         logic = logicData ?? new AssetLogicData(),
                         visualizations = visualizations ?? new List<Visualization>(),
                         spritesheet = spriteBundle?.Spritesheet ?? new SpriteSheetData()
-                    };
-
-                    string jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
-                    string jsonContent = JsonSerializer.Serialize(combinedJson, new JsonSerializerOptions { WriteIndented = true });
+                    }, new JsonSerializerOptions { WriteIndented = true });
 
                     await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
                     await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory);
@@ -199,61 +144,29 @@ namespace Habbo_Downloader.Compiler
             }
         }
 
-        private static async Task<List<string>> ParseManifestFileAsync(string manifestFilePath)
-        {
-            if (!File.Exists(manifestFilePath))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ ERROR: Manifest file not found: {manifestFilePath}");
-                Console.ResetColor();
-                return new List<string>();
-            }
-
-            try
-            {
-                string manifestContent = await File.ReadAllTextAsync(manifestFilePath);
-                XElement manifestElement = XElement.Parse(manifestContent);
-
-                var assetOrder = manifestElement
-                    .Descendants("asset")
-                    .Where(a => a.Attribute("mimeType")?.Value == "image/png")  // Extract only image assets
-                    .Select(a => a.Attribute("name")?.Value.ToLowerInvariant())
-                    .ToList();
-
-                Console.WriteLine("✅ Successfully parsed manifest order.");
-                return assetOrder;
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ ERROR: Failed to parse manifest file: {ex.Message}");
-                Console.ResetColor();
-                return new List<string>();
-            }
-        }
-
-
         private static async Task BundleNitroFileAsync(string outputDirectory, string fileName, string nitroOutputDirectory)
         {
             var nitroBundler = new NitroBundler();
 
-            // Add JSON file
             string jsonFilePath = Path.Combine(outputDirectory, $"{fileName}.json");
             byte[] jsonData = await File.ReadAllBytesAsync(jsonFilePath);
             nitroBundler.AddFile($"{fileName}.json", jsonData);
 
-            // Add image file
             string imageFilePath = Path.Combine(outputDirectory, $"{fileName}.png");
-            byte[] imageData = await File.ReadAllBytesAsync(imageFilePath);
-            nitroBundler.AddFile($"{fileName}.png", imageData);
+            if (File.Exists(imageFilePath))
+            {
+                byte[] imageData = await File.ReadAllBytesAsync(imageFilePath);
+                nitroBundler.AddFile($"{fileName}.png", imageData);
+            }
+            else
+            {
+                Console.WriteLine("⚠️ Warning: No image file found to include in nitro file.");
+            }
 
-            // Generate .nitro file
             byte[] nitroData = await nitroBundler.ToBufferAsync();
             string nitroFilePath = Path.Combine(nitroOutputDirectory, $"{fileName}.nitro");
 
-            // Write the nitro file
             await File.WriteAllBytesAsync(nitroFilePath, nitroData);
-
             Console.WriteLine($"Generated {fileName}.nitro -> {nitroFilePath}");
         }
 
