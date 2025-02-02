@@ -102,6 +102,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                         Console.WriteLine($"✅ Identified SWF Prefix: {swfPrefix}");
                     }
 
+                    var idTracker = new HashSet<string>(); // Track IDs to identify duplicates
+
                     foreach (var kvp in tagMappings)
                     {
                         string tagId = kvp.Key.ToString(); // Treat ID as a string
@@ -132,15 +134,11 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                             Console.WriteLine($"✅ Writing: ID: {tagId}, Name: {cleanedName}");
                             await assetWriter.WriteLineAsync($"{tagId},{cleanedName}");
 
-                            // 🔹 Write to image CSV (no prefix removal, but still exclude specific entries)
-                            if (!originalTagName.EndsWith("visualization") &&
-                                !originalTagName.EndsWith("logic") &&
-                                !originalTagName.EndsWith("index") &&
-                                !originalTagName.EndsWith("assets") &&
-                                !originalTagName.EndsWith("manifest"))
+                            // 🔹 Write to image CSV (only write the first occurrence of each ID)
+                            if (!idTracker.Contains(tagId))
                             {
-                                string imageEntry = $"{tagId},{originalTagName}";
-                                await imageWriter.WriteLineAsync(imageEntry);
+                                idTracker.Add(tagId); // Mark this ID as processed
+                                await imageWriter.WriteLineAsync($"{tagId},{cleanedName}");
                             }
                         }
                     }

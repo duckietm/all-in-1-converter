@@ -1,4 +1,6 @@
-﻿namespace ConsoleApplication
+﻿using System.Text;
+
+namespace ConsoleApplication
 {
     internal class Program
     {
@@ -196,6 +198,7 @@
             Console.ForegroundColor = ConsoleColor.White;
             Console.BackgroundColor = ConsoleColor.Black;
             Console.Write("Command:> ");
+            Console.OutputEncoding = Encoding.UTF8;
         }
 
         private static void DisplayHelp()

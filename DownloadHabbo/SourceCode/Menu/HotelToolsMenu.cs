@@ -1,4 +1,5 @@
 ﻿using Habbo_Downloader.Compiler;
+using System.Text;
 
 namespace ConsoleApplication
 {
@@ -29,6 +30,7 @@ namespace ConsoleApplication
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.BackgroundColor = ConsoleColor.Black;
                 Console.Write("Command:> ");
+                Console.OutputEncoding = Encoding.UTF8;
 
                 string input = Console.ReadLine()?.ToLower() ?? string.Empty;
 
