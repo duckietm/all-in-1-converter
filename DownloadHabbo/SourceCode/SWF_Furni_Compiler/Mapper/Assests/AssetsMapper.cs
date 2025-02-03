@@ -2,7 +2,6 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-
 namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 {
     public static class AssetsMapper
@@ -34,7 +33,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     return new Dictionary<string, Asset>();
                 }
 
-                // Read and parse XML
+                // Read and parse XML files
                 string assetsContent = await File.ReadAllTextAsync(assetsFilePath);
                 XElement root = XElement.Parse(assetsContent);
 
@@ -43,7 +42,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
                 var assets = MapAssetsXML(root, manifestRoot, imageSources, debugXmlPath);
 
-                // Generate CSVs
+                // Build asset mapping in memory and write image mapping to disk.
                 await WriteAssetAndImageMappingsAsync(assets, debugXmlPath, swfOutputDirectory);
 
                 return assets;
@@ -60,33 +59,38 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             }
         }
 
-        public static async Task WriteAssetAndImageMappingsAsync( Dictionary<string, Asset> assets, string debugXmlPath, string outputDirectory)
+        // Builds the asset mapping in memory (to update assets)
+        public static async Task WriteAssetAndImageMappingsAsync(
+            Dictionary<string, Asset> assets,
+            string debugXmlPath,
+            string outputDirectory)
         {
             try
             {
+                // Get the tag mappings from the debug XML.
                 var tagMappings = DebugXmlParser.ExtractSymbolClassTags(debugXmlPath);
 
-                string assetMappingPath = Path.Combine(outputDirectory, "asset_mapping.csv");
-                string imageMappingPath = Path.Combine(outputDirectory, "image_mapping.csv");
+                // In-memory list for asset_mapping.csv lines.
+                var assetMappingLines = new List<string>();
+                assetMappingLines.Add("ID,Name"); // header
 
-                using (StreamWriter assetWriter = new StreamWriter(assetMappingPath, false))
+                // Build the image mapping file normally on disk.
+                string imageMappingPath = Path.Combine(outputDirectory, "image_mapping.csv");
                 using (StreamWriter imageWriter = new StreamWriter(imageMappingPath, false))
                 {
-                    await assetWriter.WriteLineAsync("ID,Name");
                     await imageWriter.WriteLineAsync("ID,ImageFile");
 
-                    // Extract SWF file name from ID 0
+                    // Extract the SWF prefix from tag id "0"
                     string swfPrefix = tagMappings.TryGetValue("0", out var swfNames) ? swfNames.FirstOrDefault() : null;
-
                     if (string.IsNullOrEmpty(swfPrefix))
                     {
                         Console.WriteLine("⚠️ Warning: Unable to determine SWF file prefix (ID 0).");
-                        swfPrefix = "";  // Fallback to empty if missing
+                        swfPrefix = "";
                     }
 
+                    var idTracker = new HashSet<string>(); // to avoid duplicate image mappings
 
-                    var idTracker = new HashSet<string>(); // Track IDs to identify duplicates
-
+                    // Loop through the tag mappings (skip ID "0")
                     foreach (var kvp in tagMappings)
                     {
                         string tagId = kvp.Key;
@@ -96,106 +100,94 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
                         foreach (var originalTagName in originalTagNames)
                         {
-                            // Remove prefix for `asset_mapping.csv`
+                            // For asset mapping, remove the SWF prefix.
                             string cleanedName = RemoveSwfPrefix(originalTagName, swfPrefix);
 
+                            // Skip asset names with undesired parts.
                             if (cleanedName.Contains("_32_"))
+                                continue;
+
+                            if (cleanedName.EndsWith("visualization", StringComparison.OrdinalIgnoreCase) ||
+                                cleanedName.EndsWith("logic", StringComparison.OrdinalIgnoreCase) ||
+                                cleanedName.EndsWith("index", StringComparison.OrdinalIgnoreCase) ||
+                                cleanedName.EndsWith("assets", StringComparison.OrdinalIgnoreCase) ||
+                                cleanedName.EndsWith("manifest", StringComparison.OrdinalIgnoreCase))
                             {
                                 continue;
                             }
 
-                            // Skip `_visualization`, `_logic`, `_index`, `_manifest`, `_assets` in `asset_mapping.csv`
-                            if (cleanedName.EndsWith("visualization") ||
-                                cleanedName.EndsWith("logic") ||
-                                cleanedName.EndsWith("index") ||
-                                cleanedName.EndsWith("assets") ||
-                                cleanedName.EndsWith("manifest"))
-                            {
-                                continue;
-                            }
-                            await assetWriter.WriteLineAsync($"{tagId},{cleanedName}");
+                            // Add to asset mapping in memory.
+                            assetMappingLines.Add($"{tagId},{cleanedName}");
 
-                            // Write original XML value to `image_mapping.csv` (DO NOT remove prefix)
+                            // Write image mapping (with original tag name) only once per ID.
                             if (!idTracker.Contains(tagId))
                             {
                                 idTracker.Add(tagId);
-                                await imageWriter.WriteLineAsync($"{tagId},{originalTagName}"); // Keep original value
+                                await imageWriter.WriteLineAsync($"{tagId},{originalTagName}");
                             }
                         }
                     }
                 }
 
-                // Read the CSV file and update the assets dictionary
-                await UpdateAssetsWithSourceFromCsvAsync(assets, assetMappingPath);
+                // Update the assets using the in-memory asset_mapping lines.
+                await UpdateAssetsWithSourceFromCsvLinesAsync(assets, assetMappingLines.Skip(1));
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ Error writing CSVs: {ex.Message}");
+                Console.WriteLine($"❌ Error writing CSV mappings: {ex.Message}");
                 Console.ResetColor();
             }
         }
 
-
-        private static async Task UpdateAssetsWithSourceFromCsvAsync(Dictionary<string, Asset> assets, string csvFilePath)
+        private static Task UpdateAssetsWithSourceFromCsvLinesAsync(
+            Dictionary<string, Asset> assets, IEnumerable<string> csvLines)
         {
-            if (!File.Exists(csvFilePath))
-            {
-                Console.WriteLine($"❌ CSV file not found: {csvFilePath}");
-                return;
-            }
-
             var sourceMap = new Dictionary<string, string>();
 
-            using (var reader = new StreamReader(csvFilePath))
+            foreach (var line in csvLines)
             {
-                // Skip the header line
-                await reader.ReadLineAsync();
-
-                string line;
-                while ((line = await reader.ReadLineAsync()) != null)
+                var parts = line.Split(',');
+                if (parts.Length == 2)
                 {
-                    var parts = line.Split(',');
-                    if (parts.Length == 2)
-                    {
-                        string id = parts[0];
-                        string name = parts[1].ToLowerInvariant(); // Normalize the name
+                    string id = parts[0];
+                    string name = parts[1].ToLowerInvariant();
 
-                        if (sourceMap.ContainsKey(id))
+                    if (sourceMap.ContainsKey(id))
+                    {
+                        // When a duplicate ID is encountered, update the asset's Source property.
+                        string source = sourceMap[id];
+                        if (assets.ContainsKey(name))
                         {
-                            // If the ID already exists, it means we have a source-object pair
-                            string source = sourceMap[id];
-                            if (assets.ContainsKey(name))
-                            {
-                                assets[name].Source = source;
-                            }
+                            assets[name].Source = source;
                         }
-                        else
-                        {
-                            // Store the name as a potential source for the next entry with the same ID
-                            sourceMap[id] = name;
-                        }
+                    }
+                    else
+                    {
+                        // Store the name for a future asset with the same ID.
+                        sourceMap[id] = name;
                     }
                 }
             }
+
+            return Task.CompletedTask;
         }
 
         public static string RemoveSwfPrefix(string name, string swfPrefix)
         {
-            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(swfPrefix)) return name;
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(swfPrefix))
+                return name;
 
-            // Dynamically remove the SWF name followed by `_`
+            // Remove the SWF prefix (SWF name + underscore) dynamically.
             string pattern = $"^{Regex.Escape(swfPrefix)}_";
             return Regex.Replace(name, pattern, "", RegexOptions.IgnoreCase);
         }
 
-
-
         private static Dictionary<string, Asset> MapAssetsXML(
-    XElement root,
-    XElement manifestRoot,
-    Dictionary<string, string> imageSources,
-    string debugXmlPath)
+            XElement root,
+            XElement manifestRoot,
+            Dictionary<string, string> imageSources,
+            string debugXmlPath)
         {
             if (root == null || manifestRoot == null)
                 return new Dictionary<string, Asset>();
@@ -204,13 +196,13 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
             var manifestAssets = manifestRoot.Descendants("asset")
                 .Where(asset => asset.Attribute("mimeType")?.Value == "image/png")
-                .Select(asset => (asset.Attribute("name")?.Value ?? "").ToLowerInvariant()) // Keep the full name
-                .Where(name => !name.Contains("_32_")) // Exclude _32_ assets
+                .Select(asset => (asset.Attribute("name")?.Value ?? "").ToLowerInvariant())
+                .Where(name => !name.Contains("_32_"))
                 .ToList();
 
             var debugMapping = DebugXmlParser.ParseDebugXml(debugXmlPath);
             var cleanedDebugMapping = debugMapping.ToDictionary(
-                kv => kv.Key.ToLowerInvariant(), // Keep the full name
+                kv => kv.Key.ToLowerInvariant(),
                 kv => kv.Value.ToLowerInvariant()
             );
 
@@ -230,7 +222,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     FlipV = assetElement.Attribute("flipV")?.Value == "1"
                 };
 
-                output[assetKey] = asset; // Use the full name as the key
+                output[assetKey] = asset;
             }
 
             foreach (var kv in cleanedDebugMapping)
@@ -246,12 +238,11 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
         public static string RemoveFirstPrefix(string name)
         {
-            if (string.IsNullOrEmpty(name)) return name;
+            if (string.IsNullOrEmpty(name))
+                return name;
 
-            // Detect first prefix dynamically (first word before `_`)
+            // Remove the first prefix (the text up to and including the first underscore).
             string pattern = @"^[^_]+_";
-
-            // Replace only the first occurrence of the detected prefix
             return Regex.Replace(name, pattern, "", RegexOptions.None);
         }
 
