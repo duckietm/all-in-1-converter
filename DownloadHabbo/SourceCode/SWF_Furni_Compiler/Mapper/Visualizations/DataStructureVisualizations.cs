@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using System.Xml.Linq;
 
 namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations

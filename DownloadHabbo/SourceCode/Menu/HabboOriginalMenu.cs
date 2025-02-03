@@ -1,4 +1,6 @@
-﻿namespace ConsoleApplication
+﻿using System.Text;
+
+namespace ConsoleApplication
 {
     public static class HabboOriginalMenu
     {
@@ -34,6 +36,7 @@
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.BackgroundColor = ConsoleColor.Black;
                 Console.Write("Command:> ");
+                Console.OutputEncoding = Encoding.UTF8;
 
                 string input = Console.ReadLine()?.ToLower() ?? string.Empty;
 

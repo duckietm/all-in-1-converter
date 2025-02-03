@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace Habbo_Downloader.SWFCompiler.Mapper
 {
@@ -31,46 +28,81 @@ namespace Habbo_Downloader.SWFCompiler.Mapper
 
     public class SpriteSheetData
     {
+        [JsonPropertyName("frames")]
         public Dictionary<string, FrameData> Frames { get; set; } = new();
+
+        [JsonPropertyName("meta")]
         public MetaData Meta { get; set; }
     }
 
     public class FrameData
     {
+        [JsonPropertyName("frame")]
         public RectData Frame { get; set; }
-        public bool Rotated { get; set; }
-        public bool Trimmed { get; set; }
+
+        [JsonPropertyName("rotated")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+        public bool Rotated { get; set; } = false;
+
+        [JsonPropertyName("trimmed")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+        public bool Trimmed { get; set; } = false;
+
+        [JsonPropertyName("spriteSourceSize")]
         public RectData SpriteSourceSize { get; set; }
+
+        [JsonPropertyName("sourceSize")]
         public SizeData SourceSize { get; set; }
+
+        [JsonPropertyName("pivot")]
         public PivotData Pivot { get; set; }
     }
 
     public class RectData
     {
+        [JsonPropertyName("x")]
         public int X { get; set; }
-        public int Y { get; set; }
-        public int W { get; set; }
-        public int H { get; set; }
-    }
 
+        [JsonPropertyName("y")]
+        public int Y { get; set; }
+
+        [JsonPropertyName("w")]
+        public int Width { get; set; }
+
+        [JsonPropertyName("h")]
+        public int Height { get; set; }
+    }
     public class SizeData
     {
-        public int W { get; set; }
-        public int H { get; set; }
+        [JsonPropertyName("w")]
+        public int Width { get; set; }
+
+        [JsonPropertyName("h")]
+        public int Height { get; set; }
     }
 
     public class PivotData
     {
-        public float X { get; set; } = 0.5f;
-        public float Y { get; set; } = 0.5f;
+        [JsonPropertyName("x")]
+        public float X { get; set; } = 0.5f; // Default pivot (center)
+
+        [JsonPropertyName("y")]
+        public float Y { get; set; } = 0.5f; // Default pivot (center)
     }
 
     public class MetaData
     {
+        [JsonPropertyName("image")]
         public string Image { get; set; }
-        public string Format { get; set; } = "RGBA8888";
+
+        [JsonPropertyName("format")]
+        public string Format { get; set; } = "RGBA8888"; // Default format
+
+        [JsonPropertyName("size")]
         public SizeData Size { get; set; }
-        public float Scale { get; set; } = 1.0f;
+
+        [JsonPropertyName("scale")]
+        public float Scale { get; set; } = 1.0f; // Default scale
     }
 
     public class HabboAssetSWF
@@ -172,7 +204,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper
                 Meta = new MetaData
                 {
                     Image = $"{documentClass}.png",
-                    Size = new SizeData { W = 1024, H = 1024 } // Placeholder size
+                    Size = new SizeData { Width = 1024, Height = 1024 }
                 }
             };
         }
