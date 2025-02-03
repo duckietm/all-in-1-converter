@@ -8,9 +8,8 @@ using System.Drawing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
-using System.Text.RegularExpressions;
-using static Habbo_Downloader.Compiler.SWF_Furni_To_Nitro;
 using Habbo_Downloader.SWFCompiler.Mapper;
+using System.Collections.Concurrent;
 
 namespace Habbo_Downloader.Compiler
 {
@@ -30,7 +29,7 @@ namespace Habbo_Downloader.Compiler
                     ? @"hof_furni"
                     : input == "I" ? @"SWFCompiler\import\furniture" : @"hof_furni";
 
-                Console.WriteLine($"DEBUG: Converting SWF to Nitro from source {ImportDirectory}");
+                Console.WriteLine($"✅ Converting SWF to Nitro from source {ImportDirectory}");
 
                 Directory.CreateDirectory(OutputDirectory);
                 string[] swfFiles = Directory.GetFiles(ImportDirectory, "*.swf", SearchOption.TopDirectoryOnly);
@@ -41,145 +40,203 @@ namespace Habbo_Downloader.Compiler
                     return;
                 }
 
-                Console.WriteLine($"We have found {swfFiles.Length} SWF files.");
-                int nitroFilesGenerated = 0;
+                Console.WriteLine($"✅ Found {swfFiles.Length} SWF files.");
 
-                foreach (string swfFile in swfFiles)
+                // ✅ Process multiple SWFs in parallel using all available CPU cores up to 80% max
+
+                var nitroFilesGenerated = new ConcurrentBag<int>();
+                int maxParallelism = (int)(Environment.ProcessorCount * 0.8);
+                if (maxParallelism < 1) maxParallelism = 1;
+
+                await Parallel.ForEachAsync(swfFiles, new ParallelOptions { MaxDegreeOfParallelism = maxParallelism }, async (swfFile, _) =>
                 {
-                    string fileName = Path.GetFileNameWithoutExtension(swfFile);
-                    string nitroFilePath = Path.Combine(OutputDirectory, $"{fileName}.nitro");
-
-                    if (File.Exists(nitroFilePath)) continue;
-
-                    string fileOutputDirectory = Path.Combine(OutputDirectory, fileName);
-                    Directory.CreateDirectory(fileOutputDirectory);
-
-                    string binaryOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}_binaryData");
-
-                    Console.WriteLine($"Decompiling SWF: {fileName}...");
-                    await FfdecExtractor.ExtractSWFAsync(swfFile, binaryOutputPath);
-
-                    if (!Directory.Exists(Path.Combine(binaryOutputPath, "binaryData")))
+                    if (await ProcessSwfFileAsync(swfFile))
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Error: Extraction failed for {fileName}. No binaryData folder found.");
-                        Console.ResetColor();
-                        continue;
+                        nitroFilesGenerated.Add(1);
                     }
+                });
 
-                    Console.WriteLine("✅ Extraction completed successfully.");
-
-                    string debugXmlPath = Path.Combine(binaryOutputPath, "debug.xml");
-                    var imageSources = DebugXmlParser.ParseDebugXml(debugXmlPath);
-
-                    IndexData indexData = null;
-                    AssetLogicData logicData = null;
-                    List<Visualization> visualizations = null;
-                    SpriteBundle spriteBundle = null;
-                    Dictionary<string, AssetsMapper.Asset> assetData = null;
-
-                    string[] indexFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_index.bin", SearchOption.TopDirectoryOnly);
-                    if (indexFiles.Length > 0)
-                    {
-                        string indexFilePath = indexFiles[0];
-                        indexData = await IndexMapper.ParseIndexFileAsync(indexFilePath);
-                    }
-
-                    if (indexData == null)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Failed to parse index file for {fileName}. Skipping...");
-                        Console.ResetColor();
-                        continue;
-                    }
-
-                    string[] assetsFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_assets.bin", SearchOption.TopDirectoryOnly);
-                    string[] manifestFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_manifest.bin", SearchOption.TopDirectoryOnly);
-
-                    if (assetsFiles.Length > 0 && manifestFiles.Length > 0)
-                    {
-                        string assetsFilePath = assetsFiles[0];
-                        string manifestFilePath = manifestFiles[0];
-
-                        assetData = await AssetsMapper.ParseAssetsFileAsync(
-                            assetsFilePath,
-                            imageSources,
-                            manifestFilePath,
-                            debugXmlPath,
-                            fileOutputDirectory
-                        );
-                    }
-
-                    // Generate the two CSV files inside the SWF extraction directory
-                    await AssetsMapper.WriteAssetAndImageMappingsAsync(assetData, debugXmlPath, fileOutputDirectory);
-
-                    string jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
-                    string jsonContent = JsonSerializer.Serialize(new
-                    {
-                        name = indexData?.Name ?? "unknown",
-                        logicType = indexData?.LogicType ?? "default",
-                        visualizationType = indexData?.VisualizationType ?? "default",
-                        assets = assetData ?? new Dictionary<string, AssetsMapper.Asset>(),
-                        logic = logicData ?? new AssetLogicData(),
-                        visualizations = visualizations ?? new List<Visualization>(),
-                        spritesheet = spriteBundle?.Spritesheet ?? new SpriteSheetData()
-                    }, new JsonSerializerOptions { WriteIndented = true });
-
-                    await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
-                    await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory);
-
-                    nitroFilesGenerated++;
-                }
-
-                Console.WriteLine($"All SWF files have been converted. {nitroFilesGenerated} nitro files were generated.");
+                Console.WriteLine($"✅ All SWF files have been converted. {nitroFilesGenerated.Count} nitro files were generated.");
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error during SWF conversion: {ex.Message}");
-            }
-            finally
-            {
-                Console.ResetColor();
+                Console.WriteLine($"❌ Error during SWF conversion: {ex.Message}");
             }
         }
 
-        private static async Task BundleNitroFileAsync(string outputDirectory, string fileName, string nitroOutputDirectory)
+        private static async Task<bool> ProcessSwfFileAsync(string swfFile)
+        {
+            string fileName = Path.GetFileNameWithoutExtension(swfFile);
+            string nitroFilePath = Path.Combine(OutputDirectory, $"{fileName}.nitro");
+
+            if (File.Exists(nitroFilePath)) return false; // Skip already converted files
+
+            string fileOutputDirectory = Path.Combine(OutputDirectory, fileName);
+            Directory.CreateDirectory(fileOutputDirectory);
+
+            string binaryOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}_binaryData");
+
+            Console.WriteLine($"⚠️ Start Decompiling SWF: {fileName}...");
+            await FfdecExtractor.ExtractSWFAsync(swfFile, binaryOutputPath);
+
+            if (!Directory.Exists(Path.Combine(binaryOutputPath, "binaryData")))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"❌ Error: Extraction failed for {fileName}. No binaryData folder found.");
+                Console.ResetColor();
+                return false;
+            }
+
+            string debugXmlPath = Path.Combine(binaryOutputPath, "debug.xml");
+            var imageSources = DebugXmlParser.ParseDebugXml(debugXmlPath);
+
+            // ✅ Process Index, Assets, Logic, and Visualizations in parallel
+            var indexTask = GetIndexDataAsync(binaryOutputPath);
+            var assetsTask = GetAssetDataAsync(binaryOutputPath, imageSources, debugXmlPath, fileOutputDirectory);
+            var logicTask = GetLogicDataAsync(binaryOutputPath);
+            var visualizationTask = GetVisualizationsDataAsync(binaryOutputPath);
+
+            await Task.WhenAll(indexTask, assetsTask, logicTask, visualizationTask);
+            var indexData = indexTask.Result;
+            var assetData = assetsTask.Result;
+            var logicData = logicTask.Result;
+            var visualizations = visualizationTask.Result;
+
+            if (indexData == null)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"❌ Failed to parse index file for {fileName}. Skipping...");
+                Console.ResetColor();
+                return false;
+            }
+
+            // ✅ Image Processing
+            string imagesDirectory = Path.Combine(binaryOutputPath, "images");
+            string tmpDirectory = Path.Combine(binaryOutputPath, "tmp");
+            await ImageRestorer.RestoreImagesFromTmpAsync(tmpDirectory, imagesDirectory, Path.Combine(fileOutputDirectory, "image_mapping.csv"));
+
+            var images = LoadImages(imagesDirectory);
+            if (images.Count == 0)
+            {
+                Console.WriteLine($"⚠️ No valid images found for {fileName}. Skipping sprite sheet generation.");
+                return false;
+            }
+
+            try
+            {
+                var (spriteSheetPath, spriteSheetData) = SpriteSheetMapper.GenerateSpriteSheet(
+                    images, fileOutputDirectory, fileName, maxWidth: 3072, maxHeight: 7000
+                );
+
+                if (spriteSheetPath == null || spriteSheetData == null)
+                {
+                    Console.WriteLine($"⚠️ No images found to generate spritesheet for {fileName}. Skipping...");
+                    return false;
+                }
+
+                var jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
+                var jsonContent = JsonSerializer.Serialize(new
+                {
+                    name = indexData.Name,
+                    logicType = indexData.LogicType,
+                    visualizationType = indexData.VisualizationType,
+                    assets = assetData,
+                    logic = logicData,
+                    visualizations = visualizations,
+                    spritesheet = spriteSheetData
+                }, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                });
+
+                await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
+                await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);
+
+                // ✅ After .nitro is created, delete the directory <= this is a good option to enable if you want to debug the generated files
+                DeleteDirectory(fileOutputDirectory);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error generating sprite sheet for {fileName}: {ex.Message}");
+                return false;
+            }
+        }
+
+        private static Dictionary<string, Bitmap> LoadImages(string imagesDirectory)
+        {
+            var images = new Dictionary<string, Bitmap>();
+            foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
+            {
+                string imageName = Path.GetFileNameWithoutExtension(imageFile);
+                if (imageName.StartsWith("sh_") || imageName.Contains("_32_")) continue;
+
+                try
+                {
+                    using var bitmap = new Bitmap(imageFile);
+                    if (!images.ContainsKey(imageName))
+                    {
+                        images[imageName] = new Bitmap(bitmap);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Error loading image {imageFile}: {ex.Message}");
+                }
+            }
+            return images;
+        }
+
+        private static async Task<IndexData> GetIndexDataAsync(string binaryOutputPath)
+        {
+            var indexFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_index.bin", SearchOption.TopDirectoryOnly);
+            return indexFiles.Length > 0 ? await IndexMapper.ParseIndexFileAsync(indexFiles[0]) : null;
+        }
+
+        private static async Task<Dictionary<string, AssetsMapper.Asset>> GetAssetDataAsync(
+            string binaryOutputPath, Dictionary<string, string> imageSources, string debugXmlPath, string fileOutputDirectory)
+        {
+            var assetsFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_assets.bin", SearchOption.TopDirectoryOnly);
+            var manifestFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_manifest.bin", SearchOption.TopDirectoryOnly);
+            return (assetsFiles.Length > 0 && manifestFiles.Length > 0)
+                ? await AssetsMapper.ParseAssetsFileAsync(assetsFiles[0], imageSources, manifestFiles[0], debugXmlPath, fileOutputDirectory)
+                : null;
+        }
+
+        private static async Task BundleNitroFileAsync(string outputDirectory, string fileName, string nitroOutputDirectory, string spriteSheetPath)
         {
             var nitroBundler = new NitroBundler();
-
             string jsonFilePath = Path.Combine(outputDirectory, $"{fileName}.json");
-            byte[] jsonData = await File.ReadAllBytesAsync(jsonFilePath);
-            nitroBundler.AddFile($"{fileName}.json", jsonData);
 
-            string imageFilePath = Path.Combine(outputDirectory, $"{fileName}.png");
-            if (File.Exists(imageFilePath))
-            {
-                byte[] imageData = await File.ReadAllBytesAsync(imageFilePath);
-                nitroBundler.AddFile($"{fileName}.png", imageData);
-            }
-            else
-            {
-                Console.WriteLine("⚠️ Warning: No image file found to include in nitro file.");
-            }
+            if (File.Exists(jsonFilePath))
+                nitroBundler.AddFile($"{fileName}.json", await File.ReadAllBytesAsync(jsonFilePath));
 
-            byte[] nitroData = await nitroBundler.ToBufferAsync();
-            string nitroFilePath = Path.Combine(nitroOutputDirectory, $"{fileName}.nitro");
+            if (File.Exists(spriteSheetPath))
+                nitroBundler.AddFile(Path.GetFileName(spriteSheetPath), await File.ReadAllBytesAsync(spriteSheetPath));
 
-            await File.WriteAllBytesAsync(nitroFilePath, nitroData);
-            Console.WriteLine($"Generated {fileName}.nitro -> {nitroFilePath}");
+            await File.WriteAllBytesAsync(Path.Combine(nitroOutputDirectory, $"{fileName}.nitro"), await nitroBundler.ToBufferAsync());
+            Console.WriteLine($"📦 Generated {fileName}.nitro -> {nitroOutputDirectory}");
         }
 
-        public class SpriteBundle
+        private static void DeleteDirectory(string directoryPath)
         {
-            public SpriteSheetData Spritesheet { get; set; }
-            public ImageData ImageData { get; set; }
+            if (Directory.Exists(directoryPath))
+            {
+                try
+                {
+                    Directory.Delete(directoryPath, recursive: true);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Error deleting directory {directoryPath}: {ex.Message}");
+                }
+            }
         }
 
-        public class ImageData
-        {
-            public string Name { get; set; }
-            public byte[] Buffer { get; set; }
-        }
+        private static async Task<AssetLogicData> GetLogicDataAsync(string binaryOutputPath) => null;
+
+        private static async Task<List<Visualization>> GetVisualizationsDataAsync(string binaryOutputPath) => null;
     }
 }

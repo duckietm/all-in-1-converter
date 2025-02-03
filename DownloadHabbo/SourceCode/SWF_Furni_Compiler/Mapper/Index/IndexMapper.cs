@@ -19,7 +19,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Index
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error parsing _index.bin: {ex.Message}");
+                Console.WriteLine($"❌ Error parsing _index.bin: {ex.Message}");
                 return null;
             }
             finally
@@ -58,13 +58,13 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Index
 
     public class IndexData
     {
-        [JsonPropertyName("name")] // Specify lowercase JSON property name
+        [JsonPropertyName("name")]
         public string Name { get; set; }
 
-        [JsonPropertyName("visualizationType")] // Specify lowercase JSON property name
+        [JsonPropertyName("visualizationType")]
         public string VisualizationType { get; set; }
 
-        [JsonPropertyName("logicType")] // Specify lowercase JSON property name
+        [JsonPropertyName("logicType")]
         public string LogicType { get; set; }
     }
 }

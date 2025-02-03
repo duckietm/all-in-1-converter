@@ -6,16 +6,13 @@ using System.Xml.Linq;
 
 public static class DebugXmlParser
 {
-    /// <summary>
-    /// Parses the Debug.xml file and extracts object-to-source mappings.
-    /// </summary>
     public static Dictionary<string, string> ParseDebugXml(string debugXmlPath)
     {
         var mapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         if (!File.Exists(debugXmlPath))
         {
-            Console.WriteLine($"Error: Debug.xml file not found: {debugXmlPath}");
+            Console.WriteLine($"❌ Error Debug.xml file not found: {debugXmlPath}");
             return mapping;
         }
 
@@ -27,7 +24,7 @@ public static class DebugXmlParser
 
             if (symbolClassTag == null)
             {
-                Console.WriteLine("Error: SymbolClassTag not found in Debug.xml.");
+                Console.WriteLine("❌ Error SymbolClassTag not found in Debug.xml.");
                 return mapping;
             }
 
@@ -36,7 +33,7 @@ public static class DebugXmlParser
 
             if (tagItems == null || nameItems == null || tagItems.Count != nameItems.Count)
             {
-                Console.WriteLine("Error: Tags and names count mismatch in Debug.xml.");
+                Console.WriteLine("❌ Error Tags and names count mismatch in Debug.xml.");
                 return mapping;
             }
 
@@ -60,25 +57,21 @@ public static class DebugXmlParser
                     mapping[obj] = source;
                 }
             }
-            Console.WriteLine("Successfully mapped Debug.xml sources.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error parsing Debug.xml: {ex.Message}");
+            Console.WriteLine($"❌ Error parsing Debug.xml: {ex.Message}");
         }
 
         return mapping;
     }
-    /// <summary>
-    /// Extracts symbol class tags from Debug.xml and returns a dictionary of tag ID (string) to a list of asset names.
-    /// </summary>
     public static Dictionary<string, List<string>> ExtractSymbolClassTags(string debugXmlPath)
     {
         var tagMapping = new Dictionary<string, List<string>>();
 
         if (!File.Exists(debugXmlPath))
         {
-            Console.WriteLine($"Error: Debug.xml file not found: {debugXmlPath}");
+            Console.WriteLine($"❌ Error Debug.xml file not found: {debugXmlPath}");
             return tagMapping;
         }
 
@@ -90,7 +83,7 @@ public static class DebugXmlParser
 
             if (symbolClassTag == null)
             {
-                Console.WriteLine("Error: SymbolClassTag not found in Debug.xml.");
+                Console.WriteLine("❌ Error SymbolClassTag not found in Debug.xml.");
                 return tagMapping;
             }
 
@@ -99,32 +92,28 @@ public static class DebugXmlParser
 
             if (tagItems == null || nameItems == null || tagItems.Count != nameItems.Count)
             {
-                Console.WriteLine("Error: Tags and names count mismatch in Debug.xml.");
+                Console.WriteLine("❌ Error Tags and names count mismatch in Debug.xml.");
                 return tagMapping;
             }
 
             for (int i = 0; i < tagItems.Count; i++)
             {
-                string tagId = tagItems[i]; // Treat ID as string
+                string tagId = tagItems[i];
                 string assetName = nameItems[i];
 
                 if (!tagMapping.ContainsKey(tagId))
                 {
-                    tagMapping[tagId] = new List<string>(); // Initialize list for the ID
+                    tagMapping[tagId] = new List<string>();
                 }
-
-                // ✅ Append asset name to the same ID
                 tagMapping[tagId].Add(assetName);
             }
 
-            Console.WriteLine("✅ Successfully extracted symbol class tags.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error extracting symbol class tags: {ex.Message}");
+            Console.WriteLine($"❌ Error extracting symbol class tags: {ex.Message}");
         }
 
         return tagMapping;
     }
-
 }

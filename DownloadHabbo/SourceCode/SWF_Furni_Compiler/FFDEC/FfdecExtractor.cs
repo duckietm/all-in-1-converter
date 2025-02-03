@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using Habbo_Downloader.SWFCompiler.Mapper.Assests;
+﻿using System.Diagnostics;
 
 namespace Habbo_Downloader.Tools
 {
@@ -15,25 +8,17 @@ namespace Habbo_Downloader.Tools
 
         public static async Task ExtractSWFAsync(string swfFilePath, string outputDirectory)
         {
-            // Ensure output directory is clean
             ClearOutputDirectory(outputDirectory);
 
-            // First command: extract assets, binary data, and symbolClass CSV.
             string commandExport = $"-export image,binarydata,symbolClass \"{outputDirectory}\" \"{swfFilePath}\"";
             await RunFfdecCommandAsync(commandExport);
 
-            // Second command: export the SWF structure as XML for debugging.
             string debugXmlPath = Path.Combine(outputDirectory, "debug.xml");
             string commandXml = $"-swf2xml \"{swfFilePath}\" \"{debugXmlPath}\"";
             await RunFfdecCommandAsync(commandXml);
 
-            // Remove unnecessary images (e.g., _32_ variants)
             RemoveUnwantedImages(outputDirectory, "_32_");
-
-            // Parse Debug.xml for asset mappings.
             var assetMappings = DebugXmlParser.ParseDebugXml(debugXmlPath);
-
-            // Rebuild images using the asset mappings from Debug.xml.
             await RebuildImagesAsync(outputDirectory, assetMappings);
         }
 
@@ -97,7 +82,6 @@ namespace Habbo_Downloader.Tools
             }
             Directory.CreateDirectory(tmpDir);
 
-            Console.WriteLine("\nDEBUG: Files in temporary directory:");
             var allPngFiles = Directory.GetFiles(imageDir, "*.png", SearchOption.AllDirectories);
             foreach (var file in allPngFiles)
             {
@@ -105,9 +89,7 @@ namespace Habbo_Downloader.Tools
                 string destinationPath = Path.Combine(tmpDir, relativePath);
                 Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
                 File.Move(file, destinationPath);
-                Console.WriteLine("  " + relativePath);
             }
-            Console.WriteLine($"DEBUG: Total {allPngFiles.Length} files found in temporary directory.");
 
             // Build a lookup dictionary: key = file name (without extension), value = full path.
             string[] tmpFiles = Directory.GetFiles(tmpDir, "*.png", SearchOption.AllDirectories);
@@ -128,7 +110,6 @@ namespace Habbo_Downloader.Tools
                 // Try to locate the file in the temporary folder.
                 if (!fileLookup.TryGetValue(tag, out string? originalFilePath))
                 {
-                    Console.WriteLine($"WARNING: No file found for tag '{tag}'.");
                     continue;
                 }
 
@@ -140,15 +121,13 @@ namespace Habbo_Downloader.Tools
                 {
                     File.Copy(originalFilePath, sourceFilePath, overwrite: false);
                     outputMappings[name] = sourceFilePath;
-                    Console.WriteLine($"Copied file for '{name}' (from tag '{tag}').");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Failed to copy {originalFilePath} to {sourceFilePath}: {ex.Message}");
+                    Console.WriteLine($"❌ Failed to copy {originalFilePath} to {sourceFilePath}: {ex.Message}");
                     continue;
                 }
             }
-
             return outputMappings;
         }
     }

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
 
@@ -151,11 +150,9 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         {
             writer.WriteStartObject();
 
-            // Always write `id`
             writer.WritePropertyName("id");
             writer.WriteNumberValue(value.Id);
 
-            // Conditionally write `randomX` and `randomY`
             if (value.RandomX.HasValue)
             {
                 writer.WritePropertyName("randomX");

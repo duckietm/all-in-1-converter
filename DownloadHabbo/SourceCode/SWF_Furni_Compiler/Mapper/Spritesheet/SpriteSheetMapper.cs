@@ -12,24 +12,18 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 {
     public static class SpriteSheetMapper
     {
-        // Dynamic cleaning function using a regex.
-        // It removes a duplicated token at the beginning.
-        // For example, "pura_mdl1_pura_mdl1_64_d_0_0" becomes "pura_mdl1_64_d_0_0".
         public static string CleanAssetName(string name)
         {
             return Regex.Replace(name, @"^([^_]+)_\1_", "$1_");
         }
 
-        public static (string ImagePath, SpriteSheetData SpriteData) GenerateSpriteSheet(
-            Dictionary<string, Bitmap> images,
-            string outputDirectory,
-            string name,
-            int numRows = 10,
-            int maxWidth = 10240,
-            int maxHeight = 7000)
+        public static (string ImagePath, SpriteSheetData SpriteData) GenerateSpriteSheet(Dictionary<string, Bitmap> images, string outputDirectory, string name, int numRows = 10, int maxWidth = 10240, int maxHeight = 7000)
         {
             if (images == null || images.Count == 0)
+            {
+                Console.WriteLine("⚠️ No images provided to generate sprite sheet.");
                 return (null, null);
+            }
 
             // Calculate how many images go per row.
             int imagesCount = images.Count;
@@ -141,6 +135,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 
                 string imagePath = Path.Combine(outputDirectory, $"{name}.png");
                 spriteSheet.Save(imagePath, ImageFormat.Png);
+
                 return (imagePath, spriteSheetData);
             }
         }

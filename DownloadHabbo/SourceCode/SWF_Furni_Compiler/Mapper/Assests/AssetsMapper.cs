@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Xml.Linq;
-using static Habbo_Downloader.SWFCompiler.Mapper.Assests.AssetsMapper;
+
 
 namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 {
@@ -30,13 +24,13 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
                 if (!File.Exists(assetsFilePath))
                 {
-                    Console.WriteLine($"Error: Assets file not found: {assetsFilePath}");
+                    Console.WriteLine($"❌ Error Assets file not found: {assetsFilePath}");
                     return new Dictionary<string, Asset>();
                 }
 
                 if (!File.Exists(manifestFilePath))
                 {
-                    Console.WriteLine($"Error: Manifest file not found: {manifestFilePath}");
+                    Console.WriteLine($"❌ Error Manifest file not found: {manifestFilePath}");
                     return new Dictionary<string, Asset>();
                 }
 
@@ -57,7 +51,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error parsing assets or manifest file: {ex.Message}");
+                Console.WriteLine($"❌ Error parsing assets or manifest file: {ex.Message}");
                 return new Dictionary<string, Asset>();
             }
             finally
@@ -66,19 +60,11 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             }
         }
 
-        public static async Task WriteAssetAndImageMappingsAsync(
-    Dictionary<string, Asset> assets,
-    string debugXmlPath,
-    string outputDirectory)
+        public static async Task WriteAssetAndImageMappingsAsync( Dictionary<string, Asset> assets, string debugXmlPath, string outputDirectory)
         {
             try
             {
                 var tagMappings = DebugXmlParser.ExtractSymbolClassTags(debugXmlPath);
-                Console.WriteLine("\n🔍 DEBUG: Extracted Symbol Class Tags Mapping:");
-                foreach (var kvp in tagMappings)
-                {
-                    Console.WriteLine($"Tag ID: {kvp.Key} -> Asset Names: {string.Join(",", kvp.Value)}");
-                }
 
                 string assetMappingPath = Path.Combine(outputDirectory, "asset_mapping.csv");
                 string imageMappingPath = Path.Combine(outputDirectory, "image_mapping.csv");
@@ -89,7 +75,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     await assetWriter.WriteLineAsync("ID,Name");
                     await imageWriter.WriteLineAsync("ID,ImageFile");
 
-                    // ✅ Extract SWF file name from ID 0
+                    // Extract SWF file name from ID 0
                     string swfPrefix = tagMappings.TryGetValue("0", out var swfNames) ? swfNames.FirstOrDefault() : null;
 
                     if (string.IsNullOrEmpty(swfPrefix))
@@ -97,31 +83,28 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                         Console.WriteLine("⚠️ Warning: Unable to determine SWF file prefix (ID 0).");
                         swfPrefix = "";  // Fallback to empty if missing
                     }
-                    else
-                    {
-                        Console.WriteLine($"✅ Identified SWF Prefix: {swfPrefix}");
-                    }
+
 
                     var idTracker = new HashSet<string>(); // Track IDs to identify duplicates
 
                     foreach (var kvp in tagMappings)
                     {
-                        string tagId = kvp.Key.ToString(); // Treat ID as a string
+                        string tagId = kvp.Key;
                         List<string> originalTagNames = kvp.Value;
 
                         if (tagId == "0") continue;
 
                         foreach (var originalTagName in originalTagNames)
                         {
+                            // Remove prefix for `asset_mapping.csv`
                             string cleanedName = RemoveSwfPrefix(originalTagName, swfPrefix);
 
                             if (cleanedName.Contains("_32_"))
                             {
-                                Console.WriteLine($"⚠️ Skipping: {cleanedName} (contains '_32_')");
                                 continue;
                             }
 
-                            // ✅ Skip `_visualization`, `_logic`, `_index`, `_manifest`
+                            // Skip `_visualization`, `_logic`, `_index`, `_manifest`, `_assets` in `asset_mapping.csv`
                             if (cleanedName.EndsWith("visualization") ||
                                 cleanedName.EndsWith("logic") ||
                                 cleanedName.EndsWith("index") ||
@@ -130,21 +113,17 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                             {
                                 continue;
                             }
-
-                            Console.WriteLine($"✅ Writing: ID: {tagId}, Name: {cleanedName}");
                             await assetWriter.WriteLineAsync($"{tagId},{cleanedName}");
 
-                            // 🔹 Write to image CSV (only write the first occurrence of each ID)
+                            // Write original XML value to `image_mapping.csv` (DO NOT remove prefix)
                             if (!idTracker.Contains(tagId))
                             {
-                                idTracker.Add(tagId); // Mark this ID as processed
-                                await imageWriter.WriteLineAsync($"{tagId},{cleanedName}");
+                                idTracker.Add(tagId);
+                                await imageWriter.WriteLineAsync($"{tagId},{originalTagName}"); // Keep original value
                             }
                         }
                     }
                 }
-
-                Console.WriteLine($"✅ asset_mapping.csv and image_mapping.csv successfully written to {outputDirectory}");
 
                 // Read the CSV file and update the assets dictionary
                 await UpdateAssetsWithSourceFromCsvAsync(assets, assetMappingPath);
@@ -157,11 +136,12 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             }
         }
 
+
         private static async Task UpdateAssetsWithSourceFromCsvAsync(Dictionary<string, Asset> assets, string csvFilePath)
         {
             if (!File.Exists(csvFilePath))
             {
-                Console.WriteLine($"Error: CSV file not found: {csvFilePath}");
+                Console.WriteLine($"❌ CSV file not found: {csvFilePath}");
                 return;
             }
 
@@ -198,13 +178,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     }
                 }
             }
-
-            Console.WriteLine("✅ Successfully updated assets with source information from CSV.");
         }
 
-        /// <summary>
-        /// Removes the SWF file name prefix dynamically (ID 0 value + `_`).
-        /// </summary>
         public static string RemoveSwfPrefix(string name, string swfPrefix)
         {
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(swfPrefix)) return name;
@@ -276,7 +251,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             // Detect first prefix dynamically (first word before `_`)
             string pattern = @"^[^_]+_";
 
-            // ✅ Replace only the first occurrence of the detected prefix
+            // Replace only the first occurrence of the detected prefix
             return Regex.Replace(name, pattern, "", RegexOptions.None);
         }
 
