@@ -113,7 +113,8 @@ namespace Habbo_Downloader.Compiler
             // ✅ Image Processing
             string imagesDirectory = Path.Combine(binaryOutputPath, "images");
             string tmpDirectory = Path.Combine(binaryOutputPath, "tmp");
-            await ImageRestorer.RestoreImagesFromTmpAsync(tmpDirectory, imagesDirectory, Path.Combine(fileOutputDirectory, "image_mapping.csv"));
+
+            await ImageRestorer.RestoreImagesFromTmpAsync(tmpDirectory, imagesDirectory, AssetsMapper.LatestImageMapping);
 
             var images = LoadImages(imagesDirectory);
             if (images.Count == 0)
@@ -125,7 +126,7 @@ namespace Habbo_Downloader.Compiler
             try
             {
                 var (spriteSheetPath, spriteSheetData) = SpriteSheetMapper.GenerateSpriteSheet(
-                    images, fileOutputDirectory, fileName, maxWidth: 3072, maxHeight: 7000
+                    images, fileOutputDirectory, fileName, maxWidth: 10240, maxHeight: 7000
                 );
 
                 if (spriteSheetPath == null || spriteSheetData == null)
