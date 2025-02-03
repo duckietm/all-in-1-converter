@@ -126,7 +126,7 @@ namespace Habbo_Downloader.Compiler
             try
             {
                 var (spriteSheetPath, spriteSheetData) = SpriteSheetMapper.GenerateSpriteSheet(
-                    images, fileOutputDirectory, fileName, maxWidth: 3072, maxHeight: 7000
+                    images, fileOutputDirectory, fileName, maxWidth: 10240, maxHeight: 7000
                 );
 
                 if (spriteSheetPath == null || spriteSheetData == null)
