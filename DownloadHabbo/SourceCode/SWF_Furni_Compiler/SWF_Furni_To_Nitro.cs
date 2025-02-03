@@ -206,6 +206,56 @@ namespace Habbo_Downloader.Compiler
                 : null;
         }
 
+        private static async Task<AssetLogicData> GetLogicDataAsync(string binaryOutputPath)
+        {
+            string[] logicFiles = Directory.GetFiles(
+                Path.Combine(binaryOutputPath, "binaryData"),
+                "*_logic.bin",
+                SearchOption.TopDirectoryOnly
+            );
+
+            if (logicFiles.Length > 0)
+            {
+                string logicFilePath = logicFiles[0];
+                string logicContent = await File.ReadAllTextAsync(logicFilePath);
+                XElement logicElement = XElement.Parse(logicContent);
+                return LogicMapper.MapLogicXml(logicElement);
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"No *_logic.bin file found in {binaryOutputPath}. Continuing without logic.");
+                Console.ResetColor();
+                return null;
+            }
+        }
+
+        private static async Task<List<Visualization>> GetVisualizationsDataAsync(string binaryOutputPath)
+        {
+            string[] visualizationFiles = Directory.GetFiles(
+                Path.Combine(binaryOutputPath, "binaryData"),
+                "*_visualization.bin",
+                SearchOption.TopDirectoryOnly
+            );
+
+            if (visualizationFiles.Length > 0)
+            {
+                string visualizationFilePath = visualizationFiles[0];
+                string visualizationContent = await File.ReadAllTextAsync(visualizationFilePath);
+                XElement visualizationElement = XElement.Parse(visualizationContent);
+                return VisualizationsMapper.MapVisualizationsXml(visualizationElement);
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"No *_visualization.bin file found in {binaryOutputPath}. Continuing without visualization.");
+                Console.ResetColor();
+                return null;
+            }
+        }
+
+
+
         private static async Task BundleNitroFileAsync(string outputDirectory, string fileName, string nitroOutputDirectory, string spriteSheetPath)
         {
             var nitroBundler = new NitroBundler();
@@ -235,9 +285,5 @@ namespace Habbo_Downloader.Compiler
                 }
             }
         }
-
-        private static async Task<AssetLogicData> GetLogicDataAsync(string binaryOutputPath) => null;
-
-        private static async Task<List<Visualization>> GetVisualizationsDataAsync(string binaryOutputPath) => null;
     }
 }
