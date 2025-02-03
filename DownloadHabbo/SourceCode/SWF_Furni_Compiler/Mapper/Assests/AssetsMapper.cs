@@ -6,6 +6,9 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 {
     public static class AssetsMapper
     {
+        // Holds the latest image mapping dictionary (ID → original tag name) built in memory.
+        public static Dictionary<string, string> LatestImageMapping { get; private set; } = new Dictionary<string, string>();
+
         public static async Task<Dictionary<string, Asset>> ParseAssetsFileAsync(
             string assetsFilePath,
             Dictionary<string, string> imageSources,
@@ -42,8 +45,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
                 var assets = MapAssetsXML(root, manifestRoot, imageSources, debugXmlPath);
 
-                // Build asset mapping in memory and write image mapping to disk.
-                await WriteAssetAndImageMappingsAsync(assets, debugXmlPath, swfOutputDirectory);
+                // Build the mappings in memory (both asset mapping for updating assets and image mapping for image renaming).
+                await BuildMappingsInMemoryAsync(assets, debugXmlPath);
 
                 return assets;
             }
@@ -59,83 +62,79 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             }
         }
 
-        // Builds the asset mapping in memory (to update assets)
-        public static async Task WriteAssetAndImageMappingsAsync(
+        public static async Task BuildMappingsInMemoryAsync(
             Dictionary<string, Asset> assets,
-            string debugXmlPath,
-            string outputDirectory)
+            string debugXmlPath)
         {
             try
             {
-                // Get the tag mappings from the debug XML.
+                // Get tag mappings from the debug XML.
                 var tagMappings = DebugXmlParser.ExtractSymbolClassTags(debugXmlPath);
 
-                // In-memory list for asset_mapping.csv lines.
+                // In-memory list for asset mapping lines (used to update assets).
                 var assetMappingLines = new List<string>();
-                assetMappingLines.Add("ID,Name"); // header
+                assetMappingLines.Add("ID,Name"); // header (not used in processing, just for consistency)
 
-                // Build the image mapping file normally on disk.
-                string imageMappingPath = Path.Combine(outputDirectory, "image_mapping.csv");
-                using (StreamWriter imageWriter = new StreamWriter(imageMappingPath, false))
+                // In-memory dictionary for image mapping (ID → original tag name).
+                var imageMapping = new Dictionary<string, string>();
+
+                // Extract the SWF prefix from tag id "0"
+                string swfPrefix = tagMappings.TryGetValue("0", out var swfNames) ? swfNames.FirstOrDefault() : "";
+                if (string.IsNullOrEmpty(swfPrefix))
                 {
-                    await imageWriter.WriteLineAsync("ID,ImageFile");
+                    Console.WriteLine("⚠️ Warning: Unable to determine SWF file prefix (ID 0).");
+                    swfPrefix = "";
+                }
 
-                    // Extract the SWF prefix from tag id "0"
-                    string swfPrefix = tagMappings.TryGetValue("0", out var swfNames) ? swfNames.FirstOrDefault() : null;
-                    if (string.IsNullOrEmpty(swfPrefix))
+                var idTracker = new HashSet<string>(); // to avoid duplicate image mappings
+
+                // Loop through the tag mappings (skip ID "0")
+                foreach (var kvp in tagMappings)
+                {
+                    string tagId = kvp.Key;
+                    List<string> originalTagNames = kvp.Value;
+
+                    if (tagId == "0") continue;
+
+                    foreach (var originalTagName in originalTagNames)
                     {
-                        Console.WriteLine("⚠️ Warning: Unable to determine SWF file prefix (ID 0).");
-                        swfPrefix = "";
-                    }
+                        // Remove the SWF prefix from the tag name for asset mapping.
+                        string cleanedName = RemoveSwfPrefix(originalTagName, swfPrefix);
 
-                    var idTracker = new HashSet<string>(); // to avoid duplicate image mappings
-
-                    // Loop through the tag mappings (skip ID "0")
-                    foreach (var kvp in tagMappings)
-                    {
-                        string tagId = kvp.Key;
-                        List<string> originalTagNames = kvp.Value;
-
-                        if (tagId == "0") continue;
-
-                        foreach (var originalTagName in originalTagNames)
+                        // Skip names with undesired parts.
+                        if (cleanedName.Contains("_32_"))
+                            continue;
+                        if (cleanedName.EndsWith("visualization", StringComparison.OrdinalIgnoreCase) ||
+                            cleanedName.EndsWith("logic", StringComparison.OrdinalIgnoreCase) ||
+                            cleanedName.EndsWith("index", StringComparison.OrdinalIgnoreCase) ||
+                            cleanedName.EndsWith("assets", StringComparison.OrdinalIgnoreCase) ||
+                            cleanedName.EndsWith("manifest", StringComparison.OrdinalIgnoreCase))
                         {
-                            // For asset mapping, remove the SWF prefix.
-                            string cleanedName = RemoveSwfPrefix(originalTagName, swfPrefix);
+                            continue;
+                        }
 
-                            // Skip asset names with undesired parts.
-                            if (cleanedName.Contains("_32_"))
-                                continue;
+                        // Build the asset mapping (in memory).
+                        assetMappingLines.Add($"{tagId},{cleanedName}");
 
-                            if (cleanedName.EndsWith("visualization", StringComparison.OrdinalIgnoreCase) ||
-                                cleanedName.EndsWith("logic", StringComparison.OrdinalIgnoreCase) ||
-                                cleanedName.EndsWith("index", StringComparison.OrdinalIgnoreCase) ||
-                                cleanedName.EndsWith("assets", StringComparison.OrdinalIgnoreCase) ||
-                                cleanedName.EndsWith("manifest", StringComparison.OrdinalIgnoreCase))
-                            {
-                                continue;
-                            }
-
-                            // Add to asset mapping in memory.
-                            assetMappingLines.Add($"{tagId},{cleanedName}");
-
-                            // Write image mapping (with original tag name) only once per ID.
-                            if (!idTracker.Contains(tagId))
-                            {
-                                idTracker.Add(tagId);
-                                await imageWriter.WriteLineAsync($"{tagId},{originalTagName}");
-                            }
+                        // Build the image mapping using the original tag name.
+                        if (!idTracker.Contains(tagId))
+                        {
+                            idTracker.Add(tagId);
+                            imageMapping[tagId] = originalTagName;
                         }
                     }
                 }
 
-                // Update the assets using the in-memory asset_mapping lines.
+                // Update the assets using the in-memory asset mapping lines.
                 await UpdateAssetsWithSourceFromCsvLinesAsync(assets, assetMappingLines.Skip(1));
+
+                // Store the in-memory image mapping.
+                LatestImageMapping = imageMapping;
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ Error writing CSV mappings: {ex.Message}");
+                Console.WriteLine($"❌ Error building in-memory mappings: {ex.Message}");
                 Console.ResetColor();
             }
         }
