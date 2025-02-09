@@ -26,8 +26,8 @@ namespace Habbo_Downloader.Compiler
                 string input = Console.ReadLine()?.Trim().ToUpper();
 
                 ImportDirectory = string.IsNullOrEmpty(input) || input == "H"
-                    ? @"hof_furni"
-                    : input == "I" ? @"SWFCompiler\import\furniture" : @"hof_furni";
+                    ? @"Habbo_Default\hof_furni"
+                    : input == "I" ? @"SWFCompiler\import\furniture" : @"Habbo_Default\hof_furni";
 
                 Console.WriteLine($"✅ Converting SWF to Nitro from source {ImportDirectory}");
 

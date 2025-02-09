@@ -75,6 +75,9 @@ namespace ConsoleApplication
                     case "3":
                         await HotelToolsMenu.DisplayMenu();
                         break;
+                    case "4":
+                        await DatabaseMenu.DisplayMenu();
+                        break;
                     case "help":
                         DisplayHelp();
                         break;
@@ -200,6 +203,7 @@ namespace ConsoleApplication
             Console.WriteLine("1. Habbo Original Downloads                                                ");
             Console.WriteLine("2. Nitro Custom Downloads                                                  ");
             Console.WriteLine("3. Hotel Tools                                                             ");
+            Console.WriteLine("4. Database Tools                                                          ");
             Console.WriteLine("                                                                           ");
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine(" Type 1, 2 or 3 in the command to go to the required section               ");
@@ -220,6 +224,7 @@ namespace ConsoleApplication
             Console.WriteLine("1 - Habbo Original Downloads: Download assets from the original Habbo.");
             Console.WriteLine("2 - Nitro Custom Downloads: Download custom Nitro assets.");
             Console.WriteLine("3 - Hotel Tools: Manage and compile hotel tools.");
+            Console.WriteLine("4 - Database Tools: Manage tools for your database.");
             Console.WriteLine("Type 'version' to display the current Habbo release version.");
             Console.WriteLine("Type 'exit' to quit the application.");
             Console.WriteLine("Press any key to return to the main menu...");
