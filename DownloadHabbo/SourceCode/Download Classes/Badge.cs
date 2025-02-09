@@ -5,7 +5,7 @@ namespace ConsoleApplication
 {
     public static class Badges
     {
-        private const string BadgesDirectory = "./badges";
+        private const string BadgesDirectory = "./Habbo_Default/badges";
         private const string TempDirectory = "./temp";
         private const int BufferSize = 5000;
         private static SemaphoreSlim semaphore = new SemaphoreSlim(100);

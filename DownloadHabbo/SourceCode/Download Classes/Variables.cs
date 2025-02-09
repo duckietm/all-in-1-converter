@@ -11,89 +11,65 @@
 
             try
             {
-                Directory.CreateDirectory("./files");
-
-                Console.WriteLine("Saving External Variables...");
-
                 string externalvarsurl = config["AppSettings:externalvarsurl"];
                 if (string.IsNullOrEmpty(externalvarsurl))
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Error: External Variables URL is not configured.");
-                    Console.ForegroundColor = ConsoleColor.Gray;
+                    WriteColoredMessage("Error: External Variables URL is not configured.", ConsoleColor.Red);
                     return;
                 }
 
                 if (!Uri.TryCreate(externalvarsurl, UriKind.Absolute, out Uri uriResult) ||
                     (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps))
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Error: Invalid External Variables URL.");
-                    Console.ForegroundColor = ConsoleColor.Gray;
+                    WriteColoredMessage("Error: Invalid External Variables URL.", ConsoleColor.Red);
                     return;
                 }
 
                 httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
-                int retryCount = 3;
-                while (retryCount > 0)
+                for (int retryCount = 3; retryCount > 0; retryCount--)
                 {
                     try
                     {
-                        await DownloadFileAsync(externalvarsurl, "./files/external_variables.txt", "external_variables.txt");
-
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine("External Variables Saved");
-                        Console.ForegroundColor = ConsoleColor.Gray;
+                        await DownloadFileAsync(externalvarsurl, Path.Combine("./Habbo_Default/files", "external_variables.txt"), "external_variables.txt");
+                        WriteColoredMessage("External Variables Saved", ConsoleColor.Green);
                         return;
                     }
                     catch (HttpRequestException ex)
                     {
-                        retryCount--;
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"Error downloading external variables: {ex.Message}. Retries left: {retryCount}");
-                        Console.ForegroundColor = ConsoleColor.Gray;
+                        WriteColoredMessage($"Error downloading external variables: {ex.Message}. Retries left: {retryCount - 1}", ConsoleColor.Yellow);
 
-                        if (retryCount == 0)
+                        if (retryCount == 1)
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine("Failed to download external variables after 3 attempts.");
-                            Console.ForegroundColor = ConsoleColor.Gray;
+                            WriteColoredMessage("Failed to download external variables after 3 attempts.", ConsoleColor.Red);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Error downloading external variables: " + ex.Message);
-                Console.ForegroundColor = ConsoleColor.Gray;
+                WriteColoredMessage("Error downloading external variables: " + ex.Message, ConsoleColor.Red);
             }
         }
 
         private static async Task DownloadFileAsync(string url, string filePath, string fileName)
         {
-            try
-            {
-                var response = await httpClient.GetAsync(url);
-                response.EnsureSuccessStatusCode();
+            var response = await httpClient.GetAsync(url).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
 
-                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    await response.Content.CopyToAsync(fileStream);
-                }
-
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Downloaded: {fileName}");
-                Console.ForegroundColor = ConsoleColor.Gray;
-            }
-            catch (HttpRequestException ex)
+            using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error downloading {fileName}: {ex.Message}");
-                Console.ForegroundColor = ConsoleColor.Gray;
-                throw;
+                await response.Content.CopyToAsync(fileStream).ConfigureAwait(false);
             }
+
+            WriteColoredMessage($"Downloaded: {fileName}", ConsoleColor.Green);
+        }
+
+        private static void WriteColoredMessage(string message, ConsoleColor color)
+        {
+            Console.ForegroundColor = color;
+            Console.WriteLine(message);
+            Console.ForegroundColor = ConsoleColor.Gray;
         }
     }
 }

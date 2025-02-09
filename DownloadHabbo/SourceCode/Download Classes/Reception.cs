@@ -9,15 +9,6 @@
             Console.WriteLine("Starting Reception Download...");
 
             EnsureDirectoryExists("./temp");
-            EnsureDirectoryExists("./reception");
-            EnsureDirectoryExists("./reception/catalogue");
-            EnsureDirectoryExists("./reception/web_promo_small");
-
-            Console.WriteLine("This downloads not all images. Only the ones that are defined in the external_variables.");
-            Console.WriteLine("Run this once in a while to collect all images!");
-            Console.WriteLine("Catalogue Teasers used on the reception are stored in /catalogue/");
-            Console.WriteLine("web_promo_small images used on the reception are stored in /reception/web_promo_small");
-            Console.WriteLine();
 
             string externalVariablesPath = "./temp/external_variables.txt";
             Console.WriteLine("Downloading external variables");
@@ -38,15 +29,15 @@
                 {
                     if (line.Contains("reception/"))
                     {
-                        downloadCount = await ProcessImageLineAsync(line, "reception/", "./reception", "receptionurl", downloadCount);
+                        downloadCount = await ProcessImageLineAsync(line, "reception/", "./Habbo_Default/reception", "receptionurl", downloadCount);
                     }
                     if (line.Contains("catalogue/"))
                     {
-                        downloadCount = await ProcessImageLineAsync(line, "catalogue/", "./reception/catalogue", "catalogurl", downloadCount);
+                        downloadCount = await ProcessImageLineAsync(line, "catalogue/", "./Habbo_Default/reception/catalogue", "catalogurl", downloadCount);
                     }
                     if (line.Contains("web_promo_small/"))
                     {
-                        downloadCount = await ProcessImageLineAsync(line, "web_promo_small/", "./reception/web_promo_small", "promosmallurl", downloadCount);
+                        downloadCount = await ProcessImageLineAsync(line, "web_promo_small/", "./Habbo_Default/reception/web_promo_small", "promosmallurl", downloadCount);
                     }
                 }
             }
@@ -88,7 +79,8 @@
 
                 if (!fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase) &&
                     !fileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) &&
-                    !fileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
+                    !fileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) &&
+                    !fileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine($"Skipping invalid file: {fileName}");
@@ -127,9 +119,6 @@
                         catch (HttpRequestException ex)
                         {
                             retryCount--;
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine($"Error downloading {fileName}: {ex.Message}. Retries left: {retryCount}");
-                            Console.ForegroundColor = ConsoleColor.Gray;
 
                             if (retryCount == 0)
                             {
@@ -139,12 +128,6 @@
                             }
                         }
                     }
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.DarkCyan;
-                    Console.WriteLine($"{fileName} already exists!");
-                    Console.ForegroundColor = ConsoleColor.Gray;
                 }
             }
             catch (Exception ex)

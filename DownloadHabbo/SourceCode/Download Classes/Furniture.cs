@@ -17,10 +17,8 @@ namespace ConsoleApplication
 
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
-            Console.WriteLine("Furniture Download Started");
-
-            Directory.CreateDirectory("./hof_furni");
-            Directory.CreateDirectory("./hof_furni/icons");
+            Directory.CreateDirectory("./Habbo_Default/hof_furni");
+            Directory.CreateDirectory("./Habbo_Default/icons");
             Directory.CreateDirectory("./temp");
 
             string furnidataTxtPath = "./temp/furnidata.txt";
@@ -63,8 +61,8 @@ namespace ConsoleApplication
                     string iconName = string.IsNullOrEmpty(variant) ? furnitureName : $"{furnitureName}_{variant}";
                     string furnitureDir = furnitureDirWithMetadata.Split(',')[0];
 
-                    string swfFilePath = $"./hof_furni/{furnitureName}.swf";
-                    string iconFilePath = $"./hof_furni/icons/{iconName}_icon.png";
+                    string swfFilePath = $"./Habbo_Default/hof_furni/{furnitureName}.swf";
+                    string iconFilePath = $"./Habbo_Default/hof_furni/icons/{iconName}_icon.png";
 
                     if (!File.Exists(swfFilePath))
                     {
@@ -96,7 +94,6 @@ namespace ConsoleApplication
                         {
                             try
                             {
-                                Console.WriteLine($"Downloading: {iconName}_icon.png");
                                 await DownloadFileAsync(iconUrl, iconFilePath, $"{iconName}_icon.png");
                             }
                             catch (HttpRequestException ex)

@@ -93,12 +93,14 @@ namespace ConsoleApplication
 
         private static void CreateDirectories()
         {
-            string[] baseDirectories = { "./NitroCompiler/compile", "./NitroCompiler/compiled", "./NitroCompiler/extract", "./NitroCompiler/extracted" };
-            string[] subDirectories = { "furni", "clothing", "effects", "pets" };
+            string[] baseDirectories_compiler = { "./NitroCompiler/compile", "./NitroCompiler/compiled", "./NitroCompiler/extract", "./NitroCompiler/extracted" };
+            string[] subDirectories_compiler = { "furni", "clothing", "effects", "pets" };
+
+            string[] baseDirectories_habbo = { "./Habbo_Default" };
+            string[] subDirectories_habbo = { "badges", "clothes", "effect", "files", "hof_furni", "hof_furni/icons", "icons", "mp3", "quests", "reception", "reception/web_promo_small" };
 
             string[] additionalFolders = {
-                "./effect", "./hof_furni", "./Nitro_hof_furni", "./quests", "./reception", "./reception/web_promo_small",
-                "./badges", "./icons", "./files", "./mp3", "./clothes", "./Custom_clothes", "./Merge", "./Generate",
+                "./Custom_clothes", "./Merge", "./Generate",
                 "./Merge/Original_Furnidata", "./merge/Import_Furnidata", "./merge/Merged_Furnidata",
                 "./Merge/Original_Productdata", "./Merge/Import_Productdata", "./Merge/Merged_Productdata",
                 "./Merge/Original_ClothesData", "./Merge/Import_ClothesData", "./Merge/Merged_ClothesData",
@@ -108,11 +110,22 @@ namespace ConsoleApplication
 
             try
             {
-                foreach (string baseDir in baseDirectories)
+                foreach (string baseDir in baseDirectories_compiler)
                 {
                     Directory.CreateDirectory(baseDir);
 
-                    foreach (string subDir in subDirectories)
+                    foreach (string subDir in subDirectories_compiler)
+                    {
+                        string fullPath = Path.Combine(baseDir, subDir);
+                        Directory.CreateDirectory(fullPath);
+                    }
+                }
+
+                foreach (string baseDir in baseDirectories_habbo)
+                {
+                    Directory.CreateDirectory(baseDir);
+
+                    foreach (string subDir in subDirectories_habbo)
                     {
                         string fullPath = Path.Combine(baseDir, subDir);
                         Directory.CreateDirectory(fullPath);

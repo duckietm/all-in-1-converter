@@ -15,20 +15,20 @@ namespace ConsoleApplication
                 Console.WriteLine("                          Habbo Original Downloads                             ");
                 Console.ForegroundColor = ConsoleColor.Black;
                 Console.BackgroundColor = ConsoleColor.Gray;
-                Console.WriteLine("-> Download Badges                                                             ");
-                Console.WriteLine("-> Download Clothes                                                            ");
-                Console.WriteLine("-> Download Effects                                                            ");
-                Console.WriteLine("-> Download Furnidata                                                          ");
-                Console.WriteLine("-> Download Furniture                                                          ");
-                Console.WriteLine("-> Download Icons                                                              ");
-                Console.WriteLine("-> Download MP3                                                                ");
-                Console.WriteLine("-> Download Productdata                                                        ");
-                Console.WriteLine("-> Download Quests                                                             ");
-                Console.WriteLine("-> Download Reception                                                          ");
-                Console.WriteLine("-> Download Texts                                                              ");
-                Console.WriteLine("-> Download Variables                                                          ");
+                Console.WriteLine("1 => Download Badges                                                           ");
+                Console.WriteLine("2 => Download Clothes                                                          ");
+                Console.WriteLine("3 => Download Effects                                                          ");
+                Console.WriteLine("4 => Download Furnidata                                                        ");
+                Console.WriteLine("5 => Download Furniture                                                        ");
+                Console.WriteLine("6 => Download Icons                                                            ");
+                Console.WriteLine("7= > Download MP3                                                              ");
+                Console.WriteLine("8 => Download Productdata                                                      ");
+                Console.WriteLine("9 => Download Quests Images                                                    ");
+                Console.WriteLine("10 => Download Reception images                                                ");
+                Console.WriteLine("11 => Download Texts                                                           ");
+                Console.WriteLine("12 => Download Variables                                                       ");
                 Console.WriteLine("                                                                               ");
-                Console.WriteLine("-> Download All (this will download all that is required for confurting)       ");
+                Console.WriteLine("=> 'Download All' this will download all that is required for confurting)      ");
                 Console.WriteLine("                                                                               ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                        ");
                 Console.ResetColor();
@@ -77,10 +77,69 @@ namespace ConsoleApplication
                         }
                         break;
 
+                    case "1":
+                        Console.WriteLine("Starting Download badges!");
+                        await Badges.DownloadBadgesAsync();
+                        break;
+
+                    case "2":
+                        Console.WriteLine("Starting Download clothes!");
+                        await ClothesDownloader.DownloadClothesAsync();
+                        break;
+
+                    case "3":
+                        Console.WriteLine("Starting Download effects!");
+                        await EffectsDownloader.DownloadEffectsAsync();
+                        break;
+
+                    case "4":
+                        await FurnidataDownloader.DownloadFurnidata();
+                        break;
+
+                    case "5":
+                        Console.WriteLine("Starting Download furniture with icons!");
+                        await FurnitureDownloader.DownloadFurnitureAsync();
+                        break;
+                    
+                    case "6":
+                        Console.WriteLine("Starting Download Catalogue icons!");
+                        await IconDownloader.DownloadIcons();
+                        break;
+
+                    case "7":
+                        Console.WriteLine("Starting Download MP3!");
+                        await Mp3Downloader.DownloadMp3sAsync();
+                        break;
+                    case "8":
+                        Console.WriteLine("Starting Download Productdata!");
+                        await ProductDataDownloader.DownloadProductDataAsync();
+                        break;
+
+                    case "9":
+                        Console.WriteLine("Starting Download Quests images!");
+                        await QuestsDownloader.DownloadQuestsAsync();
+                        break;
+                    
+                    case "10":
+                        Console.WriteLine("Starting Download Reception images!");
+                        await ReceptionDownloader.DownloadReceptionImages();
+                        break;
+
+                    case "11":
+                        Console.WriteLine("Starting Download Texts!");
+                        await TextsDownloader.DownloadTextsAsync();
+                        break;
+
+                    case "12":
+                        Console.WriteLine("Starting Download Variables!");
+                        await VariablesDownloader.DownloadVariablesAsync();
+                        break;
+
                     default:
                         Console.WriteLine($"Unknown command: {inputData}");
                         break;
                 }
+
             }
             catch (Exception ex)
             {
@@ -100,12 +159,7 @@ namespace ConsoleApplication
             switch (downloadType)
             {
                 case "reception":
-                    await ReceptionDownloader.DownloadReceptionImages();
-                    break;
-
-                case "furniture":
-                    await FurnitureDownloader.DownloadFurnitureAsync();
-                    break;
+                    
 
                 case "nitrofurniture":
                     await NitroFurnitureDownloader.DownloadFurnitureAsync();
@@ -114,46 +168,13 @@ namespace ConsoleApplication
                 case "nitroclothes":
                     await NitroClothesDownloader.DownloadCustomClothesAsync();
                     break;
-
-                case "icons":
-                    await IconDownloader.DownloadIcons();
-                    break;
-
-                case "clothes":
-                    await ClothesDownloader.DownloadClothesAsync();
-                    break;
-
-                case "mp3":
-                    await Mp3Downloader.DownloadMp3sAsync();
-                    break;
-
-                case "furnidata":
-                    await FurnidataDownloader.DownloadFurnidata();
-                    break;
-
-                case "effects":
-                    await EffectsDownloader.DownloadEffectsAsync();
-                    break;
-
+ 
                 case "texts":
                     await TextsDownloader.DownloadTextsAsync();
                     break;
 
-                case "productdata":
-                    await ProductDataDownloader.DownloadProductDataAsync();
-                    break;
-
                 case "variables":
-                    await VariablesDownloader.DownloadVariablesAsync();
-                    break;
-
-                case "quests":
-                    await QuestsDownloader.DownloadQuestsAsync();
-                    break;
-
-                case "badges":
-                    await Badges.DownloadBadgesAsync();
-                    break;
+                    
 
                 case "all":
                     Console.WriteLine("Starting 'Download All'...");

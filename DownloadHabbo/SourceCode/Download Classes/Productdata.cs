@@ -11,10 +11,6 @@
 
             try
             {
-                Directory.CreateDirectory("./files");
-
-                Console.WriteLine("Saving productdata...");
-
                 string productdataurl = config["AppSettings:productdataurl"];
                 if (string.IsNullOrEmpty(productdataurl))
                 {
@@ -26,7 +22,7 @@
 
                 httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
-                await DownloadFileAsync(productdataurl, "./files/productdata.txt", "productdata.txt");
+                await DownloadFileAsync(productdataurl, "./Habbo_Default/files/productdata.txt", "productdata.txt");
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Productdata Saved");

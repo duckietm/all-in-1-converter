@@ -12,11 +12,6 @@
             string furnidataTXT = config["AppSettings:furnidataTXT"];
             string furnidataXML = config["AppSettings:furnidataXML"];
 
-            if (!Directory.Exists("./files"))
-            {
-                Directory.CreateDirectory("./files");
-            }
-
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             Console.WriteLine("Saving furnidata...");
@@ -27,17 +22,8 @@
                 Console.WriteLine($"Downloading furnidata.txt from: {furnidataTXT}");
                 Console.ForegroundColor = ConsoleColor.Gray;
 
-                await DownloadFileAsync(furnidataTXT, "./files/furnidata.txt", "furnidata.txt");
-
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"Downloading furnidata_xml.xml from: {furnidataXML}");
-                Console.ForegroundColor = ConsoleColor.Gray;
-
-                await DownloadFileAsync(furnidataXML, "./files/furnidata_xml.xml", "furnidata_xml.xml");
-
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Furnidata Saved");
-                Console.ForegroundColor = ConsoleColor.Gray;
+                await DownloadFileAsync(furnidataTXT, "./Habbo_Default/files/furnidata.txt", "furnidata.txt");
+                await DownloadFileAsync(furnidataXML, "./Habbo_Default/files/furnidata_xml.xml", "furnidata_xml.xml");
             }
             catch (HttpRequestException ex)
             {

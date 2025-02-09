@@ -60,7 +60,7 @@ namespace ConsoleApplication
                                 string questName = parts[1].ToLower();
                                 string questImage = parts[2].ToLower();
 
-                                if (!File.Exists($"quests/{questName}_{questImage}.png") && !questImage.Contains("="))
+                                if (!File.Exists($"Habbo_Default/quests/{questName}_{questImage}.png") && !questImage.Contains("="))
                                 {
                                     downloadCount += await DownloadQuestImageAsync(questsurl, questName, questImage);
                                 }
@@ -70,22 +70,10 @@ namespace ConsoleApplication
                                     Console.WriteLine($"{questName}_{questImage}.png is not valid!");
                                     Console.ForegroundColor = ConsoleColor.Gray;
                                 }
-                                else
-                                {
-                                    Console.ForegroundColor = ConsoleColor.DarkCyan;
-                                    Console.WriteLine($"{questName}_{questImage}.png already exists!");
-                                    Console.ForegroundColor = ConsoleColor.Gray;
-                                }
 
-                                if (!File.Exists($"quests/{questName}.png"))
+                                if (!File.Exists($"Habbo_Default/quests/{questName}.png"))
                                 {
                                     downloadCount += await DownloadQuestImageAsync(questsurl, questName, "");
-                                }
-                                else
-                                {
-                                    Console.ForegroundColor = ConsoleColor.DarkCyan;
-                                    Console.WriteLine($"{questName}.png already exists!");
-                                    Console.ForegroundColor = ConsoleColor.Gray;
                                 }
                             }
                         }
@@ -95,12 +83,6 @@ namespace ConsoleApplication
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Finished Downloading Quest images!");
                 Console.WriteLine($"{downloadCount} images have been downloaded!");
-                Console.ForegroundColor = ConsoleColor.Gray;
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Error downloading quests: " + ex.Message);
                 Console.ForegroundColor = ConsoleColor.Gray;
             }
             finally
@@ -121,7 +103,7 @@ namespace ConsoleApplication
             try
             {
                 string fileName = string.IsNullOrEmpty(questImage) ? $"{questName}.png" : $"{questName}_{questImage}.png";
-                string filePath = $"quests/{fileName}";
+                string filePath = $"Habbo_Default/quests/{fileName}";
 
                 await DownloadFileAsync($"{baseUrl}/{fileName}", filePath, fileName);
 
@@ -133,16 +115,10 @@ namespace ConsoleApplication
             }
             catch (HttpRequestException ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error downloading: {questName}_{questImage}.png: {ex.Message}");
-                Console.ForegroundColor = ConsoleColor.Gray;
                 return 0;
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error downloading: {questName}_{questImage}.png: {ex.Message}");
-                Console.ForegroundColor = ConsoleColor.Gray;
                 return 0;
             }
         }
@@ -165,9 +141,6 @@ namespace ConsoleApplication
             }
             catch (HttpRequestException ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error downloading {fileName}: {ex.Message}");
-                Console.ForegroundColor = ConsoleColor.Gray;
                 throw;
             }
         }

@@ -58,16 +58,11 @@
                     return;
                 }
 
-                if (!Directory.Exists("./effect"))
-                {
-                    Directory.CreateDirectory("./effect");
-                }
-
                 string effectMapUrl = $"{effectUrl}/{releaseEffect}/effectmap.xml";
-                await DownloadFileAsync(effectMapUrl, "./effect/effectmap.xml", "effectmap.xml");
+                await DownloadFileAsync(effectMapUrl, "./Habbo_Default/effect/effectmap.xml", "effectmap.xml");
 
                 string habboAvatarActionsUrl = $"{effectUrl}/{releaseEffect}/HabboAvatarActions.xml";
-                await DownloadFileAsync(habboAvatarActionsUrl, "./effect/HabboAvatarActions.xml", "HabboAvatarActions.xml");
+                await DownloadFileAsync(habboAvatarActionsUrl, "./Habbo_Default/effect/HabboAvatarActions.xml", "HabboAvatarActions.xml");
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Effects Downloaded and Saved");

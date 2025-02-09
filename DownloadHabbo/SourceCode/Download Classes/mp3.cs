@@ -9,10 +9,6 @@
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
 
-            Console.WriteLine("MP3 Sounds Download Started");
-
-            Directory.CreateDirectory("./mp3");
-
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             string soundMachineUrl = config["AppSettings:soundmachineurl"];
@@ -21,7 +17,7 @@
 
             while (errorCount < 20)
             {
-                string fileName = $"./mp3/sound_machine_sample_{mp3Number}.mp3";
+                string fileName = $"./Habbo_Default/mp3/sound_machine_sample_{mp3Number}.mp3";
 
                 if (File.Exists(fileName))
                 {

@@ -11,18 +11,11 @@
 
             string externalTextUrl = config["AppSettings:externaltexturl"];
 
-            if (!Directory.Exists("./files"))
-            {
-                Directory.CreateDirectory("./files");
-            }
-
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
-
-            Console.WriteLine("Saving external flash texts...");
 
             try
             {
-                await DownloadFileAsync(externalTextUrl, "./files/external_flash_texts.txt", "external_flash_texts.txt");
+                await DownloadFileAsync(externalTextUrl, "./Habbo_Default/files/external_flash_texts.txt", "external_flash_texts.txt");
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("External Flash Texts Saved");

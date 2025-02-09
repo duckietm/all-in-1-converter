@@ -9,10 +9,6 @@
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
 
-            Console.WriteLine("Catalogue Icons Download Started");
-
-            Directory.CreateDirectory("./icons");
-
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             string catalogIconUrl = config["AppSettings:catalogiconurl"];
@@ -21,7 +17,7 @@
 
             while (consecutiveErrors < 20)
             {
-                string filePath = $"./icons/icon_{iconNumber}.png";
+                string filePath = $"./Habbo_Default/icons/icon_{iconNumber}.png";
 
                 if (!File.Exists(filePath))
                 {

@@ -36,7 +36,7 @@ namespace ConsoleApplication
 
                 string currentDirectory = Environment.CurrentDirectory;
                 string gordonDirectory = "https://images.habbo.com/gordon/";
-                string downloadDirectory = Path.Combine(currentDirectory, "clothes");
+                string downloadDirectory = Path.Combine(currentDirectory, "Habbo_Default/clothes");
 
                 string figuremapUrl = $"{gordonDirectory}{release}/figuremap.xml";
                 string figuredataUrl = "http://habbo.com/gamedata/figuredata/1";
