@@ -1,9 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Xml.Linq;
 
 namespace ConsoleApplication
@@ -70,7 +66,6 @@ namespace ConsoleApplication
                     if (Directory.Exists(extractedDir))
                     {
                         Directory.Delete(extractedDir, true);
-                        Console.WriteLine($"Temporary files for {fileName} have been removed.");
                     }
                 }
                 else if (file.EndsWith(".nitro"))

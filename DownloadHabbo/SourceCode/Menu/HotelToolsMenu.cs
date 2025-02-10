@@ -16,13 +16,13 @@ namespace ConsoleApplication
                 Console.WriteLine("                          Hotel Tools Menu                                   ");
                 Console.ForegroundColor = ConsoleColor.Black;
                 Console.BackgroundColor = ConsoleColor.Gray;
-                Console.WriteLine("-> Merge Furnidata                                                           ");
-                Console.WriteLine("-> Merge Productdata                                                         ");
-                Console.WriteLine("-> Merge Clothes                                                             ");
-                Console.WriteLine("-> Generate SQL                                                              ");
-                Console.WriteLine("-> Decompile NitroFiles                                                      ");
-                Console.WriteLine("-> Compile NitroFiles                                                        ");
-                Console.WriteLine("-> SWFFurnitoNitro                                                           ");
+                Console.WriteLine("1 => Merge Furnidata                                                         ");
+                Console.WriteLine("2 => Merge Productdata                                                       ");
+                Console.WriteLine("3 => Merge Clothes                                                           ");
+                Console.WriteLine("4 => Generate SQL                                                            ");
+                Console.WriteLine("5 => Decompile NitroFil                                                      ");
+                Console.WriteLine("6 => Compile NitroFiles                                                      ");
+                Console.WriteLine("7 => SWFFurnitoNitro                                                         ");
                 Console.WriteLine("                                                                             ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                      ");
                 Console.ResetColor();
@@ -58,41 +58,33 @@ namespace ConsoleApplication
 
                 switch (starupconsole[0].ToLower())
                 {
-                    case "merge":
-                        if (starupconsole.Length > 1)
-                        {
-                            Console.WriteLine($"DEBUG: Merging {starupconsole[1]}...");
-                            await HandleMerge(starupconsole[1].ToLower());
-                        }
-                        else
-                        {
-                            Console.WriteLine("Missing argument for 'merge' command.");
-                        }
+                    case "1":
+                        await CompareFurnidata.Compare();
                         break;
 
-                    case "generate":
-                        if (starupconsole.Length > 1)
-                        {
-                            Console.WriteLine($"DEBUG: Generating {starupconsole[1]}...");
-                            HandleGenerate(starupconsole[1].ToLower());
-                        }
-                        else
-                        {
-                            Console.WriteLine("Missing argument for 'generate' command.");
-                        }
+                    case "2":
+                        await CompareProductData.Compare();
                         break;
 
-                    case "decompile":
+                    case "3":
+                        await CompareClothesData.Compare();
+                        break;
+
+                    case "4":
+                        SQLGenerator.GenerateSQL();
+                        break;
+
+                    case "5":
                         Console.WriteLine("DEBUG: Decompiling NitroFiles...");
                         await NitroExtractor.Extract();
                         break;
 
-                    case "compile":
+                    case "6":
                         Console.WriteLine("DEBUG: Compiling NitroFiles...");
                         await NitroFurniCompile.Compile();
                         break;
 
-                    case "swffurnitonitro":
+                    case "7":
                         Console.WriteLine("DEBUG: Converting SWF to Nitro...");
                         await SWF_Furni_To_Nitro.ConvertSwfFilesAsync();
                         break;
@@ -112,42 +104,6 @@ namespace ConsoleApplication
                 Console.ResetColor();
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadKey();
-            }
-        }
-
-        private static async Task HandleMerge(string mergeType)
-        {
-            switch (mergeType)
-            {
-                case "furnidata":
-                    await CompareFurnidata.Compare();
-                    break;
-
-                case "productdata":
-                    await CompareProductData.Compare();
-                    break;
-
-                case "clothes":
-                    await CompareClothesData.Compare();
-                    break;
-
-                default:
-                    Console.WriteLine($"Unknown merge type: {mergeType}");
-                    break;
-            }
-        }
-
-        private static void HandleGenerate(string generateType)
-        {
-            switch (generateType)
-            {
-                case "sql":
-                    SQLGenerator.GenerateSQL();
-                    break;
-
-                default:
-                    Console.WriteLine($"Unknown generate type: {generateType}");
-                    break;
             }
         }
     }
