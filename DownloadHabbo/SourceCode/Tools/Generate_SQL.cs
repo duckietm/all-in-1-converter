@@ -266,15 +266,25 @@ VALUES ({id}, '{spriteId}', {pageId}, {offerId}, 0, 99, '{classname}', 5, 0, 0, 
                 string xmlContent = File.ReadAllText(visualizationFilePath);
                 var xmlDoc = XDocument.Parse(xmlContent);
 
-                var animationIds = xmlDoc.Descendants("animation")
-                    .Select(a => int.TryParse(a.Attribute("id")?.Value, out var id) ? id : -1)
-                    .Where(id => id >= 0)
+                var validAnimationIds = xmlDoc.Descendants("animation")
+                    .Select(a => int.TryParse(a.Attribute("id")?.Value, out int id) ? id : -1)
+                    .Where(id => id >= 0 && id < 50)
                     .ToList();
 
-                int maxAnimationId = animationIds.Any() ? animationIds.Max() : -1;
-                int interactionModesCount = maxAnimationId + 1;
+                if (!validAnimationIds.Any())
+                {
+                    return 1;
+                }
 
-                return interactionModesCount <= 0 ? 1 : interactionModesCount;
+                if (validAnimationIds.Contains(0))
+                {
+                    int maxAnimationId = validAnimationIds.Max();
+                    return maxAnimationId + 1;
+                }
+                else
+                {
+                     return validAnimationIds.Count;
+                }
             }
             catch (Exception)
             {
