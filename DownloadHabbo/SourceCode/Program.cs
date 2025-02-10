@@ -96,59 +96,43 @@ namespace ConsoleApplication
 
         private static void CreateDirectories()
         {
-            string[] baseDirectories_compiler = { "./NitroCompiler/compile", "./NitroCompiler/compiled", "./NitroCompiler/extract", "./NitroCompiler/extracted" };
-            string[] subDirectories_compiler = { "furni", "clothing", "effects", "pets" };
-
-            string[] baseDirectories_habbo = { "./Habbo_Default" };
-            string[] subDirectories_habbo = { "badges", "clothes", "effect", "files", "hof_furni", "hof_furni/icons", "icons", "mp3", "quests", "reception", "reception/web_promo_small" };
-
-            string[] additionalFolders = {
-                "./Custom_clothes", "./Merge", "./Generate",
-                "./Merge/Original_Furnidata", "./merge/Import_Furnidata", "./merge/Merged_Furnidata",
-                "./Merge/Original_Productdata", "./Merge/Import_Productdata", "./Merge/Merged_Productdata",
-                "./Merge/Original_ClothesData", "./Merge/Import_ClothesData", "./Merge/Merged_ClothesData",
-                "./Generate/Furnidata", "./Generate/Furniture", "./Generate/Output_SQL",
-                "./SWFCompiler", "./SWFCompiler/nitro", "./SWFCompiler/import", "./SWFCompiler/import/furniture"
+            var directoryStructure = new Dictionary<string, string[]>
+            {
+                { "./NitroCompiler/compile", new[] { "furni", "clothing", "effects", "pets" } },
+                { "./NitroCompiler/compiled", new[] { "furni", "clothing", "effects", "pets" } },
+                { "./NitroCompiler/extract", new[] { "furni", "clothing", "effects", "pets" } },
+                { "./NitroCompiler/extracted", new[] { "furni", "clothing", "effects", "pets" } },
+                { "./Habbo_Default", new[] { "badges", "clothes", "effect", "files", "hof_furni", "hof_furni/icons", "icons", "mp3", "quests", "reception", "reception/web_promo_small" } },
+                { "./Merge", new[] { "Original_Furnidata", "Import_Furnidata", "Merged_Furnidata", "Original_ClothesData", "Import_ClothesData", "Merged_ClothesData", "Original_Productdata", "Import_Productdata", "Merged_Productdata" } },
+                { "./Generate", new[] { "Furnidata", "Furniture", "Output_SQL" } },
+                { "./SWFCompiler", new[] { "nitro", "import", "import/furniture" } },
+                { "./Database", new[] { "Variables" } },
+                { "./custom_downloads", new[] { "clothes", "nitro_furniture", "nitro_furniture/icons" } }
             };
 
             try
             {
-                foreach (string baseDir in baseDirectories_compiler)
+                foreach (var (baseDir, subDirs) in directoryStructure)
                 {
-                    Directory.CreateDirectory(baseDir);
-
-                    foreach (string subDir in subDirectories_compiler)
-                    {
-                        string fullPath = Path.Combine(baseDir, subDir);
-                        Directory.CreateDirectory(fullPath);
-                    }
+                    CreateDirectoryAndSubdirectories(baseDir, subDirs);
                 }
-
-                foreach (string baseDir in baseDirectories_habbo)
-                {
-                    Directory.CreateDirectory(baseDir);
-
-                    foreach (string subDir in subDirectories_habbo)
-                    {
-                        string fullPath = Path.Combine(baseDir, subDir);
-                        Directory.CreateDirectory(fullPath);
-                    }
-                }
-
-                foreach (string folder in additionalFolders)
-                {
-                    Directory.CreateDirectory(folder);
-                }
-
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("All directories have been successfully created.");
-                Console.ResetColor();
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"Error creating directories: {ex.Message}");
                 Console.ResetColor();
+            }
+        }
+
+        private static void CreateDirectoryAndSubdirectories(string baseDir, string[] subDirs)
+        {
+            Directory.CreateDirectory(baseDir);
+
+            foreach (var subDir in subDirs)
+            {
+                string fullPath = Path.Combine(baseDir, subDir);
+                Directory.CreateDirectory(fullPath);
             }
         }
 

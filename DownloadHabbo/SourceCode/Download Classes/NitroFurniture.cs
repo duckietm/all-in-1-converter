@@ -16,10 +16,6 @@ namespace ConsoleApplication
             string furnitureUrl = config["AppSettings:nitro_furnitureurl"];
             string furnitureIconUrl = config["AppSettings:nitro_furniture_icon_url"];
 
-            Console.WriteLine("Furniture Download Started");
-
-            Directory.CreateDirectory("./Nitro_hof_furni");
-            Directory.CreateDirectory("./Nitro_hof_furni/icons");
             Directory.CreateDirectory("./temp");
 
             string furnidataJsonPath = "./temp/furnidata.json";
@@ -92,8 +88,8 @@ namespace ConsoleApplication
             {
                 string classname = furni.Classname;
                 string baseClassname = classname.Split('*')[0];
-                string nitroFilePath = $"./Nitro_hof_furni/{baseClassname}.nitro";
-                string iconFilePath = $"./Nitro_hof_furni/icons/{classname.Replace('*', '_')}_icon.png";
+                string nitroFilePath = $"./custom_downloads/nitro_furniture/{baseClassname}.nitro";
+                string iconFilePath = $"./custom_downloads/nitro_furniture/icons/{classname.Replace('*', '_')}_icon.png";
 
                 string nitroUrl = $"{furnitureUrl}/{baseClassname}.nitro";
                 string iconUrl = $"{furnitureIconUrl}/{classname.Replace('*', '_')}_icon.png";

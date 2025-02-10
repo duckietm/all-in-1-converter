@@ -1,0 +1,92 @@
+{
+    "roomitemtypes": {
+        "furnitype": [{
+                "id": 13,
+                "classname": "shelves_norja",
+                "revision": 61856,
+                "category": "shelf",
+                "defaultdir": 0,
+                "xdim": 1,
+                "ydim": 1,
+                "partcolors": {
+                    "color": [
+                        "#ffffff",
+                        "#F7EBBC"
+                    ]
+                },
+                "name": "Boekenkast",
+                "description": "Bewaar hier je frutsels en kunstboeken",
+                "adurl": "",
+                "offerid": 5,
+                "buyout": true,
+                "rentofferid": -1,
+                "rentbuyout": false,
+                "bc": true,
+                "excludeddynamic": false,
+                "customparams": "",
+                "specialtype": 1,
+                "canstandon": false,
+                "cansiton": false,
+                "canlayon": false,
+                "furniline": "iced",
+                "environment": "",
+                "rare": false
+            }, {
+                "id": 14,
+                "classname": "shelves_polyfon",
+                "revision": 48082,
+                "category": "shelf",
+                "defaultdir": 0,
+                "xdim": 2,
+                "ydim": 1,
+                "partcolors": {
+                    "color": [
+                        "#0",
+                        "#0",
+                        "#0"
+                    ]
+                },
+                "name": "Boekenkast",
+                "description": "Voor de artistiekerige types",
+                "adurl": "",
+                "offerid": 6,
+                "buyout": true,
+                "rentofferid": -1,
+                "rentbuyout": false,
+                "bc": true,
+                "excludeddynamic": false,
+                "customparams": "",
+                "specialtype": 1,
+                "canstandon": false,
+                "cansiton": false,
+                "canlayon": false,
+                "furniline": "mode",
+                "environment": "",
+                "rare": false
+            }
+        ]
+    },
+    "wallitemtypes": {
+        "furnitype": [{
+                "id": 1,
+                "classname": "post.it",
+                "revision": 0,
+                "category": "unknown",
+                "name": "Setje plakbriefjes",
+                "description": "Om overal te plakken",
+                "adurl": "",
+                "offerid": -1,
+                "buyout": false,
+                "rentofferid": -1,
+                "rentbuyout": false,
+                "bc": false,
+                "excludeddynamic": false,
+                "customparams": "",
+                "specialtype": 5,
+                "furniline": "",
+                "environment": "",
+                "rare": false
+            }
+        ]
+    }
+}

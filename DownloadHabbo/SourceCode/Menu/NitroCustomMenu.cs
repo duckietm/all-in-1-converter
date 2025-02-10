@@ -16,8 +16,8 @@ namespace ConsoleApplication
                 Console.WriteLine("                          Nitro Custom Downloads                           ");
                 Console.ForegroundColor = ConsoleColor.Black;
                 Console.BackgroundColor = ConsoleColor.Gray;
-                Console.WriteLine("-> Download NitroFurniture                                                 ");
-                Console.WriteLine("-> Download NitroClothes                                                   ");
+                Console.WriteLine("1 => Download NitroFurniture                                               ");
+                Console.WriteLine("2 => Download NitroClothes                                                 ");
                 Console.WriteLine("                                                                           ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                    ");
                 Console.ResetColor();
@@ -52,17 +52,12 @@ namespace ConsoleApplication
 
                 switch (starupconsole[0].ToLower())
                 {
-                    case "download":
-                        Console.WriteLine("Starting Download...");
-                        if (starupconsole.Length > 1)
-                        {
-                            Console.WriteLine($"DEBUG: Downloading {starupconsole[1]}");
-                            await HandleDownload(starupconsole[1].ToLower());
-                        }
-                        else
-                        {
-                            Console.WriteLine("Missing argument for 'download' command.");
-                        }
+                    case "1":
+                        await NitroFurnitureDownloader.DownloadFurnitureAsync();
+                        break;
+
+                    case "2":
+                        await NitroClothesDownloader.DownloadCustomClothesAsync();
                         break;
 
                     default:
@@ -80,24 +75,6 @@ namespace ConsoleApplication
                 Console.ResetColor();
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadKey();
-            }
-        }
-
-        private static async Task HandleDownload(string downloadType)
-        {
-            switch (downloadType)
-            {
-                case "nitrofurniture":
-                    await NitroFurnitureDownloader.DownloadFurnitureAsync();
-                    break;
-
-                case "nitroclothes":
-                    await NitroClothesDownloader.DownloadCustomClothesAsync();
-                    break;
-
-                default:
-                    Console.WriteLine($"Unknown download type: {downloadType}");
-                    break;
             }
         }
     }

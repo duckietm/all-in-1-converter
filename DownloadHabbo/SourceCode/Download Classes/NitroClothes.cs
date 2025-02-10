@@ -36,7 +36,7 @@ namespace ConsoleApplication
                 string figureMapContent = await httpClient.GetStringAsync(figureMapUrlWithTimestamp);
 
                 string currentDirectory = Environment.CurrentDirectory;
-                string downloadDirectory = Path.Combine(currentDirectory, "Nitro_clothes");
+                string downloadDirectory = Path.Combine(currentDirectory, "./custom_downloads/clothes");
 
                 Directory.CreateDirectory(downloadDirectory);
 

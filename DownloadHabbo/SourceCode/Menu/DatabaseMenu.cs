@@ -1,4 +1,5 @@
-﻿using Habbo_Downloader.Compiler;
+﻿using ConsoleApplication.FixSettings;
+using Habbo_Downloader.Compiler;
 using System.Text;
 
 namespace ConsoleApplication
@@ -13,11 +14,13 @@ namespace ConsoleApplication
                 Console.Clear();
                 Console.BackgroundColor = ConsoleColor.Red;
                 Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("                          Hotel Tools Menu                                   ");
+                Console.WriteLine("                          Hotel Database Menu                                ");
                 Console.ForegroundColor = ConsoleColor.Black;
                 Console.BackgroundColor = ConsoleColor.Gray;
                 Console.WriteLine("1 => Show Database General Information (version / databases etc.)            ");
                 Console.WriteLine("2 => Optimize your database (Runs optimize table on all your tables)         ");
+                Console.WriteLine("3 => Fix the Order_ID in the database from the JSON                          ");
+                Console.WriteLine("4 => Fix Sit / Lay / Walk in the items_base with the settings from the json  ");
                 Console.WriteLine("                                                                             ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                      ");
                 Console.ResetColor();
@@ -59,10 +62,19 @@ namespace ConsoleApplication
                         break;
 
                     case "2":
-                        Console.WriteLine("Loading Database Optimize Database!");
+                        Console.WriteLine("Loading Database Optimize!");
                         await DatabaseOptimizer.OptimizeDatabaseTablesAsync();
                         break;
 
+                    case "3":
+                        Console.WriteLine("Loading Database Fix Order_ID!");
+                        await SetOfferID.RunAsync();
+                        break;
+
+                    case "4":
+                        Console.WriteLine("Loading Database Fix Settings!");
+                        await FixItemSettings.RunAsync();
+                        break;
 
                     default:
                         Console.WriteLine($"Unknown command: {inputData}");
