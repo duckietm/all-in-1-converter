@@ -77,12 +77,21 @@ public static class LogicMapper
     {
         if (dimensionsElement == null) return null;
 
+        float? ParseFloatOrNull(string value)
+        {
+            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var result))
+            {
+                return float.IsNaN(result) ? (float?)null : result;
+            }
+            return null;
+        }
+
         return new AssetDimension
         {
-            X = float.TryParse(dimensionsElement.Attribute("x")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var x) ? x : 0f,
-            Y = float.TryParse(dimensionsElement.Attribute("y")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var y) ? y : 0f,
-            Z = float.TryParse(dimensionsElement.Attribute("z")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var z) ? z : (float?)null,
-            CenterZ = float.TryParse(dimensionsElement.Attribute("centerZ")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var centerZ) ? centerZ : (float?)null
+            X = ParseFloatOrNull(dimensionsElement.Attribute("x")?.Value) ?? 0f,
+            Y = ParseFloatOrNull(dimensionsElement.Attribute("y")?.Value) ?? 0f,
+            Z = ParseFloatOrNull(dimensionsElement.Attribute("z")?.Value),
+            CenterZ = ParseFloatOrNull(dimensionsElement.Attribute("centerZ")?.Value)
         };
     }
 

@@ -1,4 +1,11 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 
 namespace ConsoleApplication.FixSettings
@@ -87,67 +94,114 @@ namespace ConsoleApplication.FixSettings
                     return;
                 }
 
-                using (var transaction = connection.BeginTransaction())
+                try
                 {
-                    try
+                    string createTempTableQuery = @"
+                        CREATE TEMPORARY TABLE temp_fixitems (
+                            id INT PRIMARY KEY,
+                            allow_walk VARCHAR(1),
+                            allow_sit VARCHAR(1),
+                            allow_lay VARCHAR(1)
+                        );";
+                    using (var createTableCmd = new MySqlCommand(createTempTableQuery, connection))
                     {
-                        // Prepare the SELECT command (to get the items_base id using sprite_id).
-                        var selectCmd = new MySqlCommand("SELECT id FROM items_base WHERE sprite_id = @spriteId LIMIT 1", connection, transaction);
-                        var spriteIdParam = selectCmd.Parameters.Add("@spriteId", MySqlDbType.Int32);
+                        await createTableCmd.ExecuteNonQueryAsync();
+                    }
 
-                        // Prepare the UPDATE command for items_base.
-                        var updateCmd = new MySqlCommand(
-                            "UPDATE items_base SET allow_walk = @allow_walk, allow_sit = @allow_sit, allow_lay = @allow_lay WHERE id = @itemBaseId",
-                            connection, transaction);
-                        updateCmd.Parameters.Add("@allow_walk", MySqlDbType.VarChar, 1);
-                        updateCmd.Parameters.Add("@allow_sit", MySqlDbType.VarChar, 1);
-                        updateCmd.Parameters.Add("@allow_lay", MySqlDbType.VarChar, 1);
-                        updateCmd.Parameters.Add("@itemBaseId", MySqlDbType.Int32);
+                    var spriteIds = allFixItems.Select(f => f.id).Distinct().ToList();
+                    var spriteIdMap = new Dictionary<int, int>();
 
-                        foreach (var fixItem in allFixItems)
+                    string query = $"SELECT id, sprite_id FROM items_base WHERE sprite_id IN ({string.Join(",", spriteIds)})";
+                    using (var cmd = new MySqlCommand(query, connection))
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
                         {
-                            spriteIdParam.Value = fixItem.id;
-                            object result = await selectCmd.ExecuteScalarAsync();
-                            if (result == null)
+                            spriteIdMap[reader.GetInt32(1)] = reader.GetInt32(0);
+                        }
+                    }
+
+                    if (spriteIdMap.Count == 0)
+                    {
+                        Console.WriteLine("No matching sprite IDs found in items_base.");
+                        return;
+                    }
+
+                    const int batchSize = 1000;
+                    int totalInserted = 0;
+
+                    var batchInsertQuery = new StringBuilder();
+                    batchInsertQuery.Append("INSERT IGNORE INTO temp_fixitems (id, allow_walk, allow_sit, allow_lay) VALUES ");
+
+                    int counter = 0;
+                    foreach (var fixItem in allFixItems)
+                    {
+                        if (spriteIdMap.TryGetValue(fixItem.id, out int itemBaseId))
+                        {
+                            batchInsertQuery.Append($"({itemBaseId}, '{(fixItem.canstandon ? "1" : "0")}', '{(fixItem.cansiton ? "1" : "0")}', '{(fixItem.canlayon ? "1" : "0")}'),");
+
+                            counter++;
+                            if (counter % batchSize == 0)
                             {
-                                Console.WriteLine($"No matching items_base record found for sprite_id {fixItem.id} (classname: {fixItem.classname}).");
-                                continue;
+                                batchInsertQuery.Length--;
+                                batchInsertQuery.Append(";");
+
+                                using (var insertCmd = new MySqlCommand(batchInsertQuery.ToString(), connection))
+                                {
+                                    totalInserted += await insertCmd.ExecuteNonQueryAsync();
+                                }
+
+                                // Reset batch insert query
+                                batchInsertQuery.Clear();
+                                batchInsertQuery.Append("INSERT IGNORE INTO temp_fixitems (id, allow_walk, allow_sit, allow_lay) VALUES ");
                             }
-                            int itemBaseId = Convert.ToInt32(result);
-
-                            string allowWalk = fixItem.canstandon ? "1" : "0";
-                            string allowSit = fixItem.cansiton ? "1" : "0";
-                            string allowLay = fixItem.canlayon ? "1" : "0";
-
-                            updateCmd.Parameters["@allow_walk"].Value = allowWalk;
-                            updateCmd.Parameters["@allow_sit"].Value = allowSit;
-                            updateCmd.Parameters["@allow_lay"].Value = allowLay;
-                            updateCmd.Parameters["@itemBaseId"].Value = itemBaseId;
-
-                            int rowsAffected = await updateCmd.ExecuteNonQueryAsync();
-                            Console.WriteLine($"Updated item : {fixItem.classname}");
                         }
-
-                        transaction.Commit();
                     }
-                    catch (Exception ex)
+
+                    if (counter % batchSize != 0)
                     {
-                        Console.WriteLine("Error during database update: " + ex.Message);
-                        try
+                        batchInsertQuery.Length--;
+                        batchInsertQuery.Append(";");
+
+                        using (var insertCmd = new MySqlCommand(batchInsertQuery.ToString(), connection))
                         {
-                            transaction.Rollback();
-                        }
-                        catch (Exception rbEx)
-                        {
-                            Console.WriteLine("Error rolling back transaction: " + rbEx.Message);
+                            totalInserted += await insertCmd.ExecuteNonQueryAsync();
                         }
                     }
+
+                    Console.WriteLine($"Inserted {totalInserted} rows into temp_fixitems.");
+
+                    string updateQuery = @"
+                        UPDATE items_base AS ib
+                        JOIN temp_fixitems AS tf ON ib.id = tf.id
+                        SET 
+                            ib.allow_walk = tf.allow_walk,
+                            ib.allow_sit = tf.allow_sit,
+                            ib.allow_lay = tf.allow_lay;
+                    ";
+
+                    using (var updateCmd = new MySqlCommand(updateQuery, connection))
+                    {
+                        int rowsAffected = await updateCmd.ExecuteNonQueryAsync();
+                        Console.WriteLine($"Updated {rowsAffected} rows in items_base.");
+                    }
+
+                    using (var cleanupCmd = new MySqlCommand("DROP TEMPORARY TABLE IF EXISTS temp_fixitems", connection))
+                    {
+                        await cleanupCmd.ExecuteNonQueryAsync();
+                    }
+
+                    Console.WriteLine("FixItemSettings process completed.");
                 }
-
-                await connection.CloseAsync();
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error during database update: " + ex.Message);
+                }
+                finally
+                {
+                    await connection.CloseAsync();
+                }
             }
-
-            Console.WriteLine("FixItemSettings process completed.");
         }
     }
 }

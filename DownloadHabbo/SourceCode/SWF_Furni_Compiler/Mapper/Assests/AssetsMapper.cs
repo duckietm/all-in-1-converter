@@ -183,34 +183,31 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
         }
 
         private static Dictionary<string, Asset> MapAssetsXML(
-            XElement root,
-            XElement manifestRoot,
-            Dictionary<string, string> imageSources,
-            string debugXmlPath)
+    XElement root,
+    XElement manifestRoot,
+    Dictionary<string, string> imageSources,
+    string debugXmlPath)
         {
             if (root == null || manifestRoot == null)
                 return new Dictionary<string, Asset>();
 
             var output = new Dictionary<string, Asset>();
 
-            var manifestAssets = manifestRoot.Descendants("asset")
+            var manifestAssetNames = manifestRoot.Descendants("asset")
                 .Where(asset => asset.Attribute("mimeType")?.Value == "image/png")
                 .Select(asset => (asset.Attribute("name")?.Value ?? "").ToLowerInvariant())
                 .Where(name => !name.Contains("_32_"))
-                .ToList();
+                .ToHashSet();
 
-            var debugMapping = DebugXmlParser.ParseDebugXml(debugXmlPath);
-            var cleanedDebugMapping = debugMapping.ToDictionary(
-                kv => kv.Key.ToLowerInvariant(),
-                kv => kv.Value.ToLowerInvariant()
-            );
-
-            foreach (var assetKey in manifestAssets)
+            foreach (var assetElement in root.Elements("asset"))
             {
-                var assetElement = root.Elements("asset")
-                    .FirstOrDefault(a => (a.Attribute("name")?.Value ?? "").ToLowerInvariant() == assetKey);
+                string assetName = (assetElement.Attribute("name")?.Value ?? "").ToLowerInvariant();
 
-                if (assetElement == null)
+                if (assetName.Contains("_32_"))
+                    continue;
+
+                // Include the asset if it is in the manifest OR it has a source attribute.
+                if (!manifestAssetNames.Contains(assetName) && assetElement.Attribute("source") == null)
                     continue;
 
                 var asset = new Asset
@@ -218,15 +215,24 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     X = int.TryParse(assetElement.Attribute("x")?.Value, out int x) ? x : 0,
                     Y = int.TryParse(assetElement.Attribute("y")?.Value, out int y) ? y : 0,
                     FlipH = assetElement.Attribute("flipH")?.Value == "1",
-                    FlipV = assetElement.Attribute("flipV")?.Value == "1"
+                    FlipV = assetElement.Attribute("flipV")?.Value == "1",
+                    Source = assetElement.Attribute("source")?.Value?.ToLowerInvariant()
                 };
 
-                output[assetKey] = asset;
+                output[assetName] = asset;
             }
+
+
+            // Now apply the debug.xml mappings for assets that don't already have a source
+            var debugMapping = DebugXmlParser.ParseDebugXml(debugXmlPath);
+            var cleanedDebugMapping = debugMapping.ToDictionary(
+                kv => kv.Key.ToLowerInvariant(),
+                kv => kv.Value.ToLowerInvariant()
+            );
 
             foreach (var kv in cleanedDebugMapping)
             {
-                if (output.ContainsKey(kv.Key))
+                if (output.ContainsKey(kv.Key) && string.IsNullOrEmpty(output[kv.Key].Source))
                 {
                     output[kv.Key].Source = kv.Value;
                 }
@@ -234,6 +240,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
             return output;
         }
+
 
         public static string RemoveFirstPrefix(string name)
         {

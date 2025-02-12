@@ -22,7 +22,8 @@ namespace ConsoleApplication
                 Console.WriteLine("4 => Generate SQL                                                            ");
                 Console.WriteLine("5 => Decompile NitroFil                                                      ");
                 Console.WriteLine("6 => Compile NitroFiles                                                      ");
-                Console.WriteLine("7 => SWFFurnitoNitro                                                         ");
+                Console.WriteLine("7 => SWF Furniture to Nitro                                                  ");
+                Console.WriteLine("8 => SWF Clothes to Nitro                                                    ");
                 Console.WriteLine("                                                                             ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                      ");
                 Console.ResetColor();
@@ -85,8 +86,13 @@ namespace ConsoleApplication
                         break;
 
                     case "7":
-                        Console.WriteLine("DEBUG: Converting SWF to Nitro...");
+                        Console.WriteLine("DEBUG: Converting SWF Furniture to Nitro...");
                         await SWF_Furni_To_Nitro.ConvertSwfFilesAsync();
+                        break;
+
+                    case "8":
+                        Console.WriteLine("DEBUG: Converting SWF Clothes to Nitro...");
+                        await SWF_clothes_To_Nitro.ConvertSwfFilesAsync();
                         break;
 
                     default:

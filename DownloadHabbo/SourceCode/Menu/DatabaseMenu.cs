@@ -19,7 +19,7 @@ namespace ConsoleApplication
                 Console.BackgroundColor = ConsoleColor.Gray;
                 Console.WriteLine("1 => Show Database General Information (version / databases etc.)            ");
                 Console.WriteLine("2 => Optimize your database (Runs optimize table on all your tables)         ");
-                Console.WriteLine("3 => Fix the Order_ID in the database from the JSON                          ");
+                Console.WriteLine("3 => Fix the Offer_ID in the database from the JSON                          ");
                 Console.WriteLine("4 => Fix Sit / Lay / Walk in the items_base with the settings from the json  ");
                 Console.WriteLine("                                                                             ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                      ");

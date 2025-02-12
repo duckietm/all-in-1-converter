@@ -16,7 +16,7 @@ namespace Habbo_Downloader.Compiler
     public static class SWF_Furni_To_Nitro
     {
         private static string ImportDirectory;
-        private const string OutputDirectory = @"SWFCompiler\nitro";
+        private const string OutputDirectory = @"SWFCompiler\furniture";
 
         public static async Task ConvertSwfFilesAsync()
         {
@@ -136,26 +136,65 @@ namespace Habbo_Downloader.Compiler
                 }
 
                 var jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
-                var jsonContent = JsonSerializer.Serialize(new
+                // First, serialize the dimensions property with options that include null values.
+                var dimensionsOptions = new JsonSerializerOptions
+                {
+                    // It doesn't need to be indented separately.
+                    WriteIndented = false,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.Never, // Force nulls to be written for dimensions
+                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+                };
+
+                string dimensionsJson = JsonSerializer.Serialize(logicData.Model?.Dimensions, dimensionsOptions);
+                // Parse the JSON so we can insert it as a JsonElement.
+                using JsonDocument dimensionsDoc = JsonDocument.Parse(dimensionsJson);
+                JsonElement dimensionsElement = dimensionsDoc.RootElement;
+
+                // Now, build a new object for the logic portion.
+                // We rebuild the 'model' property so that 'dimensions' is replaced with our pre-serialized element.
+                var logicObject = new
+                {
+                    model = new
+                    {
+                        dimensions = dimensionsElement, // this now includes null values (e.g. "z": null)
+                        directions = logicData.Model?.Directions
+                    },
+                    action = logicData.Action,
+                    maskType = logicData.MaskType,
+                    credits = logicData.Credits,
+                    soundSample = logicData.SoundSample,
+                    planetSystems = logicData.PlanetSystems,
+                    particleSystems = logicData.ParticleSystems,
+                    customVars = logicData.CustomVars
+                };
+
+                var fullObject = new
                 {
                     name = indexData.Name,
                     logicType = indexData.LogicType,
                     visualizationType = indexData.VisualizationType,
                     assets = assetData,
-                    logic = logicData,
+                    logic = logicObject,      // modified logic object with custom dimensions
                     visualizations = visualizations,
                     spritesheet = spriteSheetData
-                }, new JsonSerializerOptions
+                };
+
+                // Finally, serialize the entire object using your usual options.
+                var finalOptions = new JsonSerializerOptions
                 {
                     WriteIndented = true,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                });
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, // other nulls remain ignored
+                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+                };
+
+                string jsonContent = JsonSerializer.Serialize(fullObject, finalOptions);
+
 
                 await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
                 await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);
 
                 // ✅ After .nitro is created, delete the directory <= this is a good option to enable if you want to debug the generated files
-                DeleteDirectory(fileOutputDirectory);
+                // DeleteDirectory(fileOutputDirectory);
 
                 return true;
             }
