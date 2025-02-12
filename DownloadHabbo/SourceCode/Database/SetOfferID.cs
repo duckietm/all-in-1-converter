@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using MySql.Data.MySqlClient;
+using System.Threading;
 
 namespace ConsoleApplication
 {
@@ -37,7 +31,9 @@ namespace ConsoleApplication
     {
         public static async Task RunAsync()
         {
-            const string jsonFilePath = "./Database/Variables/FurnitureData.json";
+            Console.WriteLine("Loading Database Fix Order_ID!");
+
+            const string jsonFilePath = "./Database/VAriables/FurnitureData.json";
             if (!File.Exists(jsonFilePath))
             {
                 Console.WriteLine($"Error: {jsonFilePath} file not found.");
@@ -80,143 +76,80 @@ namespace ConsoleApplication
 
             Console.WriteLine($"{allItems.Count} furniture items loaded from JSON.");
 
-            using (var connection = new MySqlConnection(DatabaseConfig.ConnectionString))
+            int totalItems = allItems.Count;
+            int processedCount = 0;
+
+            // Limit concurrency to 20
+            var semaphore = new SemaphoreSlim(20);
+            var tasks = allItems.Select(async item =>
             {
+                await semaphore.WaitAsync();
                 try
                 {
-                    await connection.OpenAsync();
+                    await ProcessItemAsync(item);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error opening database connection: " + ex.Message);
-                    return;
-                }
-
-                try
-                {
-                    // Step 1: Fetch all sprite_id mappings at once
-                    var spriteIds = allItems.Select(f => f.id).Distinct().ToList();
-                    var spriteIdMap = new Dictionary<int, int>();
-
-                    string selectQuery = $"SELECT id, sprite_id FROM items_base WHERE sprite_id IN ({string.Join(",", spriteIds)})";
-                    using (var cmd = new MySqlCommand(selectQuery, connection))
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            spriteIdMap[reader.GetInt32(1)] = reader.GetInt32(0);
-                        }
-                    }
-
-                    if (spriteIdMap.Count == 0)
-                    {
-                        Console.WriteLine("No matching sprite IDs found in items_base.");
-                        return;
-                    }
-
-                    // Step 2: Create a Temporary Table
-                    string createTempTableQuery = @"
-                        CREATE TEMPORARY TABLE temp_furniture_updates (
-                            id INT PRIMARY KEY,
-                            classname VARCHAR(100),
-                            offer_id INT
-                        );";
-
-                    using (var createTableCmd = new MySqlCommand(createTempTableQuery, connection))
-                    {
-                        await createTableCmd.ExecuteNonQueryAsync();
-                    }
-
-                    // Step 3: Insert Data in Batches
-                    const int batchSize = 1000;
-                    int totalInserted = 0;
-
-                    var batchInsertQuery = new StringBuilder();
-                    batchInsertQuery.Append("INSERT IGNORE INTO temp_furniture_updates (id, classname, offer_id) VALUES ");
-
-                    int counter = 0;
-                    foreach (var item in allItems)
-                    {
-                        if (spriteIdMap.TryGetValue(item.id, out int itemBaseId))
-                        {
-                            batchInsertQuery.Append($"({itemBaseId}, '{item.classname}', {item.offerid}),");
-
-                            counter++;
-                            if (counter % batchSize == 0)
-                            {
-                                batchInsertQuery.Length--; // Remove last comma
-                                batchInsertQuery.Append(";");
-
-                                using (var insertCmd = new MySqlCommand(batchInsertQuery.ToString(), connection))
-                                {
-                                    totalInserted += await insertCmd.ExecuteNonQueryAsync();
-                                }
-
-                                batchInsertQuery.Clear();
-                                batchInsertQuery.Append("INSERT IGNORE INTO temp_furniture_updates (id, classname, offer_id) VALUES ");
-                            }
-                        }
-                    }
-
-                    // Insert remaining records if any
-                    if (counter % batchSize != 0)
-                    {
-                        batchInsertQuery.Length--; // Remove last comma
-                        batchInsertQuery.Append(";");
-
-                        using (var insertCmd = new MySqlCommand(batchInsertQuery.ToString(), connection))
-                        {
-                            totalInserted += await insertCmd.ExecuteNonQueryAsync();
-                        }
-                    }
-
-                    Console.WriteLine($"Inserted {totalInserted} rows into temp_furniture_updates.");
-
-                    // Step 4: Perform Bulk Updates
-                    string updateItemsBaseQuery = @"
-                        UPDATE items_base AS ib
-                        JOIN temp_furniture_updates AS tf ON ib.id = tf.id
-                        SET 
-                            ib.item_name = tf.classname,
-                            ib.public_name = tf.classname;
-                    ";
-
-                    using (var updateCmd = new MySqlCommand(updateItemsBaseQuery, connection))
-                    {
-                        int rowsUpdated = await updateCmd.ExecuteNonQueryAsync();
-                        Console.WriteLine($"Updated {rowsUpdated} rows in items_base.");
-                    }
-
-                    string updateCatalogQuery = @"
-                        UPDATE catalog_items AS ci
-                        JOIN temp_furniture_updates AS tf ON FIND_IN_SET(tf.id, ci.item_ids)
-                        SET 
-                            ci.catalog_name = tf.classname,
-                            ci.offer_id = tf.offer_id;
-                    ";
-
-                    using (var updateCmd = new MySqlCommand(updateCatalogQuery, connection))
-                    {
-                        int catalogRowsUpdated = await updateCmd.ExecuteNonQueryAsync();
-                        Console.WriteLine($"Updated {catalogRowsUpdated} rows in catalog_items.");
-                    }
-
-                    // Step 5: Clean up temporary table
-                    using (var cleanupCmd = new MySqlCommand("DROP TEMPORARY TABLE IF EXISTS temp_furniture_updates", connection))
-                    {
-                        await cleanupCmd.ExecuteNonQueryAsync();
-                    }
-
-                    Console.WriteLine("SetOfferID process completed.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Error during database update: " + ex.Message);
+                    Console.WriteLine($"Error processing item {item.id}: {ex.Message}");
                 }
                 finally
                 {
-                    await connection.CloseAsync();
+                    int count = Interlocked.Increment(ref processedCount);
+                    if (count % 100 == 0 || count == totalItems)
+                    {
+                        Console.WriteLine($"{count} of {totalItems} items processed.");
+                    }
+                    semaphore.Release();
                 }
+            });
+
+            await Task.WhenAll(tasks);
+            Console.WriteLine("SetOfferID process completed.");
+        }
+
+        private static async Task ProcessItemAsync(FurnitureItem item)
+        {
+            using (var connection = new MySqlConnection(DatabaseConfig.ConnectionString))
+            {
+                await connection.OpenAsync();
+
+                using (var transaction = await connection.BeginTransactionAsync())
+                {
+                    // 1. Select the matching items_base record.
+                    using (var selectCmd = new MySqlCommand("SELECT id FROM items_base WHERE sprite_id = @spriteId LIMIT 1", connection, transaction))
+                    {
+                        selectCmd.Parameters.AddWithValue("@spriteId", item.id);
+                        object result = await selectCmd.ExecuteScalarAsync();
+                        if (result == null)
+                        {
+                            Console.WriteLine($"No matching items_base record found for sprite_id {item.id}.");
+                            return;
+                        }
+                        int itemBaseId = Convert.ToInt32(result);
+
+                        // 2. Update items_base.
+                        using (var updateItemsBaseCmd = new MySqlCommand("UPDATE items_base SET item_name = @classname, public_name = @classname WHERE id = @itemBaseId", connection, transaction))
+                        {
+                            updateItemsBaseCmd.Parameters.AddWithValue("@classname", item.classname);
+                            updateItemsBaseCmd.Parameters.AddWithValue("@itemBaseId", itemBaseId);
+                            int rowsAffected = await updateItemsBaseCmd.ExecuteNonQueryAsync();
+                            Console.WriteLine($"Updated items_base for item {item.classname} (rows affected: {rowsAffected}).");
+                        }
+
+                        // 3. Update catalog_items.
+                        using (var updateCatalogCmd = new MySqlCommand("UPDATE catalog_items SET catalog_name = @catalogName, offer_id = @offerId WHERE FIND_IN_SET(@itemBaseIdStr, item_ids)", connection, transaction))
+                        {
+                            updateCatalogCmd.Parameters.AddWithValue("@catalogName", item.classname);
+                            updateCatalogCmd.Parameters.AddWithValue("@offerId", item.offerid);
+                            updateCatalogCmd.Parameters.AddWithValue("@itemBaseIdStr", itemBaseId.ToString());
+                            int catalogRowsAffected = await updateCatalogCmd.ExecuteNonQueryAsync();
+                            Console.WriteLine($"Updated catalog_items for item {item.classname} (rows affected: {catalogRowsAffected}).");
+                        }
+
+                        await transaction.CommitAsync();
+                    }
+                }
+                await connection.CloseAsync();
             }
         }
     }
