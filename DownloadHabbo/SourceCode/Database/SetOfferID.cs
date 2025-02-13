@@ -1,6 +1,7 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using MySql.Data.MySqlClient;
-using System.Threading;
+using System.Data;
 
 namespace ConsoleApplication
 {
@@ -29,14 +30,17 @@ namespace ConsoleApplication
 
     public static class SetOfferID
     {
+        private static readonly object consoleLock = new object();
+
         public static async Task RunAsync()
         {
-            Console.WriteLine("Loading Database Fix Order_ID!");
-
-            const string jsonFilePath = "./Database/VAriables/FurnitureData.json";
+            const string jsonFilePath = "./Database/Variables/FurnitureData.json";
             if (!File.Exists(jsonFilePath))
             {
-                Console.WriteLine($"Error: {jsonFilePath} file not found.");
+                lock (consoleLock)
+                {
+                    Console.WriteLine($"Error: {jsonFilePath} file not found.");
+                }
                 return;
             }
 
@@ -47,7 +51,10 @@ namespace ConsoleApplication
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error reading JSON file: " + ex.Message);
+                lock (consoleLock)
+                {
+                    Console.WriteLine("Error reading JSON file: " + ex.Message);
+                }
                 return;
             }
 
@@ -58,7 +65,10 @@ namespace ConsoleApplication
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error deserializing JSON: " + ex.Message);
+                lock (consoleLock)
+                {
+                    Console.WriteLine("Error deserializing JSON: " + ex.Message);
+                }
                 return;
             }
 
@@ -74,83 +84,176 @@ namespace ConsoleApplication
                 return;
             }
 
-            Console.WriteLine($"{allItems.Count} furniture items loaded from JSON.");
-
             int totalItems = allItems.Count;
-            int processedCount = 0;
+            Console.WriteLine($"🔍 {totalItems} furniture items loaded from JSON.");
+            Dictionary<int, int> spriteIdToItemBaseId = new Dictionary<int, int>();
 
-            // Limit concurrency to 20
-            var semaphore = new SemaphoreSlim(20);
-            var tasks = allItems.Select(async item =>
+            using (var connection = new MySqlConnection(DatabaseConfig.ConnectionString))
             {
-                await semaphore.WaitAsync();
                 try
                 {
-                    await ProcessItemAsync(item);
+                    await connection.OpenAsync();
+                    var spriteIds = allItems.Select(f => f.id).Distinct().ToList();
+                    string inClause = string.Join(",", spriteIds);
+                    string mappingQuery = $"SELECT id, sprite_id FROM items_base WHERE sprite_id IN ({inClause})";
+                    using (var cmd = new MySqlCommand(mappingQuery, connection))
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            int itemBaseId = reader.GetInt32("id");
+                            int spriteId = reader.GetInt32("sprite_id");
+                            if (!spriteIdToItemBaseId.ContainsKey(spriteId))
+                            {
+                                spriteIdToItemBaseId[spriteId] = itemBaseId;
+                            }
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error processing item {item.id}: {ex.Message}");
-                }
-                finally
-                {
-                    int count = Interlocked.Increment(ref processedCount);
-                    if (count % 100 == 0 || count == totalItems)
+                    lock (consoleLock)
                     {
-                        Console.WriteLine($"{count} of {totalItems} items processed.");
+                        Console.WriteLine("Error mapping sprite_ids: " + ex.Message);
                     }
-                    semaphore.Release();
+                    return;
                 }
-            });
+            }
 
-            await Task.WhenAll(tasks);
-            Console.WriteLine("SetOfferID process completed.");
-        }
+            List<(int itemBaseId, FurnitureItem item)> itemsToUpdate = allItems
+                .Where(f => spriteIdToItemBaseId.ContainsKey(f.id))
+                .Select(f => (spriteIdToItemBaseId[f.id], f))
+                .ToList();
 
-        private static async Task ProcessItemAsync(FurnitureItem item)
-        {
+            int totalToUpdate = itemsToUpdate.Count;
+            if (totalToUpdate == 0)
+            {
+                Console.WriteLine("No matching items_base records found for any furniture items.");
+                return;
+            }
+
+            var batches = Partition(itemsToUpdate, 100);
+            int totalBatches = batches.Count;
+            int processedBatches = 0;
+
+            System.Timers.Timer timer = new System.Timers.Timer(500);
+            timer.Elapsed += (sender, e) =>
+            {
+                lock (consoleLock)
+                {
+                    double percent = (double)processedBatches / totalBatches * 100;
+                    string progressBar = BuildProgressBar(processedBatches, totalBatches, 50);
+                    Console.Write($"\r{progressBar} {percent:0.00}% ({processedBatches}/{totalBatches} batches processed)");
+                }
+            };
+            timer.AutoReset = true;
+            timer.Start();
+
             using (var connection = new MySqlConnection(DatabaseConfig.ConnectionString))
             {
                 await connection.OpenAsync();
 
-                using (var transaction = await connection.BeginTransactionAsync())
+                foreach (var batch in batches)
                 {
-                    // 1. Select the matching items_base record.
-                    using (var selectCmd = new MySqlCommand("SELECT id FROM items_base WHERE sprite_id = @spriteId LIMIT 1", connection, transaction))
+                    StringBuilder caseItemName = new StringBuilder("CASE id ");
+                    StringBuilder casePublicName = new StringBuilder("CASE id ");
+                    List<int> ids = new List<int>();
+
+                    foreach (var (itemBaseId, item) in batch)
                     {
-                        selectCmd.Parameters.AddWithValue("@spriteId", item.id);
-                        object result = await selectCmd.ExecuteScalarAsync();
-                        if (result == null)
-                        {
-                            Console.WriteLine($"No matching items_base record found for sprite_id {item.id}.");
-                            return;
-                        }
-                        int itemBaseId = Convert.ToInt32(result);
-
-                        // 2. Update items_base.
-                        using (var updateItemsBaseCmd = new MySqlCommand("UPDATE items_base SET item_name = @classname, public_name = @classname WHERE id = @itemBaseId", connection, transaction))
-                        {
-                            updateItemsBaseCmd.Parameters.AddWithValue("@classname", item.classname);
-                            updateItemsBaseCmd.Parameters.AddWithValue("@itemBaseId", itemBaseId);
-                            int rowsAffected = await updateItemsBaseCmd.ExecuteNonQueryAsync();
-                            Console.WriteLine($"Updated items_base for item {item.classname} (rows affected: {rowsAffected}).");
-                        }
-
-                        // 3. Update catalog_items.
-                        using (var updateCatalogCmd = new MySqlCommand("UPDATE catalog_items SET catalog_name = @catalogName, offer_id = @offerId WHERE FIND_IN_SET(@itemBaseIdStr, item_ids)", connection, transaction))
-                        {
-                            updateCatalogCmd.Parameters.AddWithValue("@catalogName", item.classname);
-                            updateCatalogCmd.Parameters.AddWithValue("@offerId", item.offerid);
-                            updateCatalogCmd.Parameters.AddWithValue("@itemBaseIdStr", itemBaseId.ToString());
-                            int catalogRowsAffected = await updateCatalogCmd.ExecuteNonQueryAsync();
-                            Console.WriteLine($"Updated catalog_items for item {item.classname} (rows affected: {catalogRowsAffected}).");
-                        }
-
-                        await transaction.CommitAsync();
+                        ids.Add(itemBaseId);
+                        string classname = item.classname.Replace("'", "''");
+                        caseItemName.AppendFormat("WHEN {0} THEN '{1}' ", itemBaseId, classname);
+                        casePublicName.AppendFormat("WHEN {0} THEN '{1}' ", itemBaseId, classname);
                     }
+                    caseItemName.Append("ELSE item_name END");
+                    casePublicName.Append("ELSE public_name END");
+
+                    string updateItemsBaseQuery = "UPDATE items_base SET " +
+                        "item_name = " + caseItemName.ToString() + ", " +
+                        "public_name = " + casePublicName.ToString() +
+                        " WHERE id IN (" + string.Join(",", ids) + ")";
+
+                    StringBuilder caseCatalogName = new StringBuilder("CASE ");
+                    StringBuilder caseOfferId = new StringBuilder("CASE ");
+                    List<string> catalogConditions = new List<string>();
+
+                    foreach (var (itemBaseId, item) in batch)
+                    {
+                        string classname = item.classname.Replace("'", "''");
+                        caseCatalogName.AppendFormat("WHEN FIND_IN_SET('{0}', item_ids) > 0 THEN '{1}' ", itemBaseId, classname);
+                        caseOfferId.AppendFormat("WHEN FIND_IN_SET('{0}', item_ids) > 0 THEN {1} ", itemBaseId, item.offerid);
+                        catalogConditions.Add($"FIND_IN_SET('{itemBaseId}', item_ids) > 0");
+                    }
+                    caseCatalogName.Append("ELSE catalog_name END");
+                    caseOfferId.Append("ELSE offer_id END");
+
+                    string updateCatalogQuery = "UPDATE catalog_items SET " +
+                        "catalog_name = " + caseCatalogName.ToString() + ", " +
+                        "offer_id = " + caseOfferId.ToString() +
+                        " WHERE " + string.Join(" OR ", catalogConditions);
+
+                    using (var transaction = await connection.BeginTransactionAsync())
+                    {
+                        try
+                        {
+                            using (var cmd = new MySqlCommand(updateItemsBaseQuery, connection, transaction))
+                            {
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                            using (var cmd = new MySqlCommand(updateCatalogQuery, connection, transaction))
+                            {
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                            await transaction.CommitAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            lock (consoleLock)
+                            {
+                                Console.WriteLine($"\nError updating batch: {ex.Message}");
+                            }
+                            try
+                            {
+                                await transaction.RollbackAsync();
+                            }
+                            catch { }
+                        }
+                    }
+
+                    processedBatches++;
                 }
+
                 await connection.CloseAsync();
             }
+
+            timer.Stop();
+            timer.Dispose();
+
+            lock (consoleLock)
+            {
+                string progressBar = BuildProgressBar(totalBatches, totalBatches, 50);
+                Console.WriteLine($"\r{progressBar} 100.00% ({totalBatches}/{totalBatches} batches processed)");
+                Console.WriteLine("\nSetOfferID process completed.");
+            }
+        }
+
+        private static string BuildProgressBar(int processed, int total, int barWidth)
+        {
+            double fraction = (double)processed / total;
+            int filledBars = (int)(fraction * barWidth);
+            int emptyBars = barWidth - filledBars;
+            return "[" + new string('▓', filledBars) + new string('-', emptyBars) + "]";
+        }
+
+        private static List<List<T>> Partition<T>(List<T> source, int size)
+        {
+            List<List<T>> partitions = new List<List<T>>();
+            for (int i = 0; i < source.Count; i += size)
+            {
+                partitions.Add(source.GetRange(i, Math.Min(size, source.Count - i)));
+            }
+            return partitions;
         }
     }
 }
