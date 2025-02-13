@@ -90,7 +90,7 @@ public static class LogicMapper
         {
             X = ParseFloatOrNull(dimensionsElement.Attribute("x")?.Value) ?? 0f,
             Y = ParseFloatOrNull(dimensionsElement.Attribute("y")?.Value) ?? 0f,
-            Z = ParseFloatOrNull(dimensionsElement.Attribute("z")?.Value),
+            Z = ParseFloatOrNull(dimensionsElement.Attribute("z")?.Value) ?? 0.000001f,
             CenterZ = ParseFloatOrNull(dimensionsElement.Attribute("centerZ")?.Value)
         };
     }

@@ -98,6 +98,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
         [JsonPropertyName("y")]
         public float Y { get; set; }
 
+        [JsonConverter(typeof(FloatToFixedDecimalConverter))]
         [JsonPropertyName("z")]
         public float? Z { get; set; }
 

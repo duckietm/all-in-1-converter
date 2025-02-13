@@ -55,13 +55,13 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
 
     public class AnimationLayer
     {
-        [JsonPropertyName("loopCount")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        public int? LoopCount { get; set; }
-
         [JsonPropertyName("frameRepeat")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public int? FrameRepeat { get; set; }
+
+        [JsonPropertyName("loopCount")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? LoopCount { get; set; }
 
         [JsonPropertyName("random")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -73,8 +73,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
 
         public AnimationLayer(XElement xml)
         {
-            LoopCount = int.TryParse(xml.Attribute("loopCount")?.Value, out int loopCount) ? loopCount : (int?)null;
             FrameRepeat = int.TryParse(xml.Attribute("frameRepeat")?.Value, out int frameRepeat) ? frameRepeat : (int?)null;
+            LoopCount = int.TryParse(xml.Attribute("loopCount")?.Value, out int loopCount) ? loopCount : (int?)null;
             Random = int.TryParse(xml.Attribute("random")?.Value, out int random) ? random : (int?)null;
             FrameSequences = ParseFrameSequences(xml);
 

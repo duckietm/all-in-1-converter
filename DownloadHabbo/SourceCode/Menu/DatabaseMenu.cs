@@ -57,22 +57,22 @@ namespace ConsoleApplication
                 switch (starupconsole[0].ToLower())
                 {
                     case "1":
-                        Console.WriteLine("Loading Database version!");
+                        Console.WriteLine("✅ Loading Database version!");
                         await DatabaseGeneralInfo.ShowDatabaseVersionAsync();
                         break;
 
                     case "2":
-                        Console.WriteLine("Loading Database Optimize!");
+                        Console.WriteLine("✅ Loading Database Optimize!");
                         await DatabaseOptimizer.OptimizeDatabaseTablesAsync();
                         break;
 
                     case "3":
-                        Console.WriteLine("Loading Database Fix Order_ID!");
+                        Console.WriteLine("✅ Loading Database and start proccessing the offer_id");
                         await SetOfferID.RunAsync();
                         break;
 
                     case "4":
-                        Console.WriteLine("Loading Database Fix Settings!");
+                        Console.WriteLine("✅ Loading Database Fix Settings!");
                         await FixItemSettings.RunAsync();
                         break;
 

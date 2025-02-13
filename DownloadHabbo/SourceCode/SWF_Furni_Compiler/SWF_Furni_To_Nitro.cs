@@ -76,7 +76,7 @@ namespace Habbo_Downloader.Compiler
 
             string binaryOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}_binaryData");
 
-            Console.WriteLine($"⚠️ Start Decompiling SWF: {fileName}...");
+            Console.WriteLine($"🔍 Start Decompiling SWF: {fileName}...");
             await FfdecExtractor.ExtractSWFAsync(swfFile, binaryOutputPath);
 
             if (!Directory.Exists(Path.Combine(binaryOutputPath, "binaryData")))
@@ -136,27 +136,22 @@ namespace Habbo_Downloader.Compiler
                 }
 
                 var jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
-                // First, serialize the dimensions property with options that include null values.
-                var dimensionsOptions = new JsonSerializerOptions
+
+                // ✅ No need for separate dimensions serialization—apply converter globally
+                var jsonOptions = new JsonSerializerOptions
                 {
-                    // It doesn't need to be indented separately.
-                    WriteIndented = false,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.Never, // Force nulls to be written for dimensions
-                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+                    WriteIndented = true,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+                    Converters = { new FloatToFixedDecimalConverter() }
                 };
 
-                string dimensionsJson = JsonSerializer.Serialize(logicData.Model?.Dimensions, dimensionsOptions);
-                // Parse the JSON so we can insert it as a JsonElement.
-                using JsonDocument dimensionsDoc = JsonDocument.Parse(dimensionsJson);
-                JsonElement dimensionsElement = dimensionsDoc.RootElement;
-
-                // Now, build a new object for the logic portion.
-                // We rebuild the 'model' property so that 'dimensions' is replaced with our pre-serialized element.
+                // ✅ Directly use logicData.Model.Dimensions without separate parsing
                 var logicObject = new
                 {
                     model = new
                     {
-                        dimensions = dimensionsElement, // this now includes null values (e.g. "z": null)
+                        dimensions = logicData.Model?.Dimensions, // ✅ This now gets correct float formatting
                         directions = logicData.Model?.Directions
                     },
                     action = logicData.Action,
@@ -174,26 +169,18 @@ namespace Habbo_Downloader.Compiler
                     logicType = indexData.LogicType,
                     visualizationType = indexData.VisualizationType,
                     assets = assetData,
-                    logic = logicObject,      // modified logic object with custom dimensions
+                    logic = logicObject,      // ✅ No unnecessary conversion steps
                     visualizations = visualizations,
                     spritesheet = spriteSheetData
                 };
 
-                // Finally, serialize the entire object using your usual options.
-                var finalOptions = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, // other nulls remain ignored
-                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
-                };
-
-                string jsonContent = JsonSerializer.Serialize(fullObject, finalOptions);
-
-
+                // ✅ Serialize everything with the custom converter applied
+                string jsonContent = JsonSerializer.Serialize(fullObject, jsonOptions);
                 await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
+
                 await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);
 
-                // ✅ After .nitro is created, delete the directory <= this is a good option to enable if you want to debug the generated files
+                // ✅ After .nitro is created, delete the directory (commented for debugging)
                 // DeleteDirectory(fileOutputDirectory);
 
                 return true;
