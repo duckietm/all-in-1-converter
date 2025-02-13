@@ -62,11 +62,22 @@ Also i changed the SQL-Generator to load variables from the .nitro furni
 - height
   
 The SQL Furni generator, this will generate all the SQL's for you.</br>
-- Step 1 => just place all .nitro files into the Generate/Furniture that you want in the SQL
+- Step 1 => just place all .nitro or .swf files into the Generate/Furniture that you want in the SQL
 - Step 2 => place the FurnitureData.json in the Generate/Furnidata
 - Last step : in the download tool run: Generate SQL
 So more Copy & Paste and way more easyer to combine stuff from other resources!
 
+The SWF to Nitro generator</br>
+- Clothes
+- Furniture
+Here you can confurt all the above to .nitro files so they can be used for nitro based hotels
+
+Database tools</br>
+- show Database version
+- Database Optimize
+- Database fix the the offer_id.
+- Database Fix Settings lay / walk on / sit in the database.
+- Datavase Fixing Sprite_ID in items_base
 
 # Credits
 - The whole habbo community.
