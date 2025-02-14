@@ -78,7 +78,7 @@ namespace ConsoleApplication
                         break;
 
                     case "5":
-                        Console.WriteLine("✅ Fixing Sprite_ID in items_base from JSON!");
+                        Console.WriteLine("✅ Fixing Sprite_IDs in items_base from JSON!");
                         await FixSpriteIDSettings.RunAsync();
                         break;
 
