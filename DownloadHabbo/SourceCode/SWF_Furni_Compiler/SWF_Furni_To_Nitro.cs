@@ -151,7 +151,7 @@ namespace Habbo_Downloader.Compiler
                 {
                     model = new
                     {
-                        dimensions = logicData.Model?.Dimensions, // ✅ This now gets correct float formatting
+                        dimensions = logicData.Model?.Dimensions,
                         directions = logicData.Model?.Directions
                     },
                     action = logicData.Action,
@@ -169,7 +169,7 @@ namespace Habbo_Downloader.Compiler
                     logicType = indexData.LogicType,
                     visualizationType = indexData.VisualizationType,
                     assets = assetData,
-                    logic = logicObject,      // ✅ No unnecessary conversion steps
+                    logic = logicObject,
                     visualizations = visualizations,
                     spritesheet = spriteSheetData
                 };
@@ -181,7 +181,7 @@ namespace Habbo_Downloader.Compiler
                 await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);
 
                 // ✅ After .nitro is created, delete the directory (commented for debugging)
-                DeleteDirectory(fileOutputDirectory);
+                // DeleteDirectory(fileOutputDirectory);
 
                 return true;
             }

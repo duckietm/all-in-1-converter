@@ -16,7 +16,7 @@ namespace ConsoleApplication
                 Console.ForegroundColor = ConsoleColor.Black;
                 Console.BackgroundColor = ConsoleColor.Gray;
                 Console.WriteLine("1 => Download Badges                                                           ");
-                Console.WriteLine("2 => Download Clothes                                                          ");
+                Console.WriteLine("2 => Download Clothes + figuredata & figuremap json and xml                    ");
                 Console.WriteLine("3 => Download Effects                                                          ");
                 Console.WriteLine("4 => Download Furnidata                                                        ");
                 Console.WriteLine("5 => Download Furniture                                                        ");

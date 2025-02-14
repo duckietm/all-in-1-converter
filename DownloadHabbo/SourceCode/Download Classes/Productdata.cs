@@ -22,7 +22,7 @@
 
                 httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
-                await DownloadFileAsync(productdataurl, "./Habbo_Default/files/productdata.txt", "productdata.txt");
+                await DownloadFileAsync(productdataurl, "./Habbo_Default/files/xml/productdata.txt", "productdata.txt");
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Productdata Saved");
