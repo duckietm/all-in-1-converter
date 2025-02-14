@@ -21,7 +21,7 @@ namespace ConsoleApplication
                 Console.WriteLine("2 => Optimize your database (Runs optimize table on all your tables)         ");
                 Console.WriteLine("3 => Fix the Offer_ID in the database from the JSON                          ");
                 Console.WriteLine("4 => Fix Sit / Lay / Walk in the items_base with the settings from the json  ");
-                Console.WriteLine("5 => Fix Sprite_ID in the items_base from the JSON                           ");
+                Console.WriteLine("5 => Fix Sprite_ID and Item_IDS in the items_base from the JSON              ");
                 Console.WriteLine("                                                                             ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                      ");
                 Console.ResetColor();
@@ -78,7 +78,7 @@ namespace ConsoleApplication
                         break;
 
                     case "5":
-                        Console.WriteLine("✅ Fixing Sprite_IDs in items_base from JSON!");
+                        Console.WriteLine("✅ Fixing Sprite_ID and Item_IDS in items_base from JSON!");
                         await FixSpriteIDSettings.RunAsync();
                         break;
 
