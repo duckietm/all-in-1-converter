@@ -185,6 +185,7 @@ namespace ConsoleApplication
                         caseOfferId.AppendFormat("WHEN FIND_IN_SET('{0}', item_ids) > 0 THEN {1} ", itemBaseId, item.offerid);
                         catalogConditions.Add($"FIND_IN_SET('{itemBaseId}', item_ids) > 0");
                     }
+
                     caseCatalogName.Append("ELSE catalog_name END");
                     caseOfferId.Append("ELSE offer_id END");
 
