@@ -4,20 +4,31 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 {
     public static class SpriteSheetMapper
     {
-        public static string CleanAssetName(string name)
+        public static string CleanAssetName(string name, bool disableCleanKey = false)
         {
-            return Regex.Replace(name, @"^([^_]+)_\1_", "$1_");
+            string lowerName = name.ToLowerInvariant();
+            if (disableCleanKey)
+            {
+                return lowerName;
+            }
+            return Regex.Replace(lowerName, @"^([^_]+)_\1_", "$1_");
         }
 
-        public static (string ImagePath, SpriteSheetData SpriteData) GenerateSpriteSheet(Dictionary<string, Bitmap> images, string outputDirectory, string name, int numRows = 10, int maxWidth = 10240, int maxHeight = 7000)
+        public static (string ImagePath, SpriteSheetData SpriteData) GenerateSpriteSheet(
+            Dictionary<string, Bitmap> images,
+            string outputDirectory,
+            string name,
+            Dictionary<string, string> canonicalMapping, // new parameter
+            bool disableCleanKey = false, // control cleaning
+            int numRows = 10,
+            int maxWidth = 10240,
+            int maxHeight = 7000)
         {
             if (images == null || images.Count == 0)
             {
@@ -25,20 +36,17 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                 return (null, null);
             }
 
-            // Calculate how many images go per row.
             int imagesCount = images.Count;
             int imagesPerRow = (int)Math.Ceiling((double)imagesCount / numRows);
 
             int maxRowWidth = 0;
             int maxRowHeight = 0;
 
-            // Group images into rows.
             var imageGroups = images.Values
                 .Select((img, index) => new { Image = img, Index = index })
                 .GroupBy(x => x.Index / imagesPerRow)
                 .ToList();
 
-            // Calculate the maximum row width and height.
             foreach (var group in imageGroups)
             {
                 int rowWidth = group.Sum(x => x.Image.Width);
@@ -57,7 +65,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                     "Reduce the number of images or adjust the maximum dimensions.");
             }
 
-            // Create the sprite sheet.
             var spriteSheet = new Bitmap(totalWidth, totalHeight);
             using (var graphics = Graphics.FromImage(spriteSheet))
             {
@@ -67,6 +74,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                 {
                     Meta = new MetaData
                     {
+                        Label = "All-in-1-dowload-tool",
                         Image = $"{name}.png",
                         Size = new SizeData { Width = totalWidth, Height = totalHeight },
                         Scale = 1.0f,
@@ -77,7 +85,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 
                 int currentY = 0;
                 int imageIndex = 0;
-                // For each row (group) of images.
                 foreach (var group in imageGroups)
                 {
                     int currentX = 0;
@@ -86,14 +93,14 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                     foreach (var imageItem in group)
                     {
                         var image = imageItem.Image;
-                        // Get the original key from the dictionary and clean it.
                         var key = images.Keys.ElementAt(imageIndex);
-                        var cleanedKey = CleanAssetName(key.ToLowerInvariant());
+                        string shortKey = CleanAssetName(key, disableCleanKey: false);
+                        string finalKey = canonicalMapping.ContainsKey(shortKey)
+                            ? canonicalMapping[shortKey]
+                            : CleanAssetName(key, disableCleanKey);
 
-                        // Draw the image.
                         graphics.DrawImage(image, new Point(currentX, currentY));
 
-                        // Create frame data.
                         var frameData = new FrameData
                         {
                             Frame = new RectData
@@ -124,7 +131,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                             }
                         };
 
-                        spriteSheetData.Frames[cleanedKey] = frameData;
+                        spriteSheetData.Frames[finalKey] = frameData;
 
                         currentX += image.Width;
                         rowHeight = Math.Max(rowHeight, image.Height);

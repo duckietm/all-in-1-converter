@@ -92,6 +92,9 @@ namespace Habbo_Downloader.SWFCompiler.Mapper
 
     public class MetaData
     {
+        [JsonPropertyName("label")]
+        public string Label { get; set; } = "All-in-1-dowload-tool"; 
+
         [JsonPropertyName("image")]
         public string Image { get; set; }
 
