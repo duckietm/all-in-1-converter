@@ -4,12 +4,17 @@ using Habbo_Downloader.SWFCompiler.Mapper.Logic;
 using Habbo_Downloader.SWFCompiler.Mapper.Visualizations;
 using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
 using Habbo_Downloader.Tools;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using System.Xml.Linq;
-using Habbo_Downloader.SWFCompiler.Mapper;
-using System.Collections.Concurrent;
 
 namespace Habbo_Downloader.Compiler
 {
@@ -42,8 +47,7 @@ namespace Habbo_Downloader.Compiler
 
                 Console.WriteLine($"✅ Found {swfFiles.Length} SWF files.");
 
-                // ✅ Process multiple SWFs in parallel using all available CPU cores up to 80% max
-
+                // Process multiple SWFs in parallel.
                 var nitroFilesGenerated = new ConcurrentBag<int>();
                 int maxParallelism = (int)(Environment.ProcessorCount * 0.8);
                 if (maxParallelism < 1) maxParallelism = 1;
@@ -87,12 +91,16 @@ namespace Habbo_Downloader.Compiler
                 return false;
             }
 
-            string debugXmlPath = Path.Combine(binaryOutputPath, "debug.xml");
-            var imageSources = DebugXmlParser.ParseDebugXml(debugXmlPath);
+            // Build canonical mapping from CSV (using AssetNameMapper)
+            string csvPath = Path.Combine(binaryOutputPath, "symbolClass", "symbols.csv");
+            var canonicalMapping = AssetNameMapper.BuildCanonicalMapping(csvPath);
 
-            // ✅ Process Index, Assets, Logic, and Visualizations in parallel
+            // Parse the CSV via DebugXmlParser (which now reads CSV)
+            var imageSources = DebugXmlParser.ParseDebugXml(csvPath);
+
+            // Process Index, Assets, Logic, and Visualizations in parallel.
             var indexTask = GetIndexDataAsync(binaryOutputPath);
-            var assetsTask = GetAssetDataAsync(binaryOutputPath, imageSources, debugXmlPath, fileOutputDirectory);
+            var assetsTask = GetAssetDataAsync(binaryOutputPath, imageSources, csvPath, fileOutputDirectory);
             var logicTask = GetLogicDataAsync(binaryOutputPath);
             var visualizationTask = GetVisualizationsDataAsync(binaryOutputPath);
 
@@ -110,7 +118,7 @@ namespace Habbo_Downloader.Compiler
                 return false;
             }
 
-            // ✅ Image Processing
+            // Image Processing
             string imagesDirectory = Path.Combine(binaryOutputPath, "images");
             string tmpDirectory = Path.Combine(binaryOutputPath, "tmp");
 
@@ -125,8 +133,16 @@ namespace Habbo_Downloader.Compiler
 
             try
             {
+                // Pass the canonicalMapping to GenerateSpriteSheet.
                 var (spriteSheetPath, spriteSheetData) = SpriteSheetMapper.GenerateSpriteSheet(
-                    images, fileOutputDirectory, fileName, maxWidth: 10240, maxHeight: 7000
+                    images,
+                    fileOutputDirectory,
+                    fileName,
+                    canonicalMapping,        // canonical mapping argument
+                    disableCleanKey: false,  // set as desired
+                    numRows: 10,
+                    maxWidth: 7500,
+                    maxHeight: 12500
                 );
 
                 if (spriteSheetPath == null || spriteSheetData == null)
@@ -137,7 +153,6 @@ namespace Habbo_Downloader.Compiler
 
                 var jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
 
-                // ✅ No need for separate dimensions serialization—apply converter globally
                 var jsonOptions = new JsonSerializerOptions
                 {
                     WriteIndented = true,
@@ -146,7 +161,6 @@ namespace Habbo_Downloader.Compiler
                     Converters = { new FloatToFixedDecimalConverter() }
                 };
 
-                // ✅ Directly use logicData.Model.Dimensions without separate parsing
                 var logicObject = new
                 {
                     model = new
@@ -174,13 +188,12 @@ namespace Habbo_Downloader.Compiler
                     spritesheet = spriteSheetData
                 };
 
-                // ✅ Serialize everything with the custom converter applied
                 string jsonContent = JsonSerializer.Serialize(fullObject, jsonOptions);
                 await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
 
                 await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);
 
-                // ✅ After .nitro is created, delete the directory (commented for debugging)
+                // Optionally delete the output directory after bundling.
                 DeleteDirectory(fileOutputDirectory);
 
                 return true;
@@ -223,12 +236,12 @@ namespace Habbo_Downloader.Compiler
         }
 
         private static async Task<Dictionary<string, AssetsMapper.Asset>> GetAssetDataAsync(
-            string binaryOutputPath, Dictionary<string, string> imageSources, string debugXmlPath, string fileOutputDirectory)
+            string binaryOutputPath, Dictionary<string, string> imageSources, string csvPath, string fileOutputDirectory)
         {
             var assetsFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_assets.bin", SearchOption.TopDirectoryOnly);
             var manifestFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_manifest.bin", SearchOption.TopDirectoryOnly);
             return (assetsFiles.Length > 0 && manifestFiles.Length > 0)
-                ? await AssetsMapper.ParseAssetsFileAsync(assetsFiles[0], imageSources, manifestFiles[0], debugXmlPath, fileOutputDirectory)
+                ? await AssetsMapper.ParseAssetsFileAsync(assetsFiles[0], imageSources, manifestFiles[0], csvPath, fileOutputDirectory)
                 : null;
         }
 
@@ -279,8 +292,6 @@ namespace Habbo_Downloader.Compiler
                 return null;
             }
         }
-
-
 
         private static async Task BundleNitroFileAsync(string outputDirectory, string fileName, string nitroOutputDirectory, string spriteSheetPath)
         {

@@ -1,8 +1,4 @@
-﻿using Habbo_Downloader.Compiler;
-using System;
-using System.IO;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 
 namespace ConsoleApplication
 {

@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-public static class ExtractHandler
+﻿public static class ExtractHandler
 {
     public static string[] GetFiles(string folder)
     {

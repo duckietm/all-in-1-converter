@@ -59,6 +59,7 @@ namespace Habbo_Downloader.Compiler
 
         private static async Task<bool> ProcessSwfFileAsync(string swfFile)
         {
+            // Skip the effect file.
             if (string.Equals(Path.GetFileName(swfFile), "hh_human_fx.swf", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("ℹ️ Skipping file: hh_human_fx.swf This is an effect file.");
@@ -68,7 +69,8 @@ namespace Habbo_Downloader.Compiler
             string fileName = Path.GetFileNameWithoutExtension(swfFile);
             string nitroFilePath = Path.Combine(OutputDirectory, $"{fileName}.nitro");
 
-            if (File.Exists(nitroFilePath)) return false; // Skip already converted files
+            if (File.Exists(nitroFilePath))
+                return false; // Skip already converted files
 
             string fileOutputDirectory = Path.Combine(OutputDirectory, fileName);
             Directory.CreateDirectory(fileOutputDirectory);
@@ -86,26 +88,26 @@ namespace Habbo_Downloader.Compiler
                 return false;
             }
 
-            string debugXmlPath = Path.Combine(binaryOutputPath, "debug.xml");
-            var imageSources = DebugXmlParser.ParseDebugXml(debugXmlPath);
+            // Use CSV instead of debug.xml:
+            string csvPath = Path.Combine(binaryOutputPath, "symbolClass", "symbols.csv");
+            var imageSources = DebugXmlParser.ParseDebugXml(csvPath);
 
-            // For clothes, get the mapping using the new helper:
-            var clothesMapping = ClothesDebugXmlParser.GetClothesImageMapping(debugXmlPath);
+            // For clothes, obtain the clothes mapping from the CSV.
+            var clothesMapping = ClothesDebugXmlParser.GetClothesImageMapping(csvPath);
             if (clothesMapping.Count == 0)
             {
                 Console.WriteLine("❌ No valid clothes image mappings found. Skipping sprite sheet generation.");
                 return false;
             }
 
-            // ✅ Process asset data
-            var assetDataResult = await GetAssetDataAsync(binaryOutputPath, imageSources, debugXmlPath, fileOutputDirectory);
+            // Process asset data.
+            var assetDataResult = await GetAssetDataAsync(binaryOutputPath, imageSources, csvPath, fileOutputDirectory);
 
-            // ✅ Image Processing
+            // Image Processing.
             string imagesDirectory = Path.Combine(binaryOutputPath, "images");
             string tmpDirectory = Path.Combine(binaryOutputPath, "tmp");
 
             await ImageRestorer.RestoreImagesFromTmpAsync(tmpDirectory, imagesDirectory, clothesMapping);
-
 
             var images = LoadImages(imagesDirectory);
             if (images.Count == 0)
@@ -141,7 +143,7 @@ namespace Habbo_Downloader.Compiler
                 await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
                 await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);
 
-                // ✅ After .nitro is created, delete the directory (commented for debugging)
+                // Optionally delete the output directory after bundling.
                 DeleteDirectory(fileOutputDirectory);
 
                 return true;
@@ -153,14 +155,14 @@ namespace Habbo_Downloader.Compiler
             }
         }
 
-
         private static Dictionary<string, Bitmap> LoadImages(string imagesDirectory)
         {
             var images = new Dictionary<string, Bitmap>();
             foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
             {
                 string imageName = Path.GetFileNameWithoutExtension(imageFile);
-                if (imageName.StartsWith("sh_") || imageName.Contains("_32_")) continue;
+                if (imageName.StartsWith("sh_") || imageName.Contains("_32_"))
+                    continue;
 
                 try
                 {
@@ -179,7 +181,7 @@ namespace Habbo_Downloader.Compiler
         }
 
         private static async Task<(string LibraryName, Dictionary<string, ClothesAssetsMapper.Asset> Assets)> GetAssetDataAsync(
-            string binaryOutputPath, Dictionary<string, string> imageSources, string debugXmlPath, string fileOutputDirectory)
+            string binaryOutputPath, Dictionary<string, string> imageSources, string csvPath, string fileOutputDirectory)
         {
             var binaryDataPath = Path.Combine(binaryOutputPath, "binaryData");
             var manifestFiles = Directory.GetFiles(binaryDataPath, "*_manifest.*", SearchOption.TopDirectoryOnly);
@@ -190,9 +192,8 @@ namespace Habbo_Downloader.Compiler
                 return ("", new Dictionary<string, ClothesAssetsMapper.Asset>());
             }
 
-            return await ClothesAssetsMapper.ParseAssetsFileAsync(null, imageSources, manifestFiles[0], debugXmlPath, fileOutputDirectory);
+            return await ClothesAssetsMapper.ParseAssetsFileAsync(null, imageSources, manifestFiles[0], csvPath, fileOutputDirectory);
         }
-
 
         private static async Task BundleNitroFileAsync(string outputDirectory, string fileName, string nitroOutputDirectory, string spriteSheetPath)
         {

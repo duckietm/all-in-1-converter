@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     internal static class HelpCommand
     {

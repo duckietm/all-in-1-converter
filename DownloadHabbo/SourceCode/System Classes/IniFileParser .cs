@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     public static class IniFileParser
     {

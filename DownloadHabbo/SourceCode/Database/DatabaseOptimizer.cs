@@ -6,7 +6,6 @@ namespace ConsoleApplication
     {
         public static async Task OptimizeDatabaseTablesAsync()
         {
-            // Use the centralized connection string from DatabaseConfig
             string connectionString = DatabaseConfig.ConnectionString;
 
             try
@@ -15,7 +14,6 @@ namespace ConsoleApplication
                 {
                     await connection.OpenAsync();
 
-                    // Get list of tables in the current database using SHOW TABLES
                     var tables = new List<string>();
                     string showTablesQuery = "SHOW TABLES;";
                     using (MySqlCommand showTablesCommand = new MySqlCommand(showTablesQuery, connection))
@@ -37,7 +35,6 @@ namespace ConsoleApplication
 
                     Console.WriteLine($"Optimizing {tables.Count} table(s) in database '{DatabaseConfig.DatabaseName}':");
 
-                    // Loop through tables and optimize each one
                     foreach (string table in tables)
                     {
                         string optimizeQuery = $"OPTIMIZE TABLE `{table}`;";

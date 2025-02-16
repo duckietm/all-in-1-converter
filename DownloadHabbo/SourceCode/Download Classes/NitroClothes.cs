@@ -4,7 +4,6 @@ namespace ConsoleApplication
 {
     internal static class NitroClothesDownloader
     {
-        // Constants for config keys
         private const string NitroClothesDirKey = "AppSettings:nitro_clothes_dir";
         private const string NitroFigureDataKey = "AppSettings:nitro_figuredata";
         private const string NitroFigureMapKey = "AppSettings:nitro_figuremap";

@@ -1,50 +1,122 @@
-﻿using System.Xml.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Xml.Linq;
 
 public static class ClothesDebugXmlParser
 {
-    public static Dictionary<string, string> GetClothesImageMapping(string debugXmlPath)
+    public static Dictionary<string, string> GetClothesImageMapping(string filePath)
     {
-        var mapping = new Dictionary<string, string>();
-        if (!File.Exists(debugXmlPath))
+        if (!File.Exists(filePath))
         {
-            Console.WriteLine($"❌ Debug.xml not found at {debugXmlPath}");
-            return mapping;
+            Console.WriteLine($"❌ Debug file not found: {filePath}");
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
-        XElement debugXml = XElement.Load(debugXmlPath);
-
-        // Find the first item with type "SymbolClassTag"
-        var symbolItem = debugXml.Descendants("item")
-            .FirstOrDefault(x => x.Attribute("type")?.Value == "SymbolClassTag");
-        if (symbolItem == null)
+        if (Path.GetExtension(filePath).Equals(".csv", StringComparison.OrdinalIgnoreCase))
         {
-            Console.WriteLine("❌ SymbolClassTag item not found in Debug.xml.");
-            return mapping;
+            return ParseSymbolsCsv(filePath);
         }
-
-        // Get the tags and names lists.
-        var tags = symbolItem.Element("tags")?.Elements("item").Select(x => x.Value.Trim()).ToList();
-        var names = symbolItem.Element("names")?.Elements("item").Select(x => x.Value.Trim()).ToList();
-
-        if (tags == null || names == null || tags.Count != names.Count)
+        else
         {
-            Console.WriteLine("❌ Error: Tags and Names count mismatch in Debug.xml.");
-            return mapping;
+            return ParseXml(filePath);
         }
+    }
 
-        // Build mapping: for each pair, if tag is not "0" and name doesn't contain "manifest",
-        // and if the tag is not already mapped (i.e. only use first occurrence), add it.
-        for (int i = 0; i < tags.Count; i++)
+    private static Dictionary<string, string> ParseSymbolsCsv(string csvPath)
+    {
+        var mapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        try
         {
-            string tag = tags[i];
-            string name = names[i];
-            if (tag == "0" || name.ToLowerInvariant().Contains("manifest"))
-                continue;
+            var lines = File.ReadAllLines(csvPath)
+                            .Where(l => !string.IsNullOrWhiteSpace(l))
+                            .ToList();
 
-            if (!mapping.ContainsKey(tag))
+            var entries = new List<(string Tag, string Name)>();
+            foreach (var line in lines)
             {
-                mapping[tag] = name;
+                var parts = line.Split(';');
+                if (parts.Length < 2)
+                    continue;
+                string tag = parts[0].Trim();
+                string name = parts[1].Trim();
+                entries.Add((tag, name));
             }
+
+            var groups = entries.GroupBy(e => e.Tag);
+            foreach (var group in groups)
+            {
+                var names = group.Select(e => e.Name).ToList();
+                if (names.Count >= 2)
+                {
+                    string source = names[0].ToLowerInvariant();
+                    string obj = names[1].ToLowerInvariant();
+                    mapping[obj] = source;
+                }
+                else if (names.Count == 1)
+                {
+                    string onlyName = names[0].ToLowerInvariant();
+                    mapping[onlyName] = onlyName;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error parsing CSV: {ex.Message}");
+        }
+        return mapping;
+    }
+
+
+    private static Dictionary<string, string> ParseXml(string xmlPath)
+    {
+        var mapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            XDocument doc = XDocument.Load(xmlPath);
+            var symbolClassTag = doc.Descendants("item")
+                                    .FirstOrDefault(item => item.Attribute("type")?.Value == "SymbolClassTag");
+
+            if (symbolClassTag == null)
+            {
+                Console.WriteLine("❌ Error SymbolClassTag not found in XML.");
+                return mapping;
+            }
+
+            var tagItems = symbolClassTag.Element("tags")?.Elements("item").Select(e => e.Value).ToList();
+            var nameItems = symbolClassTag.Element("names")?.Elements("item").Select(e => e.Value).ToList();
+
+            if (tagItems == null || nameItems == null || tagItems.Count != nameItems.Count)
+            {
+                Console.WriteLine("❌ Error: Tags and names count mismatch in XML.");
+                return mapping;
+            }
+
+            var temp = new Dictionary<string, List<string>>();
+            for (int i = 0; i < tagItems.Count; i++)
+            {
+                string tag = tagItems[i];
+                string name = nameItems[i];
+                if (!temp.ContainsKey(tag))
+                    temp[tag] = new List<string>();
+                temp[tag].Add(name);
+            }
+
+            foreach (var kv in temp)
+            {
+                var names = kv.Value;
+                if (names.Count >= 2)
+                {
+                    string source = names[0].ToLowerInvariant();
+                    string obj = names[1].ToLowerInvariant();
+                    mapping[obj] = source;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error parsing XML: {ex.Message}");
         }
         return mapping;
     }

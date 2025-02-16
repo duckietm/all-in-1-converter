@@ -1,5 +1,4 @@
-﻿using System;
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     public static class QuestsDownloader
     {

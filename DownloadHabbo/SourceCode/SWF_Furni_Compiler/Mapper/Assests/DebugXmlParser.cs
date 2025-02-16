@@ -2,54 +2,50 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Xml.Linq;
 
 public static class DebugXmlParser
 {
-    public static Dictionary<string, string> ParseDebugXml(string debugXmlPath)
+    /// <summary>
+    /// Parses the CSV file (in place of Debug.xml) and creates a mapping.
+    /// For each tag group (each unique first column), if there are at least two names,
+    /// it maps the second name (object) to the first name (source) in lowercase.
+    /// </summary>
+    public static Dictionary<string, string> ParseDebugXml(string csvPath)
     {
         var mapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        if (!File.Exists(debugXmlPath))
+        if (!File.Exists(csvPath))
         {
-            Console.WriteLine($"❌ Error Debug.xml file not found: {debugXmlPath}");
+            Console.WriteLine($"❌ Error CSV file not found: {csvPath}");
             return mapping;
         }
 
         try
         {
-            XDocument doc = XDocument.Load(debugXmlPath);
-            var symbolClassTag = doc.Descendants("item")
-                                    .FirstOrDefault(item => item.Attribute("type")?.Value == "SymbolClassTag");
+            // Read all non-empty lines from the CSV file.
+            var lines = File.ReadAllLines(csvPath)
+                            .Where(l => !string.IsNullOrWhiteSpace(l))
+                            .ToList();
 
-            if (symbolClassTag == null)
+            // Parse each line into a tuple (tag, name)
+            var entries = new List<(string Tag, string Name)>();
+            foreach (var line in lines)
             {
-                Console.WriteLine("❌ Error SymbolClassTag not found in Debug.xml.");
-                return mapping;
+                // Expecting format: tag;name
+                var parts = line.Split(';');
+                if (parts.Length < 2)
+                    continue;
+
+                string tag = parts[0].Trim();
+                string name = parts[1].Trim();
+                entries.Add((tag, name));
             }
 
-            var tagItems = symbolClassTag.Element("tags")?.Elements("item").Select(e => e.Value).ToList();
-            var nameItems = symbolClassTag.Element("names")?.Elements("item").Select(e => e.Value).ToList();
-
-            if (tagItems == null || nameItems == null || tagItems.Count != nameItems.Count)
+            // Group by tag.
+            var groups = entries.GroupBy(e => e.Tag);
+            foreach (var group in groups)
             {
-                Console.WriteLine("❌ Error Tags and names count mismatch in Debug.xml.");
-                return mapping;
-            }
-
-            var temp = new Dictionary<string, List<string>>();
-            for (int i = 0; i < tagItems.Count; i++)
-            {
-                string tag = tagItems[i];
-                string name = nameItems[i];
-                if (!temp.ContainsKey(tag))
-                    temp[tag] = new List<string>();
-                temp[tag].Add(name);
-            }
-
-            foreach (var kv in temp)
-            {
-                var names = kv.Value;
+                var names = group.Select(e => e.Name).ToList();
                 if (names.Count >= 2)
                 {
                     string source = names[0].ToLowerInvariant();
@@ -60,54 +56,48 @@ public static class DebugXmlParser
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error parsing Debug.xml: {ex.Message}");
+            Console.WriteLine($"❌ Error parsing CSV: {ex.Message}");
         }
 
         return mapping;
     }
-    public static Dictionary<string, List<string>> ExtractSymbolClassTags(string debugXmlPath)
+
+    /// <summary>
+    /// Extracts symbol class tags from the CSV file (instead of Debug.xml).
+    /// Returns a dictionary mapping each tag (first column) to a list of asset names (second column).
+    /// </summary>
+    public static Dictionary<string, List<string>> ExtractSymbolClassTags(string csvPath)
     {
         var tagMapping = new Dictionary<string, List<string>>();
 
-        if (!File.Exists(debugXmlPath))
+        if (!File.Exists(csvPath))
         {
-            Console.WriteLine($"❌ Error Debug.xml file not found: {debugXmlPath}");
+            Console.WriteLine($"❌ Error CSV file not found: {csvPath}");
             return tagMapping;
         }
 
         try
         {
-            XDocument doc = XDocument.Load(debugXmlPath);
-            var symbolClassTag = doc.Descendants("item")
-                                    .FirstOrDefault(item => item.Attribute("type")?.Value == "SymbolClassTag");
+            var lines = File.ReadAllLines(csvPath)
+                            .Where(l => !string.IsNullOrWhiteSpace(l))
+                            .ToList();
 
-            if (symbolClassTag == null)
+            foreach (var line in lines)
             {
-                Console.WriteLine("❌ Error SymbolClassTag not found in Debug.xml.");
-                return tagMapping;
-            }
+                // Expecting format: tag;name
+                var parts = line.Split(';');
+                if (parts.Length < 2)
+                    continue;
 
-            var tagItems = symbolClassTag.Element("tags")?.Elements("item").Select(e => e.Value).ToList();
-            var nameItems = symbolClassTag.Element("names")?.Elements("item").Select(e => e.Value).ToList();
+                string tag = parts[0].Trim();
+                string assetName = parts[1].Trim();
 
-            if (tagItems == null || nameItems == null || tagItems.Count != nameItems.Count)
-            {
-                Console.WriteLine("❌ Error Tags and names count mismatch in Debug.xml.");
-                return tagMapping;
-            }
-
-            for (int i = 0; i < tagItems.Count; i++)
-            {
-                string tagId = tagItems[i];
-                string assetName = nameItems[i];
-
-                if (!tagMapping.ContainsKey(tagId))
+                if (!tagMapping.ContainsKey(tag))
                 {
-                    tagMapping[tagId] = new List<string>();
+                    tagMapping[tag] = new List<string>();
                 }
-                tagMapping[tagId].Add(assetName);
+                tagMapping[tag].Add(assetName);
             }
-
         }
         catch (Exception ex)
         {

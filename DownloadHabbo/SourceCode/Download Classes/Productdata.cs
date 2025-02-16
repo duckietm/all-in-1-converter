@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Web;
 
 namespace ConsoleApplication
@@ -92,13 +87,8 @@ namespace ConsoleApplication
             {
                 string text = await File.ReadAllTextAsync(textFilePath);
 
-                // 🔍 Debug: Show raw preview of file content
-                Console.WriteLine("📄 Raw file content preview:");
-                Console.WriteLine(text.Substring(0, Math.Min(text.Length, 500)));
-
-                // ✅ Extract only valid lines that match ["xxx", "xxx", "xxx"]
                 var matches = Regex.Matches(text, @"\[\s*""(.*?)""\s*,\s*""(.*?)""\s*,\s*""(.*?)""\s*\]");
-                var products = new List<object>(); // Anonymous objects for lowercase JSON keys
+                var products = new List<object>();
 
                 foreach (Match match in matches)
                 {
@@ -109,16 +99,14 @@ namespace ConsoleApplication
                     products.Add(new { code, name, description });
                 }
 
-                // ✅ Wrap products in a JSON object with lowercase keys
                 var productDataWrapper = new { productdata = new { product = products } };
                 var options = new JsonSerializerOptions
                 {
                     WriteIndented = true,
-                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping // Allow non-ASCII characters
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                 };
                 string json = JsonSerializer.Serialize(productDataWrapper, options);
 
-                // ✅ Save the JSON
                 Directory.CreateDirectory(Path.GetDirectoryName(jsonFilePath));
                 await File.WriteAllTextAsync(jsonFilePath, json);
 
@@ -133,18 +121,9 @@ namespace ConsoleApplication
                 Console.ForegroundColor = ConsoleColor.Gray;
             }
         }
-
-        // ✅ Function to fully decode Unicode characters (fixing all escape sequences)
         private static string DecodeUnicode(string input)
         {
             return Regex.Unescape(HttpUtility.HtmlDecode(input));
         }
-    }
-
-    public class Product
-    {
-        public string Code { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
     }
 }

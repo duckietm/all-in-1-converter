@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace ConsoleApplication
+﻿namespace ConsoleApplication
 {
     public static class DatabaseConfig
     {

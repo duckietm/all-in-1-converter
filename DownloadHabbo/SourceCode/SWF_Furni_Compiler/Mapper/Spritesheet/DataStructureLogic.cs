@@ -96,13 +96,16 @@ namespace Habbo_Downloader.SWFCompiler.Mapper
         public string Image { get; set; }
 
         [JsonPropertyName("format")]
-        public string Format { get; set; } = "RGBA8888"; // Default format
+        public string Format { get; set; } = "RGBA8888";
 
         [JsonPropertyName("size")]
         public SizeData Size { get; set; }
 
         [JsonPropertyName("scale")]
-        public float Scale { get; set; } = 1.0f; // Default scale
+        public float Scale { get; set; } = 1.0f;
+
+        [JsonPropertyName("converter")]
+        public string Converter { get; set; } = "All-in-1-dowload-tool";
     }
 
     public class HabboAssetSWF

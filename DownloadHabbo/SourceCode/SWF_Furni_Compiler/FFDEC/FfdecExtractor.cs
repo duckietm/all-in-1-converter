@@ -13,13 +13,9 @@ namespace Habbo_Downloader.Tools
             string commandExport = $"-export image,binarydata,symbolClass \"{outputDirectory}\" \"{swfFilePath}\"";
             await RunFfdecCommandAsync(commandExport);
 
-            string debugXmlPath = Path.Combine(outputDirectory, "debug.xml");
-            string commandXml = $"-swf2xml \"{swfFilePath}\" \"{debugXmlPath}\"";
-            await RunFfdecCommandAsync(commandXml);
-
-            RemoveUnwantedImages(outputDirectory, "_32_");
-            var assetMappings = DebugXmlParser.ParseDebugXml(debugXmlPath);
-            await RebuildImagesAsync(outputDirectory, assetMappings);
+            // Use the CSV mapping symbolClass/symbols.csv.
+            string csvPath = Path.Combine(outputDirectory, "symbolClass", "symbols.csv");
+            var assetMappings = await RebuildImagesFromCsvAsync(outputDirectory, csvPath);
         }
 
         private static async Task RunFfdecCommandAsync(string command)
@@ -50,10 +46,7 @@ namespace Habbo_Downloader.Tools
                 var pngFiles = Directory.GetFiles(outputDirectory, "*.png", SearchOption.AllDirectories);
                 foreach (var file in pngFiles)
                 {
-                    try
-                    {
-                        File.Delete(file);
-                    }
+                    try { File.Delete(file); }
                     catch (Exception ex)
                     {
                         Console.WriteLine($"❌ Error deleting {file}: {ex.Message}");
@@ -62,24 +55,23 @@ namespace Habbo_Downloader.Tools
             }
         }
 
-        private static void RemoveUnwantedImages(string imageDir, string pattern)
-        {
-            foreach (var file in Directory.GetFiles(imageDir, $"*{pattern}*.png", SearchOption.AllDirectories))
-            {
-                File.Delete(file);
-            }
-        }
-
-        public static async Task<Dictionary<string, string>> RebuildImagesAsync(string imageDir, Dictionary<string, string> assetMappings)
+        // CSV rules for the furni
+        // - Skip any line with ID 0 As this is the Furni name
+        // - Skip any mapping whose name contains "_32_" or whose comment contains any of:
+        //   "manifest", "assets", "logic", "visualization", or "index".
+        // - For a given CSV ID:
+        //     • If there are multiple rows (e.g. ID 1), the extracted file is named "{ID}.png".
+        //       The first row (marked "source" or the first row if none is marked) is used as the physical image.
+        //       The alias (Main) rows simply point to that file.
+        //     • If there is a single row, the extracted file is named "{ID}_{MappingName}.png".
+        public static async Task<Dictionary<string, string>> RebuildImagesFromCsvAsync(string imageDir, string csvFilePath)
         {
             var outputMappings = new Dictionary<string, string>();
 
-            // Move all PNG files to a temporary folder.
+            // Move first all extracted PNG files to a temporary folder.
             string tmpDir = Path.Combine(imageDir, "tmp");
             if (Directory.Exists(tmpDir))
-            {
                 Directory.Delete(tmpDir, recursive: true);
-            }
             Directory.CreateDirectory(tmpDir);
 
             var allPngFiles = Directory.GetFiles(imageDir, "*.png", SearchOption.AllDirectories);
@@ -91,44 +83,140 @@ namespace Habbo_Downloader.Tools
                 File.Move(file, destinationPath);
             }
 
-            // Build a lookup dictionary: key = file name (without extension), value = full path.
+            // Build a lookup of extracted files.
+            // For SWFs with multiple images: key = "{ID}" (e.g. "1").
+            // For single-image SWFs: key = "{ID}_{MappingName}" (e.g. "17_pura_mdl3_pura_mdl3_64_a_2_0").
             string[] tmpFiles = Directory.GetFiles(tmpDir, "*.png", SearchOption.AllDirectories);
             var fileLookup = tmpFiles.ToDictionary(
                 f => Path.GetFileNameWithoutExtension(f),
                 f => f);
 
-            // Prepare the target folder where files will be copied.
+            // Here we prepare the target folder.
             string targetImagesFolder = Path.Combine(imageDir, "images");
             Directory.CreateDirectory(targetImagesFolder);
 
-            // Process each asset mapping from Debug.xml.
-            foreach (var kvp in assetMappings)
+            // Parse the CSV and group mappings by ID.
+            var csvMappings = ParseCsv(csvFilePath);
+            var groups = csvMappings.GroupBy(m => m.Id);
+            foreach (var group in groups)
             {
-                string tag = kvp.Key;   // the key from Debug.xml (object name)
-                string name = kvp.Value; // the corresponding source name
+                int id = group.Key;
+                var mappings = group.ToList();
 
-                // Try to locate the file in the temporary folder.
-                if (!fileLookup.TryGetValue(tag, out string? originalFilePath))
+                // Determine expected lookup key:
+                // - If multiple mappings: expect file named "{ID}.png"
+                // - If single mapping: expect file named "{ID}_{MappingName}.png"
+                string lookupKey = mappings.Count > 1
+                    ? id.ToString()
+                    : $"{id}_{mappings.First().Name}";
+
+                if (!fileLookup.TryGetValue(lookupKey, out string? originalFilePath))
                 {
-                    continue;
+                     continue;
                 }
+                string ext = Path.GetExtension(originalFilePath);
 
-                string originalExt = Path.GetExtension(originalFilePath);
-                // The file should be renamed using the source name from Debug.xml.
-                string sourceFilePath = Path.Combine(targetImagesFolder, $"{name}{originalExt}");
+                // Determine the target file name:
+                // For multiple mappings, choose the source mapping (first marked Source if available, else first).
+                // For single mapping, use its CSV name.
+                CsvMapping sourceMapping = mappings.Count > 1
+                    ? (mappings.FirstOrDefault(m => m.Type == MappingType.Source) ?? mappings.First())
+                    : mappings.First();
+
+                string targetFileName = $"{sourceMapping.Name}{ext}";
+                string targetPath = Path.Combine(targetImagesFolder, targetFileName);
 
                 try
                 {
-                    File.Copy(originalFilePath, sourceFilePath, overwrite: false);
-                    outputMappings[name] = sourceFilePath;
+                    File.Copy(originalFilePath, targetPath, overwrite: false);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"❌ Failed to copy {originalFilePath} to {sourceFilePath}: {ex.Message}");
+                    Console.WriteLine($"❌ Failed to copy file for group with ID {id}: {ex.Message}");
                     continue;
                 }
+
+                foreach (var mapping in mappings)
+                {
+                    outputMappings[mapping.Name] = targetPath;
+                }
             }
+
+            await Task.CompletedTask;
             return outputMappings;
         }
+
+        #region CSV Parsing Helpers
+
+        private enum MappingType
+        {
+            Source,
+            Main
+        }
+
+        private class CsvMapping
+        {
+            public int Id { get; set; }
+            public string Name { get; set; } = "";
+            public MappingType Type { get; set; }
+        }
+
+        private static List<CsvMapping> ParseCsv(string csvFilePath)
+        {
+            var result = new List<CsvMapping>();
+            if (!File.Exists(csvFilePath))
+            {
+                Console.WriteLine($"❌ CSV file not found: {csvFilePath}");
+                return result;
+            }
+
+            foreach (var line in File.ReadLines(csvFilePath))
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                var parts = line.Split(';');
+                if (parts.Length < 2)
+                    continue;
+
+                if (!int.TryParse(parts[0].Trim(), out int id))
+                    continue;
+                if (id == 0)
+                    continue;
+
+                string namePart = parts[1].Trim();
+                string name = namePart;
+                string comment = "";
+                int commentIndex = namePart.IndexOf(" <=");
+                if (commentIndex >= 0)
+                {
+                    name = namePart.Substring(0, commentIndex).Trim();
+                    comment = namePart.Substring(commentIndex + 3).Trim();
+                }
+
+                if (name.Contains("_32_"))
+                    continue;
+
+                string lowerComment = comment.ToLower();
+                if (lowerComment.Contains("manifest") ||
+                    lowerComment.Contains("assets") ||
+                    lowerComment.Contains("logic") ||
+                    lowerComment.Contains("visualization") ||
+                    lowerComment.Contains("index"))
+                {
+                    continue;
+                }
+
+                MappingType type = MappingType.Main;
+                if (lowerComment.Contains("source"))
+                    type = MappingType.Source;
+                else if (lowerComment.Contains("main"))
+                    type = MappingType.Main;
+
+                result.Add(new CsvMapping { Id = id, Name = name, Type = type });
+            }
+            return result;
+        }
+        #endregion
     }
 }
