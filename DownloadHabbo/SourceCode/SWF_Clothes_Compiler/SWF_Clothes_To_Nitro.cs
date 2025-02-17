@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Concurrent;
+using SkiaSharp;
 
 namespace Habbo_Downloader.Compiler
 {
@@ -155,21 +156,23 @@ namespace Habbo_Downloader.Compiler
             }
         }
 
-        private static Dictionary<string, Bitmap> LoadImages(string imagesDirectory)
+        private static Dictionary<string, SKBitmap> LoadImages(string imagesDirectory)
         {
-            var images = new Dictionary<string, Bitmap>();
-            foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
+            var imageFiles = Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly);
+            var images = new Dictionary<string, SKBitmap>();
+
+            foreach (var imageFile in imageFiles)
             {
                 string imageName = Path.GetFileNameWithoutExtension(imageFile);
-                if (imageName.StartsWith("sh_") || imageName.Contains("_32_"))
-                    continue;
+                if (imageName.StartsWith("sh_") || imageName.Contains("_32_")) continue;
 
                 try
                 {
-                    using var bitmap = new Bitmap(imageFile);
-                    if (!images.ContainsKey(imageName))
+                    using var stream = File.OpenRead(imageFile);
+                    var skBitmap = SKBitmap.Decode(stream); // Decode directly to SkiaSharp
+                    if (skBitmap != null)
                     {
-                        images[imageName] = new Bitmap(bitmap);
+                        images[imageName] = skBitmap;
                     }
                 }
                 catch (Exception ex)
@@ -177,6 +180,7 @@ namespace Habbo_Downloader.Compiler
                     Console.WriteLine($"⚠️ Error loading image {imageFile}: {ex.Message}");
                 }
             }
+
             return images;
         }
 
