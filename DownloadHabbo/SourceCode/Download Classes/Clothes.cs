@@ -103,11 +103,11 @@ namespace ConsoleApplication
 
                 // Convert XML to JSON.
                 string figuredataFile = Path.Combine(xmlDirectory, "figuredata.xml");
-                string figuredataJsonOutput = Path.Combine(jsonDirectory, "figuredata.json");
+                string figuredataJsonOutput = Path.Combine(jsonDirectory, "FigureData.json");
                 await ConvertFigureDataToJson(figuredataFile, figuredataJsonOutput, disableSellable);
 
                 string figuremapFile = Path.Combine(xmlDirectory, "figuremap.xml");
-                string figuremapJsonOutput = Path.Combine(jsonDirectory, "figuremap.json");
+                string figuremapJsonOutput = Path.Combine(jsonDirectory, "FigureMap.json");
                 await ConvertFigureMapToJson(figuremapFile, figuremapJsonOutput);
 
                 List<string> libIds = new List<string>();
@@ -313,7 +313,7 @@ namespace ConsoleApplication
                 lock (consoleLock)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"📁 Downloaded: {jsonOutputPath}");
+                    Console.WriteLine($"🔄 Converted: {jsonOutputPath}");
                     Console.ForegroundColor = ConsoleColor.Gray;
                 }
             }
@@ -392,7 +392,7 @@ namespace ConsoleApplication
                 lock (consoleLock)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"📁 Downloaded: {jsonOutputPath}");
+                    Console.WriteLine($"🔄 Converted: {jsonOutputPath}");
                     Console.ForegroundColor = ConsoleColor.Gray;
                 }
             }

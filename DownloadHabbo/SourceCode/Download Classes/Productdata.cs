@@ -73,7 +73,7 @@ namespace ConsoleApplication
 
         private static async Task ConvertProductDataToJsonAsync(string textFilePath)
         {
-            string jsonFilePath = "./Habbo_Default/files/json/productdata.json";
+            string jsonFilePath = "./Habbo_Default/files/json/ProductData.json";
 
             if (!File.Exists(textFilePath))
             {
@@ -111,7 +111,7 @@ namespace ConsoleApplication
                 await File.WriteAllTextAsync(jsonFilePath, json);
 
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("✅ Productdata converted to JSON successfully.");
+                Console.WriteLine($"🔄 Converted: {jsonFilePath}");
                 Console.ForegroundColor = ConsoleColor.Gray;
             }
             catch (Exception ex)
