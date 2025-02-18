@@ -1,7 +1,6 @@
 # Setup
-Place the files in C:\Tools</br>
-make sure you got NPM installed : https://nodejs.org/en/download/</br>
-Run C:\Tools\RunMeFirst.bat
+Place the files where you like
+make sure you got .NET SDK : https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-8.0.406-windows-x64-installer
 
 # Step 1
 Download all the swf's with the download tool : C:\Tools\DownloadHabbo\Habbo_Downloader.exe
