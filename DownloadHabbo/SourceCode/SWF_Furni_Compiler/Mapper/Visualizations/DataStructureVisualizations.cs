@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using System.Xml.Linq;
+using static Habbo_Downloader.SWFCompiler.Mapper.Visualizations.Layer;
 
 namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
 {
@@ -37,6 +38,16 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public Dictionary<int, Color> Colors { get; set; } = new();
 
+        [JsonPropertyOrder(7)]
+        [JsonPropertyName("postures")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public PostureCollection Postures { get; set; }
+
+        [JsonPropertyOrder(8)]
+        [JsonPropertyName("gestures")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<Gesture> Gestures { get; set; }
+
         public Visualization(XElement xml)
         {
             Size = int.TryParse(xml.Attribute("size")?.Value, out int size) ? size : 0;
@@ -47,6 +58,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
             Directions = ParseDirections(xml.Element("directions"));
             Animations = ParseAnimations(xml.Element("animations"));
             Colors = ParseColors(xml.Element("colors"));
+            Postures = ParsePostures(xml.Element("postures"));
+            Gestures = ParseGestures(xml.Element("gestures"));
 
             if (Animations != null && Animations.Count == 0)
             {
@@ -122,6 +135,41 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
             }
             return colors;
         }
+
+        private PostureCollection ParsePostures(XElement posturesElement)
+        {
+            if (posturesElement == null) return null;
+
+            var postures = new PostureCollection();
+
+            // Check for default posture
+            if (posturesElement.Attribute("defaultPosture") != null)
+            {
+                postures.DefaultPosture = posturesElement.Attribute("defaultPosture")?.Value;
+            }
+
+            // Extract posture list
+            foreach (var posture in posturesElement.Elements("posture"))
+            {
+                postures.Postures.Add(new Posture(posture));
+            }
+
+            return postures;
+        }
+
+        private List<Gesture> ParseGestures(XElement gesturesElement)
+        {
+            if (gesturesElement == null) return null;
+
+            var gestures = new List<Gesture>();
+
+            foreach (var gesture in gesturesElement.Elements("gesture"))
+            {
+                gestures.Add(new Gesture(gesture));
+            }
+
+            return gestures;
+        }
     }
 
     public class Layer
@@ -162,6 +210,46 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
             Y = int.TryParse(xml.Attribute("y")?.Value, out int y) ? y : (int?)null;
             Tag = xml.Attribute("tag")?.Value;
             IgnoreMouse = xml.Attribute("ignoreMouse")?.Value == "1" ? true : (bool?)null;
+        }
+
+        public class Posture
+        {
+            [JsonPropertyName("id")]
+            public string Id { get; set; }
+
+            [JsonPropertyName("animationId")]
+            public int AnimationId { get; set; }
+
+            public Posture(XElement xml)
+            {
+                Id = xml.Attribute("id")?.Value;
+                AnimationId = int.TryParse(xml.Attribute("animationId")?.Value, out int animId) ? animId : 0;
+            }
+        }
+
+        public class PostureCollection
+        {
+            [JsonPropertyName("defaultPosture")]
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public string DefaultPosture { get; set; }
+
+            [JsonPropertyName("postures")]
+            public List<Posture> Postures { get; set; } = new();
+        }
+
+        public class Gesture
+        {
+            [JsonPropertyName("id")]
+            public string Id { get; set; }
+
+            [JsonPropertyName("animationId")]
+            public int AnimationId { get; set; }
+
+            public Gesture(XElement xml)
+            {
+                Id = xml.Attribute("id")?.Value;
+                AnimationId = int.TryParse(xml.Attribute("animationId")?.Value, out int animId) ? animId : 0;
+            }
         }
     }
 }

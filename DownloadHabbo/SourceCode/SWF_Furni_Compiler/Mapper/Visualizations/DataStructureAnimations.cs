@@ -130,14 +130,89 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         public int Id { get; set; }
         public int? RandomX { get; set; }
         public int? RandomY { get; set; }
+        public int? Y { get; set; }
+
+        [JsonPropertyName("offsets")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public Dictionary<int, Offset> Offsets { get; set; } = new();
 
         public Frame(XElement xml)
         {
             Id = int.TryParse(xml.Attribute("id")?.Value, out int id) ? id : 0;
             RandomX = int.TryParse(xml.Attribute("randomX")?.Value, out int randomX) ? randomX : (int?)null;
             RandomY = int.TryParse(xml.Attribute("randomY")?.Value, out int randomY) ? randomY : (int?)null;
+            Y = int.TryParse(xml.Attribute("y")?.Value, out int y) ? y : (int?)null;
+
+            Offsets = ParseOffsets(xml);
+        }
+
+        private Dictionary<int, Offset> ParseOffsets(XElement xml)
+        {
+            var offsets = new Dictionary<int, Offset>();
+
+            var offsetsElement = xml.Element("offsets");
+            if (offsetsElement != null)
+            {
+                foreach (var offsetElement in offsetsElement.Elements("offset"))
+                {
+                    if (int.TryParse(offsetElement.Attribute("direction")?.Value, out int direction))
+                    {
+                        offsets[direction] = new Offset(offsetElement);
+                    }
+                }
+            }
+
+            return offsets.Count > 0 ? offsets : null;
         }
     }
+
+    public class Offset
+    {
+        [JsonPropertyName("direction")]
+        public int Direction { get; set; }
+
+        [JsonPropertyName("x")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? X { get; set; }
+
+        [JsonPropertyName("y")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? Y { get; set; }
+
+        public Offset(XElement xml)
+        {
+            Direction = int.TryParse(xml.Attribute("direction")?.Value, out int dir) ? dir : 0;
+            X = int.TryParse(xml.Attribute("x")?.Value, out int x) ? x : (int?)null;
+            Y = int.TryParse(xml.Attribute("y")?.Value, out int y) ? y : (int?)null;
+        }
+    }
+
+
+    public class Posture
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        [JsonPropertyName("animationId")]
+        public int AnimationId { get; set; }
+
+        public Posture(XElement xml)
+        {
+            Id = xml.Attribute("id")?.Value;
+            AnimationId = int.TryParse(xml.Attribute("animationId")?.Value, out int animId) ? animId : 0;
+        }
+    }
+
+    public class PostureCollection
+    {
+        [JsonPropertyName("defaultPosture")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string DefaultPosture { get; set; }
+
+        [JsonPropertyName("postures")]
+        public List<Posture> Postures { get; set; } = new();
+    }
+
 
     public class FrameConverter : JsonConverter<Frame>
     {
@@ -163,6 +238,42 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
             {
                 writer.WritePropertyName("randomY");
                 writer.WriteNumberValue(value.RandomY.Value);
+            }
+
+            if (value.Y.HasValue)
+            {
+                writer.WritePropertyName("y");
+                writer.WriteNumberValue(value.Y.Value);
+            }
+
+            // Serialize Offsets
+            if (value.Offsets != null && value.Offsets.Count > 0)
+            {
+                writer.WritePropertyName("offsets");
+                writer.WriteStartObject();
+                foreach (var offset in value.Offsets)
+                {
+                    writer.WritePropertyName(offset.Key.ToString());
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("direction");
+                    writer.WriteNumberValue(offset.Value.Direction);
+
+                    if (offset.Value.X.HasValue)
+                    {
+                        writer.WritePropertyName("x");
+                        writer.WriteNumberValue(offset.Value.X.Value);
+                    }
+
+                    if (offset.Value.Y.HasValue)
+                    {
+                        writer.WritePropertyName("y");
+                        writer.WriteNumberValue(offset.Value.Y.Value);
+                    }
+
+                    writer.WriteEndObject();
+                }
+                writer.WriteEndObject();
             }
 
             writer.WriteEndObject();

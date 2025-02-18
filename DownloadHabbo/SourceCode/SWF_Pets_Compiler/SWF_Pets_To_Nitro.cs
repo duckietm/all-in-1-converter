@@ -4,25 +4,19 @@ using Habbo_Downloader.SWFCompiler.Mapper.Logic;
 using Habbo_Downloader.SWFCompiler.Mapper.Visualizations;
 using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
 using Habbo_Downloader.Tools;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using SkiaSharp;
+using Habbo_Downloader.SWF_Pets_Compiler.Mapper.NewFolder;
 
 namespace Habbo_Downloader.Compiler
 {
-    public static class SWF_Furni_To_Nitro
+    public static class SWF_Pets_To_Nitro
     {
         private static string ImportDirectory;
-        private const string OutputDirectory = @"SWFCompiler\furniture";
+        private const string OutputDirectory = @"SWFCompiler\pets";
 
         public static async Task ConvertSwfFilesAsync()
         {
@@ -33,7 +27,7 @@ namespace Habbo_Downloader.Compiler
 
                 ImportDirectory = string.IsNullOrEmpty(input) || input == "H"
                     ? @"Habbo_Default\hof_furni"
-                    : input == "I" ? @"SWFCompiler\import\furniture" : @"Habbo_Default\hof_furni";
+                    : input == "I" ? @"SWFCompiler\import\pets" : @"Habbo_Default\hof_furni";
 
                 Console.WriteLine($"✅ Converting SWF to Nitro from source {ImportDirectory}");
 
@@ -100,8 +94,8 @@ namespace Habbo_Downloader.Compiler
             var imageSources = DebugXmlParser.ParseDebugXml(csvPath);
 
             // Process Index, Assets, Logic, and Visualizations in parallel.
-            var indexTask = GetIndexDataAsync(binaryOutputPath);
-            var assetsTask = GetAssetDataAsync(binaryOutputPath, imageSources, csvPath, fileOutputDirectory);
+            var indexTask = GetIndexPetsDataAsync(binaryOutputPath);
+            var assetsTask = GetAssetPetsDataAsync(binaryOutputPath, imageSources, csvPath, fileOutputDirectory);
             var logicTask = GetLogicDataAsync(binaryOutputPath);
             var visualizationTask = GetVisualizationsDataAsync(binaryOutputPath);
 
@@ -110,6 +104,7 @@ namespace Habbo_Downloader.Compiler
             var assetData = assetsTask.Result;
             var logicData = logicTask.Result;
             var visualizations = visualizationTask.Result;
+            var palettes = PaletteExtractor.ExtractPalettes(binaryOutputPath);
 
             if (indexData == null)
             {
@@ -123,7 +118,7 @@ namespace Habbo_Downloader.Compiler
             string imagesDirectory = Path.Combine(binaryOutputPath, "images");
             string tmpDirectory = Path.Combine(binaryOutputPath, "tmp");
 
-            await ImageRestorer.RestoreImagesFromTmpAsync(tmpDirectory, imagesDirectory, AssetsMapper.LatestImageMapping);
+            await ImageRestorer.RestoreImagesFromTmpAsync(tmpDirectory, imagesDirectory, AssetsPetsMapper.LatestImageMapping);
 
             var images = LoadImages(imagesDirectory);
             if (images.Count == 0)
@@ -154,14 +149,6 @@ namespace Habbo_Downloader.Compiler
 
                 var jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
 
-                var jsonOptions = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
-                    Converters = { new FloatToFixedDecimalConverter() }
-                };
-
                 var logicObject = new
                 {
                     model = new
@@ -178,18 +165,33 @@ namespace Habbo_Downloader.Compiler
                     customVars = logicData.CustomVars
                 };
 
+                // ✅ Declare `fullObject` BEFORE using it in JSON serialization
                 var fullObject = new
                 {
+                    type = indexData.Type,
                     name = indexData.Name,
                     logicType = indexData.LogicType,
                     visualizationType = indexData.VisualizationType,
                     assets = assetData,
+                    palettes = palettes,
                     logic = logicObject,
                     visualizations = visualizations,
                     spritesheet = spriteSheetData
                 };
 
-                string jsonContent = JsonSerializer.Serialize(fullObject, jsonOptions);
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = true, // Keeps objects readable
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+                };
+
+                // ✅ Serialize JSON only ONCE
+                string jsonContent = JsonSerializer.Serialize(fullObject, jsonOptions)
+                    .Replace("[\n  ", "[") // Fixes indentations for RGB
+                    .Replace("\n  ]", "]")  // Ensures inline array
+                    .Replace("\n    ", " "); // Removes extra spaces from multi-line formatting
+
                 await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
 
                 await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);
@@ -231,19 +233,19 @@ namespace Habbo_Downloader.Compiler
             return images;
         }
 
-        private static async Task<IndexData> GetIndexDataAsync(string binaryOutputPath)
+        private static async Task<IndexPetsData> GetIndexPetsDataAsync(string binaryOutputPath)
         {
             var indexFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_index.bin", SearchOption.TopDirectoryOnly);
-            return indexFiles.Length > 0 ? await IndexMapper.ParseIndexFileAsync(indexFiles[0]) : null;
+            return indexFiles.Length > 0 ? await IndexPetsMapper.ParsePetsIndexFileAsync(indexFiles[0]) : null;
         }
 
-        private static async Task<Dictionary<string, AssetsMapper.Asset>> GetAssetDataAsync(
+        private static async Task<Dictionary<string, AssetsPetsMapper.Asset>> GetAssetPetsDataAsync(
             string binaryOutputPath, Dictionary<string, string> imageSources, string csvPath, string fileOutputDirectory)
         {
             var assetsFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_assets.bin", SearchOption.TopDirectoryOnly);
             var manifestFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_manifest.bin", SearchOption.TopDirectoryOnly);
             return (assetsFiles.Length > 0 && manifestFiles.Length > 0)
-                ? await AssetsMapper.ParseAssetsFileAsync(assetsFiles[0], imageSources, manifestFiles[0], csvPath, fileOutputDirectory)
+                ? await AssetsPetsMapper.ParseAssetsFileAsync(assetsFiles[0], imageSources, manifestFiles[0], csvPath, fileOutputDirectory)
                 : null;
         }
 
