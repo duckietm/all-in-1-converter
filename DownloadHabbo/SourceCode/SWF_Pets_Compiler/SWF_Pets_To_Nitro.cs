@@ -1,7 +1,7 @@
-﻿using Habbo_Downloader.SWFCompiler.Mapper.Assests;
-using Habbo_Downloader.SWFCompiler.Mapper.Index;
+﻿using Habbo_Downloader.SWF_Pets_Compiler.Mapper.Assests;
+using Habbo_DownloaderSWF_Pets_Compiler.Mapper.Index;
 using Habbo_Downloader.SWFCompiler.Mapper.Logic;
-using Habbo_Downloader.SWFCompiler.Mapper.Visualizations;
+using Habbo_Downloader.SWF_Pets_Compiler.Mapper.Visualizations;
 using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
 using Habbo_Downloader.Tools;
 using System.Collections.Concurrent;
@@ -9,7 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
 using SkiaSharp;
-using Habbo_Downloader.SWF_Pets_Compiler.Mapper.NewFolder;
+using Habbo_Downloader.SWF_Pets_Compiler.Mapper.palette;
 
 namespace Habbo_Downloader.Compiler
 {

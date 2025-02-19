@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Habbo_Downloader.SWFCompiler.Mapper.Index
+namespace Habbo_DownloaderSWF_Pets_Compiler.Mapper.Index
 {
     public static class IndexPetsMapper
     {
