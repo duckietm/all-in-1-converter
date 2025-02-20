@@ -11,7 +11,6 @@
           "MySql.Data": "9.2.0",
           "Newtonsoft.Json": "13.0.3",
           "SharpZipLib": "1.4.2",
-          "SkiaSharp": "3.116.1",
           "System.Drawing.Common": "9.0.1"
         },
         "runtime": {
@@ -144,46 +143,6 @@
           "lib/net6.0/ICSharpCode.SharpZipLib.dll": {
             "assemblyVersion": "1.4.2.13",
             "fileVersion": "1.4.2.13"
-          }
-        }
-      },
-      "SkiaSharp/3.116.1": {
-        "dependencies": {
-          "SkiaSharp.NativeAssets.Win32": "3.116.1",
-          "SkiaSharp.NativeAssets.macOS": "3.116.1"
-        },
-        "runtime": {
-          "lib/net8.0/SkiaSharp.dll": {
-            "assemblyVersion": "3.116.0.0",
-            "fileVersion": "3.116.1.0"
-          }
-        }
-      },
-      "SkiaSharp.NativeAssets.macOS/3.116.1": {
-        "runtimeTargets": {
-          "runtimes/osx/native/libSkiaSharp.dylib": {
-            "rid": "osx",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          }
-        }
-      },
-      "SkiaSharp.NativeAssets.Win32/3.116.1": {
-        "runtimeTargets": {
-          "runtimes/win-arm64/native/libSkiaSharp.dll": {
-            "rid": "win-arm64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/win-x64/native/libSkiaSharp.dll": {
-            "rid": "win-x64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/win-x86/native/libSkiaSharp.dll": {
-            "rid": "win-x86",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
           }
         }
       },
@@ -456,27 +415,6 @@
       "sha512": "sha512-yjj+3zgz8zgXpiiC3ZdF/iyTBbz2fFvMxZFEBPUcwZjIvXOf37Ylm+K58hqMfIBt5JgU/Z2uoUS67JmTLe973A==",
       "path": "sharpziplib/1.4.2",
       "hashPath": "sharpziplib.1.4.2.nupkg.sha512"
-    },
-    "SkiaSharp/3.116.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-DNDwbRjP+aMo27dV2h/uHCVTcWubWWxHnPLiePNyl24f4Pv43mQ8AQQeseOrKR+J3AOCEs6t0sUjo0aa3j3RWQ==",
-      "path": "skiasharp/3.116.1",
-      "hashPath": "skiasharp.3.116.1.nupkg.sha512"
-    },
-    "SkiaSharp.NativeAssets.macOS/3.116.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-3KPvpKysDmEMt0NnAZPX5U6KFk0LmG/72/IjAIJemIksIZ0Tjs9pGpr3L+zboVCv1MLVoJLKl3nJDXUG6Jda6A==",
-      "path": "skiasharp.nativeassets.macos/3.116.1",
-      "hashPath": "skiasharp.nativeassets.macos.3.116.1.nupkg.sha512"
-    },
-    "SkiaSharp.NativeAssets.Win32/3.116.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-dRQ75MCI8oz6zAs2Y1w6pq6ARs4MhdNG+gf3doOxOxdnueDXffQLGQIxON54GDoxc0WjKOoHMKBR4DhaduwwQw==",
-      "path": "skiasharp.nativeassets.win32/3.116.1",
-      "hashPath": "skiasharp.nativeassets.win32.3.116.1.nupkg.sha512"
     },
     "System.Buffers/4.5.1": {
       "type": "package",

@@ -15,7 +15,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using SkiaSharp;
 
 namespace Habbo_Downloader.Compiler
 {
@@ -206,9 +205,9 @@ namespace Habbo_Downloader.Compiler
             }
         }
 
-        private static Dictionary<string, SKBitmap> LoadImages(string imagesDirectory)
+        private static Dictionary<string, Bitmap> LoadImages(string imagesDirectory)
         {
-            var images = new Dictionary<string, SKBitmap>();
+            var images = new Dictionary<string, Bitmap>();
             foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
             {
                 string imageName = Path.GetFileNameWithoutExtension(imageFile);
@@ -216,11 +215,10 @@ namespace Habbo_Downloader.Compiler
 
                 try
                 {
-                    using var stream = File.OpenRead(imageFile);
-                    var bitmap = SKBitmap.Decode(stream);
-                    if (bitmap != null && !images.ContainsKey(imageName))
+                    using var bitmap = new Bitmap(imageFile);
+                    if (!images.ContainsKey(imageName))
                     {
-                        images[imageName] = bitmap;
+                        images[imageName] = new Bitmap(bitmap);
                     }
                 }
                 catch (Exception ex)
