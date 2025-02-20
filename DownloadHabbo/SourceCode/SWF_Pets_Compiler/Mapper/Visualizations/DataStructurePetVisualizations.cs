@@ -18,35 +18,60 @@ namespace Habbo_Downloader.SWF_Pets_Compiler.Mapper.Visualizations
         [JsonPropertyName("size")]
         public int Size { get; set; }
 
+        private Dictionary<int, Layer> _layers = new();
         [JsonPropertyOrder(3)]
         [JsonPropertyName("layers")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        public Dictionary<int, Layer> Layers { get; set; } = new();
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<int, Layer>? Layers
+        {
+            get => _layers.Count > 0 ? _layers : null;
+            set => _layers = value ?? new();
+        }
 
+        private SortedDictionary<int, object> _directions = new();
         [JsonPropertyOrder(4)]
         [JsonPropertyName("directions")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        public Dictionary<int, object> Directions { get; set; } = new();
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public SortedDictionary<int, object>? Directions
+        {
+            get => _directions.Count > 0 ? _directions : null;
+            set => _directions = value ?? new();
+        }
 
         [JsonPropertyOrder(5)]
         [JsonPropertyName("animations")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public Dictionary<int, Animation> Animations { get; set; } = new();
 
+        private Dictionary<int, Color> _colors = new();
         [JsonPropertyOrder(6)]
         [JsonPropertyName("colors")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        public Dictionary<int, Color> Colors { get; set; } = new();
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<int, Color>? Colors
+        {
+            get => _colors.Count > 0 ? _colors : null;
+            set => _colors = value ?? new();
+        }
 
+        private PostureCollection? _postures;
         [JsonPropertyOrder(7)]
         [JsonPropertyName("postures")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public PostureCollection Postures { get; set; }
+        public PostureCollection? Postures
+        {
+            get => _postures != null && _postures.Postures.Count > 0 ? _postures : null;
+            set => _postures = value;
+        }
 
+        private List<Gesture> _gestures = new();
         [JsonPropertyOrder(8)]
         [JsonPropertyName("gestures")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public List<Gesture> Gestures { get; set; }
+        public List<Gesture>? Gestures
+        {
+            get => _gestures.Count > 0 ? _gestures : null;
+            set => _gestures = value ?? new();
+        }
 
         public Visualization(XElement xml)
         {
@@ -82,16 +107,16 @@ namespace Habbo_Downloader.SWF_Pets_Compiler.Mapper.Visualizations
             return layers;
         }
 
-        private Dictionary<int, object> ParseDirections(XElement directionsElement)
+        private SortedDictionary<int, object> ParseDirections(XElement directionsElement)
         {
-            var directions = new Dictionary<int, object>();
+            var directions = new SortedDictionary<int, object>();
             if (directionsElement == null) return directions;
 
             foreach (var directionElement in directionsElement.Elements("direction"))
             {
                 if (int.TryParse(directionElement.Attribute("id")?.Value, out int id))
                 {
-                    var layers = new Dictionary<int, Layer>();
+                    var layers = new SortedDictionary<int, Layer>();
                     foreach (var layerElement in directionElement.Elements("layer"))
                     {
                         if (int.TryParse(layerElement.Attribute("id")?.Value, out int layerId))

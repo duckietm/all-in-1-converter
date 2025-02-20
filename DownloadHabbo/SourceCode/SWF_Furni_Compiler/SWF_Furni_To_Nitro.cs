@@ -173,9 +173,9 @@ namespace Habbo_Downloader.Compiler
                     maskType = logicData.MaskType,
                     credits = logicData.Credits,
                     soundSample = logicData.SoundSample,
-                    planetSystems = logicData.PlanetSystems,
-                    particleSystems = logicData.ParticleSystems,
-                    customVars = logicData.CustomVars
+                    planetSystems = logicData.PlanetSystems?.Any() == true ? logicData.PlanetSystems : null,
+                    particleSystems = logicData.ParticleSystems?.Any() == true ? logicData.ParticleSystems : null,
+                    customVars = logicData.CustomVars?.Variables.Any() == true ? logicData.CustomVars : null
                 };
 
                 var fullObject = new

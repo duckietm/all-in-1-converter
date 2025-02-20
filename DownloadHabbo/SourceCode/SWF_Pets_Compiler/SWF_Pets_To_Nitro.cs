@@ -11,6 +11,7 @@ using System.Xml.Linq;
 using SkiaSharp;
 using Habbo_Downloader.SWF_Pets_Compiler.Mapper.palette;
 
+
 namespace Habbo_Downloader.Compiler
 {
     public static class SWF_Pets_To_Nitro
@@ -42,20 +43,23 @@ namespace Habbo_Downloader.Compiler
 
                 Console.WriteLine($"✅ Found {swfFiles.Length} SWF files.");
 
-                // Process multiple SWFs in parallel.
-                var nitroFilesGenerated = new ConcurrentBag<int>();
-                int maxParallelism = (int)(Environment.ProcessorCount * 0.8);
-                if (maxParallelism < 1) maxParallelism = 1;
+                int convertedCount = 0;
 
-                await Parallel.ForEachAsync(swfFiles, new ParallelOptions { MaxDegreeOfParallelism = maxParallelism }, async (swfFile, _) =>
+                foreach (var swfFile in swfFiles)
                 {
-                    if (await ProcessSwfFileAsync(swfFile))
-                    {
-                        nitroFilesGenerated.Add(1);
-                    }
-                });
+                    Console.WriteLine($"\n🎬 Processing: {Path.GetFileName(swfFile)}");
 
-                Console.WriteLine($"✅ All SWF files have been converted. {nitroFilesGenerated.Count} nitro files were generated.");
+                    bool success = await ProcessSwfFileAsync(swfFile);
+
+                    if (success)
+                    {
+                        convertedCount++;
+                    }
+
+                    Console.WriteLine($"✅ Completed: {Path.GetFileName(swfFile)}");
+                }
+
+                Console.WriteLine($"✅ All SWF files have been processed. {convertedCount} nitro files were generated.");
             }
             catch (Exception ex)
             {
@@ -95,7 +99,7 @@ namespace Habbo_Downloader.Compiler
 
             // Process Index, Assets, Logic, and Visualizations in parallel.
             var indexTask = GetIndexPetsDataAsync(binaryOutputPath);
-            var assetsTask = GetAssetPetsDataAsync(binaryOutputPath, imageSources, csvPath, fileOutputDirectory);
+            var assetsTask = GetAssetPetsDataAsync(binaryOutputPath, imageSources, csvPath, fileOutputDirectory, Path.GetFileName(swfFile));
             var logicTask = GetLogicDataAsync(binaryOutputPath);
             var visualizationTask = GetVisualizationsDataAsync(binaryOutputPath);
 
@@ -160,9 +164,9 @@ namespace Habbo_Downloader.Compiler
                     maskType = logicData.MaskType,
                     credits = logicData.Credits,
                     soundSample = logicData.SoundSample,
-                    planetSystems = logicData.PlanetSystems,
-                    particleSystems = logicData.ParticleSystems,
-                    customVars = logicData.CustomVars
+                    planetSystems = logicData.PlanetSystems?.Any() == true ? logicData.PlanetSystems : null,
+                    particleSystems = logicData.ParticleSystems?.Any() == true ? logicData.ParticleSystems : null,
+                    customVars = logicData.CustomVars?.Variables.Any() == true ? logicData.CustomVars : null
                 };
 
                 // ✅ Declare `fullObject` BEFORE using it in JSON serialization
@@ -175,7 +179,7 @@ namespace Habbo_Downloader.Compiler
                     assets = assetData,
                     palettes = palettes,
                     logic = logicObject,
-                    visualizations = visualizations,
+                    visualizations = visualizations?.Any(v => !IsVisualizationEmpty(v)) == true ? visualizations.Where(v => !IsVisualizationEmpty(v)).ToList() : null,
                     spritesheet = spriteSheetData
                 };
 
@@ -240,12 +244,13 @@ namespace Habbo_Downloader.Compiler
         }
 
         private static async Task<Dictionary<string, AssetsPetsMapper.Asset>> GetAssetPetsDataAsync(
-            string binaryOutputPath, Dictionary<string, string> imageSources, string csvPath, string fileOutputDirectory)
+            string binaryOutputPath, Dictionary<string, string> imageSources, string csvPath, string fileOutputDirectory, string swfFileName)
+
         {
             var assetsFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_assets.bin", SearchOption.TopDirectoryOnly);
             var manifestFiles = Directory.GetFiles(Path.Combine(binaryOutputPath, "binaryData"), "*_manifest.bin", SearchOption.TopDirectoryOnly);
             return (assetsFiles.Length > 0 && manifestFiles.Length > 0)
-                ? await AssetsPetsMapper.ParseAssetsFileAsync(assetsFiles[0], imageSources, manifestFiles[0], csvPath, fileOutputDirectory)
+                ? await AssetsPetsMapper.ParseAssetsFileAsync(assetsFiles[0], imageSources, manifestFiles[0], csvPath, swfFileName, fileOutputDirectory)
                 : null;
         }
 
@@ -311,6 +316,18 @@ namespace Habbo_Downloader.Compiler
             await File.WriteAllBytesAsync(Path.Combine(nitroOutputDirectory, $"{fileName}.nitro"), await nitroBundler.ToBufferAsync());
             Console.WriteLine($"📦 Generated {fileName}.nitro -> {nitroOutputDirectory}");
         }
+
+        private static bool IsVisualizationEmpty(Visualization v)
+        {
+            return v == null ||
+                   (v.Layers == null || v.Layers.Count == 0) &&
+                   (v.Directions == null || v.Directions.Count == 0) &&
+                   (v.Animations == null || v.Animations.Count == 0) &&
+                   (v.Colors == null || v.Colors.Count == 0) &&
+                   (v.Postures?.Postures == null || v.Postures.Postures.Count == 0) &&
+                   (v.Gestures == null || v.Gestures.Count == 0);
+        }
+
 
         private static void DeleteDirectory(string directoryPath)
         {
