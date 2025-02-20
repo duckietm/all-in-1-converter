@@ -14,56 +14,61 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Logic
         public string Credits { get; set; }
 
         [JsonPropertyName("soundSample")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public SoundSample SoundSample { get; set; }
 
         [JsonPropertyName("action")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public ActionData Action { get; set; }
 
-        private List<AssetLogicPlanetSystem> _planetSystems = new List<AssetLogicPlanetSystem>();
+        private List<AssetLogicPlanetSystem> _planetSystems;
 
         [JsonIgnore]
         public List<AssetLogicPlanetSystem> PlanetSystems
         {
-            get => _planetSystems;
-            set => _planetSystems = value ?? new List<AssetLogicPlanetSystem>();
+            get => _planetSystems ??= new List<AssetLogicPlanetSystem>();
+            set => _planetSystems = value;
         }
 
         [JsonPropertyName("planetSystems")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public List<AssetLogicPlanetSystem> PlanetSystemsSerializable
         {
-            get => _planetSystems.Count > 0 ? _planetSystems : null;
+            get => (_planetSystems != null && _planetSystems.Any()) ? _planetSystems : null;
             set => _planetSystems = value ?? new List<AssetLogicPlanetSystem>();
         }
 
-        private List<ParticleSystem> _particleSystems = new List<ParticleSystem>();
+        private List<ParticleSystem> _particleSystems;
 
         [JsonIgnore]
         public List<ParticleSystem> ParticleSystems
         {
-            get => _particleSystems;
-            set => _particleSystems = value ?? new List<ParticleSystem>();
+            get => _particleSystems ??= new List<ParticleSystem>();
+            set => _particleSystems = value;
         }
 
         [JsonPropertyName("particleSystems")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public List<ParticleSystem> ParticleSystemsSerializable
         {
-            get => _particleSystems.Count > 0 ? _particleSystems : null;
+            get => (_particleSystems != null && _particleSystems.Any()) ? _particleSystems : null;
             set => _particleSystems = value ?? new List<ParticleSystem>();
         }
 
-        private CustomVars _customVars = new CustomVars();
+        private CustomVars _customVars;
 
         [JsonIgnore]
         public CustomVars CustomVars
         {
-            get => _customVars;
-            set => _customVars = value ?? new CustomVars();
+            get => _customVars ??= new CustomVars();
+            set => _customVars = value;
         }
 
         [JsonPropertyName("customVars")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public CustomVars CustomVarsSerializable
         {
-            get => _customVars.Variables.Count > 0 ? _customVars : null;
+            get => (_customVars != null && _customVars.Variables.Any()) ? _customVars : null;
             set => _customVars = value ?? new CustomVars();
         }
     }
