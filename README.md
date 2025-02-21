@@ -1,6 +1,9 @@
 # Setup
-Place the files where you like
-make sure you got .NET SDK : https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-8.0.406-windows-x64-installer
+Place the files where you like</br>
+make sure you got
+- .NET SDK : https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-8.0.406-windows-x64-installer</br>
+- Latest NodeJS: https://nodejs.org/en/download
+
 
 # Step 1
 Download all the swf's with the download tool : C:\Tools\DownloadHabbo\Habbo_Downloader.exe
