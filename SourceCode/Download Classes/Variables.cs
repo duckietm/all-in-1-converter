@@ -31,7 +31,7 @@
                 {
                     try
                     {
-                        await DownloadFileAsync(externalvarsurl, Path.Combine("./Habbo_Default/files", "external_variables.txt"), "external_variables.txt");
+                        await DownloadFileAsync(externalvarsurl, Path.Combine("./Habbo_Default/files/txt", "external_variables.txt"), "external_variables.txt");
                         WriteColoredMessage("External Variables Saved", ConsoleColor.Green);
                         return;
                     }
