@@ -1,4 +1,10 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace ConsoleApplication
 {
@@ -15,7 +21,22 @@ namespace ConsoleApplication
             Directory.CreateDirectory(importDir);
             Directory.CreateDirectory(mergedDir);
 
-            string originalFilePath = Path.Combine(originalDir, "FurnitureData.json");
+            Console.WriteLine("👉 Where do you want to load the Original Furnidata from 👈");
+            Console.WriteLine("⏩ (D) From the Habbo Default directory");
+            Console.WriteLine("⏩ (I) From the Original_Furnidata folder in Merge");
+            Console.Write("💁 Please select (I) or (D) [default is D]: ");
+            var userSelection = Console.ReadLine();
+
+            string originalFilePath;
+            if (string.Equals(userSelection, "I", StringComparison.OrdinalIgnoreCase))
+            {
+                originalFilePath = Path.Combine(originalDir, "FurnitureData.json");
+            }
+            else
+            {
+                originalFilePath = Path.Combine(Directory.GetCurrentDirectory(), "Habbo_Default", "files", "json", "FurnitureData.json");
+            }
+
             string mergedFilePath = Path.Combine(mergedDir, "FurnitureData.json");
 
             if (!File.Exists(originalFilePath))
@@ -52,7 +73,7 @@ namespace ConsoleApplication
                 SortJsonByID(originalJson, "roomitemtypes");
                 SortJsonByID(originalJson, "wallitemtypes");
 
-                await File.WriteAllTextAsync(mergedFilePath, originalJson.ToString());
+                await File.WriteAllTextAsync(mergedFilePath, originalJson.ToString(Formatting.None));
 
                 Console.WriteLine($"Furnidata merged successfully and saved to {mergedFilePath}");
                 Console.WriteLine($"Total Furniture imported: {totalImported}");

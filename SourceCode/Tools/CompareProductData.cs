@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
 using System.Linq;
@@ -10,39 +11,29 @@ namespace ConsoleApplication
     {
         public static async Task Compare()
         {
-            // Define base directories for Merge
             string baseDir = Path.Combine(Directory.GetCurrentDirectory(), "Merge");
             string importDir = Path.Combine(baseDir, "Import_ProductData");
             string mergedDir = Path.Combine(baseDir, "Merged_ProductData");
 
-            // Ensure necessary directories exist
-            Directory.CreateDirectory(mergedDir);
-            Directory.CreateDirectory(importDir);
 
-            // Ask user where to load the original ProductData from
             Console.WriteLine("👉 Where do you want to load the Original Productdata from 👈");
             Console.WriteLine("⏩ (D) From the Habbo Default directory");
             Console.WriteLine("⏩ (I) From the Original_ProductData folder in Merge");
             Console.Write("💁 Please select (I) or (D) [default is D]: ");
             string choice = Console.ReadLine()?.Trim().ToUpper();
 
-            // Determine the original file path based on user input
             string originalFilePath;
             if (string.IsNullOrEmpty(choice) || choice == "D")
             {
-                // Load from Habbo Default directory
                 originalFilePath = Path.Combine(Directory.GetCurrentDirectory(), "Habbo_Default", "files", "json", "ProductData.json");
             }
             else if (choice == "I")
             {
-                // Load from the Original_ProductData folder in Merge
                 string originalDir = Path.Combine(baseDir, "Original_ProductData");
-                Directory.CreateDirectory(originalDir); // Ensure the directory exists
                 originalFilePath = Path.Combine(originalDir, "ProductData.json");
             }
             else
             {
-                // Invalid input defaults to Habbo Default
                 originalFilePath = Path.Combine(Directory.GetCurrentDirectory(), "Habbo_Default", "files", "json", "ProductData.json");
             }
 
@@ -78,7 +69,8 @@ namespace ConsoleApplication
 
                 SortJsonByCode(originalJson, "productdata");
                 string mergedFilePath = Path.Combine(mergedDir, "ProductData.json");
-                await File.WriteAllTextAsync(mergedFilePath, originalJson.ToString());
+
+                await File.WriteAllTextAsync(mergedFilePath, originalJson.ToString(Formatting.None));
 
                 Console.WriteLine($"ProductData merged successfully and saved to {mergedFilePath}");
                 Console.WriteLine($"Total Products imported: {totalImported}");
@@ -163,7 +155,6 @@ namespace ConsoleApplication
 
             return importedCount;
         }
-
 
         private static void SortJsonByCode(JObject json, string itemType)
         {
