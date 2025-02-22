@@ -39,7 +39,7 @@ namespace ConsoleApplication
             {
                 lock (consoleLock)
                 {
-                    Console.WriteLine($"Error: {jsonFilePath} file not found.");
+                    Console.WriteLine($"⚠️ Please place FurnitureData.json in the /Database/Variables/ directory");
                 }
                 return;
             }
@@ -166,6 +166,7 @@ namespace ConsoleApplication
                         caseItemName.AppendFormat("WHEN {0} THEN '{1}' ", itemBaseId, classname);
                         casePublicName.AppendFormat("WHEN {0} THEN '{1}' ", itemBaseId, classname);
                     }
+
                     caseItemName.Append("ELSE item_name END");
                     casePublicName.Append("ELSE public_name END");
 

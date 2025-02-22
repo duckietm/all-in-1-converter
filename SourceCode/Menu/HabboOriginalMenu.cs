@@ -18,8 +18,8 @@ namespace ConsoleApplication
                 Console.WriteLine("1 => Download Badges                                                           ");
                 Console.WriteLine("2 => Download Clothes + figuredata & figuremap json and xml                    ");
                 Console.WriteLine("3 => Download Effects                                                          ");
-                Console.WriteLine("4 => Download Furnidata                                                        ");
-                Console.WriteLine("5 => Download Furniture                                                        ");
+                Console.WriteLine("4 => Download Furnidata and convurt to FurnitureData.json                      ");
+                Console.WriteLine("5 => Download Furniture as SWF                                                 ");
                 Console.WriteLine("6 => Download Icons                                                            ");
                 Console.WriteLine("7= > Download MP3                                                              ");
                 Console.WriteLine("8 => Download Productdata                                                      ");

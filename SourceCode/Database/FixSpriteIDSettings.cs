@@ -16,7 +16,7 @@ namespace ConsoleApplication
             {
                 lock (consoleLock)
                 {
-                    Console.WriteLine($"❌ Error: {jsonFilePath} file not found.");
+                    Console.WriteLine($"⚠️ Please place FurnitureData.json in the /Database/Variables/ directory");
                 }
                 return;
             }
