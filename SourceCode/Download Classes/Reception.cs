@@ -1,4 +1,6 @@
-﻿namespace ConsoleApplication
+﻿using System.Text.RegularExpressions;
+
+namespace ConsoleApplication
 {
     public static class ReceptionDownloader
     {
@@ -19,7 +21,7 @@
             var externalVariablesContent = await httpClient.GetStringAsync(externalVariablesUrl);
             await File.WriteAllTextAsync(externalVariablesPath, externalVariablesContent);
 
-            Console.WriteLine("Let's start downloading!");
+            Console.WriteLine("🚀 Let's start downloading some images!");
             int downloadCount = 0;
 
             using (StreamReader streamReader = new StreamReader(externalVariablesPath))
@@ -27,23 +29,15 @@
                 string line;
                 while ((line = await streamReader.ReadLineAsync()) != null)
                 {
-                    if (line.Contains("reception/"))
+                    if (line.Contains("${image.library.url}"))
                     {
-                        downloadCount = await ProcessImageLineAsync(line, "reception/", "./Habbo_Default/reception", "receptionurl", downloadCount);
-                    }
-                    if (line.Contains("catalogue/"))
-                    {
-                        downloadCount = await ProcessImageLineAsync(line, "catalogue/", "./Habbo_Default/reception/catalogue", "catalogurl", downloadCount);
-                    }
-                    if (line.Contains("web_promo_small/"))
-                    {
-                        downloadCount = await ProcessImageLineAsync(line, "web_promo_small/", "./Habbo_Default/reception/web_promo_small", "promosmallurl", downloadCount);
+                        downloadCount = await ProcessImageLineAsync(line, "${image.library.url}", "./Habbo_Default/reception", downloadCount);
                     }
                 }
             }
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"Finished downloading {downloadCount} images");
+            Console.WriteLine($"🎉 Finished downloading {downloadCount} images");
             Console.ForegroundColor = ConsoleColor.Gray;
 
             if (Directory.Exists("./temp"))
@@ -64,79 +58,79 @@
             }
         }
 
-        private static async Task<int> ProcessImageLineAsync(string line, string splitString, string saveDirectory, string configKey, int downloadCount)
+        private static async Task<int> ProcessImageLineAsync(string line, string splitString, string saveDirectory, int downloadCount)
         {
             string[] parts = line.Split(new string[] { splitString }, StringSplitOptions.None);
-            if (parts.Length < 2) return downloadCount;
-
-            string configFilePath = "config.ini";
-            var config = IniFileParser.Parse(configFilePath);
-
-            try
+            if (parts.Length < 2)
             {
-                string[] fileParts = parts[1].Split(new string[] { ",", ";" }, StringSplitOptions.None);
-                string fileName = fileParts[0].Trim();
-
-                if (!fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase) &&
-                    !fileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) &&
-                    !fileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) &&
-                    !fileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"Skipping invalid file: {fileName}");
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    return downloadCount;
-                }
-
-                string baseUrl = config[$"AppSettings:{configKey}"];
-                string fullUrl = $"{baseUrl}/{fileName}";
-
-                if (!Uri.TryCreate(fullUrl, UriKind.Absolute, out Uri uriResult) ||
-                    (uriResult.Scheme != Uri.UriSchemeHttp && uriResult.Scheme != Uri.UriSchemeHttps))
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"Skipping invalid URL: {fullUrl}");
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    return downloadCount;
-                }
-
-                string filePath = Path.Combine(saveDirectory, fileName);
-                if (!File.Exists(filePath))
-                {
-                    int retryCount = 3;
-                    while (retryCount > 0)
-                    {
-                        try
-                        {
-                            var imageBytes = await httpClient.GetByteArrayAsync(fullUrl);
-                            await File.WriteAllBytesAsync(filePath, imageBytes);
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"Downloading {fileName}");
-                            Console.ForegroundColor = ConsoleColor.Gray;
-                            downloadCount++;
-                            break;
-                        }
-                        catch (HttpRequestException ex)
-                        {
-                            retryCount--;
-
-                            if (retryCount == 0)
-                            {
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($"Failed to download {fileName} after 3 attempts.");
-                                Console.ForegroundColor = ConsoleColor.Gray;
-                            }
-                        }
-                    }
-                }
+                Console.WriteLine("❌ Skipping line (not split correctly)");
+                return downloadCount;
             }
-            catch (Exception ex)
+
+            string[] fileParts = parts[1].Split(new string[] { ",", ";" }, StringSplitOptions.None);
+            string filePath = fileParts[0].Trim().TrimEnd('}', '"');
+
+            if (string.IsNullOrEmpty(filePath))
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error processing line: {parts[1]}: {ex.Message}");
+                Console.WriteLine("❌ Skipping line (empty filename)");
+                return downloadCount;
+            }
+
+            // Ignore non-image files
+            if (!filePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase) &&
+                !filePath.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) &&
+                !filePath.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) &&
+                !filePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"❌ Skipping non-image file: {filePath}");
+                return downloadCount;
+            }
+
+            string subFolder = Path.GetDirectoryName(filePath);
+            if (string.IsNullOrEmpty(subFolder))
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"❌ No subfolder found for: {filePath}. Saving in 'other/'");
                 Console.ForegroundColor = ConsoleColor.Gray;
+                subFolder = "other";
             }
 
+            string baseUrl = "https://images.habbo.com/c_images/";
+            string fullUrl = $"{baseUrl}{filePath}";
+            string finalSaveDirectory = Path.Combine(saveDirectory, subFolder);
+            EnsureDirectoryExists(finalSaveDirectory);
+            string fullFilePath = Path.Combine(finalSaveDirectory, Path.GetFileName(filePath));
+
+            if (File.Exists(fullFilePath))
+            {
+                return downloadCount;
+            }
+
+            int retryCount = 3;
+            while (retryCount > 0)
+            {
+                try
+                {
+                    httpClient.DefaultRequestHeaders.Clear();
+                    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+                    httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("image/png"));
+                    httpClient.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, deflate");
+
+                    var imageBytes = await httpClient.GetByteArrayAsync(fullUrl);
+                    await File.WriteAllBytesAsync(fullFilePath, imageBytes);
+
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"📁 Downloaded: {filePath}");
+                    Console.ForegroundColor = ConsoleColor.Gray;
+
+                    downloadCount++;
+                    break;
+                }
+                catch (HttpRequestException ex)
+                {
+                    retryCount--;
+                }
+            }
             return downloadCount;
         }
     }
