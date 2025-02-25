@@ -36,12 +36,14 @@ namespace ConsoleApplication
                                 releaseEffect = parts[4];
                                 Console.ForegroundColor = ConsoleColor.Blue;
                                 Console.WriteLine("📃 Downloading Effects from habbo version: " + releaseEffect);
+                                Console.ForegroundColor = ConsoleColor.Gray;
                                 break;
                             }
                             else
                             {
                                 Console.ForegroundColor = ConsoleColor.Red;
                                 Console.WriteLine("Error: Insufficient parts in URL to determine release effect.");
+                                Console.ForegroundColor = ConsoleColor.Gray;
                                 return;
                             }
                         }
@@ -62,16 +64,45 @@ namespace ConsoleApplication
                     return;
                 }
 
-                // Download XML files
-                string effectMapUrl = $"{effectUrl}/{releaseEffect}/effectmap.xml";
-                string effectMapFilePath = "./Habbo_Default/files/xml/effectmap.xml";
-                await DownloadFileAsync(effectMapUrl, effectMapFilePath, "effectmap.xml");
+                Console.WriteLine("Would you like to use the Default effectmap.xml or do you want to use a custom effectmap.xml?");
+                Console.WriteLine("The custom effectmap must be in: SWFCompiler/import/effects/CustomXML");
+                Console.WriteLine("Please select (C)-Custom or (D)-Default:");
+                string choice = Console.ReadLine();
+                string effectMapFilePath = string.Empty;
 
+                if (string.IsNullOrWhiteSpace(choice) || choice.ToUpper() == "D")
+                {
+                    // Use default effectmap.xml - download it
+                    effectMapFilePath = "./Habbo_Default/files/xml/effectmap.xml";
+                    string effectMapUrl = $"{effectUrl}/{releaseEffect}/effectmap.xml";
+                    await DownloadFileAsync(effectMapUrl, effectMapFilePath, "effectmap.xml");
+                }
+                else if (choice.ToUpper() == "C")
+                {
+                    // Use custom effectmap.xml
+                    effectMapFilePath = "./SWFCompiler/import/effects/CustomXML/effectmap.xml";
+                    if (!File.Exists(effectMapFilePath))
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Error: Custom effectmap.xml file not found at " + effectMapFilePath);
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                        return;
+                    }
+                }
+                else
+                {
+                    // If input is unrecognized, default to the default effectmap.xml
+                    effectMapFilePath = "./Habbo_Default/files/xml/effectmap.xml";
+                    string effectMapUrl = $"{effectUrl}/{releaseEffect}/effectmap.xml";
+                    await DownloadFileAsync(effectMapUrl, effectMapFilePath, "effectmap.xml");
+                }
+
+                // Download HabboAvatarActions.xml
                 string habboAvatarActionsUrl = $"{effectUrl}/{releaseEffect}/HabboAvatarActions.xml";
                 string avatarActionsFilePath = "./Habbo_Default/files/xml/HabboAvatarActions.xml";
                 await DownloadFileAsync(habboAvatarActionsUrl, avatarActionsFilePath, "HabboAvatarActions.xml");
 
-                // Download SWF files
+                // Download SWF files (this method uses the chosen effectMapFilePath)
                 await DownloadSwfFilesAsync(effectUrl, releaseEffect, effectMapFilePath);
 
                 // Generate JSON files from the XML
@@ -89,6 +120,7 @@ namespace ConsoleApplication
                 Console.ForegroundColor = ConsoleColor.Gray;
             }
         }
+
         private static async Task DownloadSwfFilesAsync(string effectUrl, string releaseEffect, string effectMapFilePath)
         {
             try
@@ -307,8 +339,8 @@ namespace ConsoleApplication
             }
             catch (HttpRequestException ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ downloading {fileName}: {ex.Message}");
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"ℹ️ We will skip downloading {fileName} as this is custom");
                 Console.ForegroundColor = ConsoleColor.Gray;
             }
         }

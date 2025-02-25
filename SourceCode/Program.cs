@@ -105,7 +105,7 @@ namespace ConsoleApplication
                 { "./Habbo_Default", new[] { "badges", "clothes", "files", "files/xml", "files/json", "hof_furni", "hof_furni/icons", "icons", "mp3", "quests", "reception", "reception/web_promo_small" } },
                 { "./Merge", new[] { "Original_Furnidata", "Import_Furnidata", "Merged_Furnidata", "Original_ClothesData", "Import_ClothesData", "Merged_ClothesData", "Original_Productdata", "Import_Productdata", "Merged_Productdata" } },
                 { "./Generate", new[] { "Furnidata", "Furniture", "Output_SQL" } },
-                { "./SWFCompiler", new[] { "clothes", "furniture", "import", "import/clothes", "import/furniture", "import/pets", "import/effects" } },
+                { "./SWFCompiler", new[] { "clothes", "furniture", "import", "import/clothes", "import/furniture", "import/pets", "import/effects", "import/effects/CustomXML" } },
                 { "./Database", new[] { "Variables" } },
                 { "./custom_downloads", new[] { "clothes", "nitro_furniture", "nitro_furniture/icons" } }
             };

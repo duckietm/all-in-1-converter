@@ -17,7 +17,7 @@ namespace ConsoleApplication
                 Console.BackgroundColor = ConsoleColor.Gray;
                 Console.WriteLine("1 => Download Badges                                                           ");
                 Console.WriteLine("2 => Download Clothes + figuredata & figuremap json and xml                    ");
-                Console.WriteLine("3 => Download Effects and convurt effect & HabboAvatarActions.json             ");
+                Console.WriteLine("3 => Download Effects and convurt effectmap & HabboAvatarActions.json          ");
                 Console.WriteLine("4 => Download Furnidata and convurt to FurnitureData.json                      ");
                 Console.WriteLine("5 => Download Furniture as SWF                                                 ");
                 Console.WriteLine("6 => Download Icons                                                            ");

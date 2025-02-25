@@ -57,6 +57,8 @@ Database tools</br>
 - Database Fix Settings lay / walk on / sit in the database.
 - Datavase Fixing Sprite_ID in items_base
 
+For the custom Effects they are in the Addons\Custom Effects folder, please read the README.md how to import this, ofcourse you can customize if you want !
+
 # Credits
 - The whole habbo community.
 - Credits for the Converter : Nitro Team https://discord.gg/yCXcMqrT (this is only used for the Pets)
