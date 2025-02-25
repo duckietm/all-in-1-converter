@@ -1,4 +1,5 @@
-﻿using Habbo_Downloader.SWFCompiler.Mapper.Assests;
+﻿using Habbo_Downloader.SWFCompiler.Mapper;
+using Habbo_Downloader.SWFCompiler.Mapper.Assests;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -9,9 +10,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
-namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
+namespace Habbo_Downloader.SWF_Effects_Compiler.Spritesheet
 {
-    public static class SpritesheetClothesMapper
+    public static class EffectsSpritesheetMapper
     {
         public static (string ImagePath, SpriteSheetData SpriteData) GenerateSpriteSheet(
             Dictionary<string, Bitmap> images,
@@ -88,6 +89,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 
                         var key = images.Keys.ElementAt(imageIndex);
 
+                        // 🔥 **Fix: Get the correct name from Debug.xml mapping**
                         var originalName = ClothesAssetsMapper.LatestImageMapping.ContainsKey(key)
                             ? ClothesAssetsMapper.LatestImageMapping[key]
                             : key;
@@ -126,6 +128,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                             }
                         };
 
+                        // ✅ **Store with correct naming from Debug.xml**
                         spriteSheetData.Frames[originalName] = frameData;
 
                         currentX += image.Width;

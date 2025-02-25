@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Habbo_Downloader.Tools
 {
-    public static class FfdecExtractor
+    public static class FfdecExtractorEffects
     {
         private const string FfdecExecutable = @"Tools\ffdec\ffdec-cli.exe";
 
@@ -61,21 +61,10 @@ namespace Habbo_Downloader.Tools
                 }
             }
         }
-
-        // CSV rules for the furni
-        // - Skip any line with ID 0 As this is the Furni name
-        // - Skip any mapping whose name contains "_32_" or whose comment contains any of:
-        //   "manifest", "assets", "logic", "visualization", or "index".
-        // - For a given CSV ID:
-        //     • If there are multiple rows (e.g. ID 1), the extracted file is named "{ID}.png".
-        //       The first row (marked "source" or the first row if none is marked) is used as the physical image.
-        //       The alias (Main) rows simply point to that file.
-        //     • If there is a single row, the extracted file is named "{ID}_{MappingName}.png".
         public static async Task<Dictionary<string, string>> RebuildImagesFromCsvAsync(string imageDir, string csvFilePath)
         {
             var outputMappings = new Dictionary<string, string>();
 
-            // Move first all extracted PNG files to a temporary folder.
             string tmpDir = Path.Combine(imageDir, "tmp");
             if (Directory.Exists(tmpDir))
                 Directory.Delete(tmpDir, recursive: true);
@@ -90,19 +79,14 @@ namespace Habbo_Downloader.Tools
                 File.Move(file, destinationPath);
             }
 
-            // Build a lookup of extracted files.
-            // For SWFs with multiple images: key = "{ID}" (e.g. "1").
-            // For single-image SWFs: key = "{ID}_{MappingName}" (e.g. "17_pura_mdl3_pura_mdl3_64_a_2_0").
             string[] tmpFiles = Directory.GetFiles(tmpDir, "*.png", SearchOption.AllDirectories);
             var fileLookup = tmpFiles.ToDictionary(
                 f => Path.GetFileNameWithoutExtension(f),
                 f => f);
 
-            // Here we prepare the target folder.
             string targetImagesFolder = Path.Combine(imageDir, "images");
             Directory.CreateDirectory(targetImagesFolder);
 
-            // Parse the CSV and group mappings by ID.
             var csvMappings = ParseCsv(csvFilePath);
             var groups = csvMappings.GroupBy(m => m.Id);
             foreach (var group in groups)
@@ -110,22 +94,16 @@ namespace Habbo_Downloader.Tools
                 int id = group.Key;
                 var mappings = group.ToList();
 
-                // Determine expected lookup key:
-                // - If multiple mappings: expect file named "{ID}.png"
-                // - If single mapping: expect file named "{ID}_{MappingName}.png"
                 string lookupKey = mappings.Count > 1
                     ? id.ToString()
                     : $"{id}_{mappings.First().Name}";
 
                 if (!fileLookup.TryGetValue(lookupKey, out string? originalFilePath))
                 {
-                     continue;
+                    continue;
                 }
                 string ext = Path.GetExtension(originalFilePath);
 
-                // Determine the target file name:
-                // For multiple mappings, choose the source mapping (first marked Source if available, else first).
-                // For single mapping, use its CSV name.
                 CsvMapping sourceMapping = mappings.Count > 1
                     ? (mappings.FirstOrDefault(m => m.Type == MappingType.Source) ?? mappings.First())
                     : mappings.First();

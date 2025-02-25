@@ -102,10 +102,10 @@ namespace ConsoleApplication
                 { "./NitroCompiler/compiled", new[] { "furni", "clothing", "effects", "pets" } },
                 { "./NitroCompiler/extract", new[] { "furni", "clothing", "effects", "pets" } },
                 { "./NitroCompiler/extracted", new[] { "furni", "clothing", "effects", "pets" } },
-                { "./Habbo_Default", new[] { "badges", "clothes", "effect", "files", "files/xml", "files/json", "hof_furni", "hof_furni/icons", "icons", "mp3", "quests", "reception", "reception/web_promo_small" } },
+                { "./Habbo_Default", new[] { "badges", "clothes", "files", "files/xml", "files/json", "hof_furni", "hof_furni/icons", "icons", "mp3", "quests", "reception", "reception/web_promo_small" } },
                 { "./Merge", new[] { "Original_Furnidata", "Import_Furnidata", "Merged_Furnidata", "Original_ClothesData", "Import_ClothesData", "Merged_ClothesData", "Original_Productdata", "Import_Productdata", "Merged_Productdata" } },
                 { "./Generate", new[] { "Furnidata", "Furniture", "Output_SQL" } },
-                { "./SWFCompiler", new[] { "clothes", "furniture", "import", "import/clothes", "import/furniture" } },
+                { "./SWFCompiler", new[] { "clothes", "furniture", "import", "import/clothes", "import/furniture", "import/pets", "import/effects" } },
                 { "./Database", new[] { "Variables" } },
                 { "./custom_downloads", new[] { "clothes", "nitro_furniture", "nitro_furniture/icons" } }
             };

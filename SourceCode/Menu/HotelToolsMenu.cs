@@ -25,6 +25,7 @@ namespace ConsoleApplication
                 Console.WriteLine("7 => SWF Furniture to Nitro                                                  ");
                 Console.WriteLine("8 => SWF Clothes to Nitro                                                    ");
                 Console.WriteLine("9 => SWF Pets to Nitro                                                       ");
+                Console.WriteLine("10 => SWF Effects to Nitro                                                   ");
                 Console.WriteLine("                                                                             ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                      ");
                 Console.ResetColor();
@@ -99,6 +100,11 @@ namespace ConsoleApplication
                     case "9":
                         Console.WriteLine("DEBUG: Converting SWF Pets to Nitro...");
                         await SWF_Pets_To_Nitro.RunDecoderPipelineAsync();
+                        break;
+
+                    case "10":
+                        Console.WriteLine("DEBUG: Converting SWF Pets to Nitro...");
+                        await SWF_Effects_To_Nitro.ConvertSwfFilesAsync();
                         break;
 
                     default:
