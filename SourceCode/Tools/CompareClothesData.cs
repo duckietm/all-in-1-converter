@@ -80,43 +80,31 @@ namespace ConsoleApplication
 
             if (importJson["palettes"] != null)
             {
-                var originalPalettes = originalJson["palettes"].ToDictionary(p => p["id"].ToString());
-                HashSet<string> processedPaletteIds = new HashSet<string>();
+                var originalPalettes = originalJson["palettes"] as JArray;
+                var importPalettes = importJson["palettes"] as JArray;
 
-                foreach (var importPalette in importJson["palettes"])
+                foreach (var importPalette in importPalettes)
                 {
                     string paletteId = importPalette["id"].ToString();
+                    var existingPalette = originalPalettes.FirstOrDefault(p => p["id"].ToString() == paletteId);
 
-                    if (processedPaletteIds.Contains(paletteId))
+                    if (existingPalette != null)
                     {
-                        continue;
-                    }
-                    processedPaletteIds.Add(paletteId);
+                        var importColors = importPalette["colors"] as JArray ?? new JArray();
+                        var originalColors = existingPalette["colors"] as JArray ?? new JArray();
 
-                    if (originalPalettes.ContainsKey(paletteId))
-                    {
-                        var originalPalette = originalPalettes[paletteId];
-                        var importPaletteColors = importPalette["colors"] as JArray;
-
-                        if (importPaletteColors != null)
+                        foreach (var importColor in importColors)
                         {
-                            var originalColors = originalPalette["colors"] as JArray ?? new JArray();
-                            originalPalette["colors"] = originalColors;
-
-                            foreach (var importColor in importPaletteColors)
+                            if (!originalColors.Any(c => c["id"].ToString() == importColor["id"].ToString()))
                             {
-                                string colorId = importColor["id"].ToString();
-                                if (!originalColors.Any(c => c["id"].ToString() == colorId))
-                                {
-                                    originalColors.Add(importColor);
-                                    importedCount++;
-                                }
+                                originalColors.Add(importColor);
+                                importedCount++;
                             }
                         }
                     }
                     else
                     {
-                        ((JArray)originalJson["palettes"]).Add(importPalette);
+                        originalPalettes.Add(importPalette);
                         importedCount++;
                     }
                 }
@@ -124,44 +112,31 @@ namespace ConsoleApplication
 
             if (importJson["setTypes"] != null)
             {
-                var originalSetTypes = originalJson["setTypes"].ToDictionary(s => s["type"].ToString());
-                HashSet<string> processedSetTypeIds = new HashSet<string>();
+                var originalSetTypes = originalJson["setTypes"] as JArray;
+                var importSetTypes = importJson["setTypes"] as JArray;
 
-                foreach (var importSetType in importJson["setTypes"])
+                foreach (var importSetType in importSetTypes)
                 {
                     string setTypeId = importSetType["type"].ToString();
+                    var existingSetType = originalSetTypes.FirstOrDefault(s => s["type"].ToString() == setTypeId);
 
-                    // Skip duplicate set type IDs in import JSON
-                    if (processedSetTypeIds.Contains(setTypeId))
+                    if (existingSetType != null)
                     {
-                        continue;
-                    }
-                    processedSetTypeIds.Add(setTypeId);
+                        var importSets = importSetType["sets"] as JArray ?? new JArray();
+                        var originalSets = existingSetType["sets"] as JArray ?? new JArray();
 
-                    if (originalSetTypes.ContainsKey(setTypeId))
-                    {
-                        var originalSetType = originalSetTypes[setTypeId];
-                        var importSets = importSetType["sets"] as JArray;
-
-                        if (importSets != null)
+                        foreach (var importSet in importSets)
                         {
-                            var originalSets = originalSetType["sets"] as JArray ?? new JArray();
-                            originalSetType["sets"] = originalSets;
-
-                            foreach (var importSet in importSets)
+                            if (!originalSets.Any(s => s["id"].ToString() == importSet["id"].ToString()))
                             {
-                                string setId = importSet["id"].ToString();
-                                if (!originalSets.Any(s => s["id"].ToString() == setId))
-                                {
-                                    originalSets.Add(importSet);
-                                    importedCount++;
-                                }
+                                originalSets.Add(importSet);
+                                importedCount++;
                             }
                         }
                     }
                     else
                     {
-                        ((JArray)originalJson["setTypes"]).Add(importSetType);
+                        originalSetTypes.Add(importSetType);
                         importedCount++;
                     }
                 }
