@@ -86,24 +86,31 @@ namespace ConsoleApplication
 
         private static int MergeJson(JObject originalJson, JObject importJson, string itemType)
         {
-            var originalItems = originalJson[itemType]["furnitype"]
+            var originalItemsByClassname = originalJson[itemType]["furnitype"]
                 .ToDictionary(item => item["classname"].ToString());
+            var originalItemsById = originalJson[itemType]["furnitype"]
+                .ToDictionary(item => item["id"].Value<int>());
 
-            var processedImportKeys = new HashSet<string>();
+            // Create hash sets to track items processed from the current import
+            var processedImportClassnames = new HashSet<string>();
+            var processedImportIds = new HashSet<int>();
 
             int importedCount = 0;
 
             foreach (var importItem in importJson[itemType]["furnitype"])
             {
                 var classname = importItem["classname"].ToString();
+                var id = importItem["id"].Value<int>();
 
-                if (originalItems.ContainsKey(classname) || processedImportKeys.Contains(classname))
+                if (originalItemsByClassname.ContainsKey(classname) || processedImportClassnames.Contains(classname) ||
+                    originalItemsById.ContainsKey(id) || processedImportIds.Contains(id))
                 {
                     continue;
                 }
 
                 ((JArray)originalJson[itemType]["furnitype"]).Add(importItem);
-                processedImportKeys.Add(classname);
+                processedImportClassnames.Add(classname);
+                processedImportIds.Add(id);
                 importedCount++;
             }
 
