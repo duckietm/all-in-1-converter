@@ -204,6 +204,23 @@ namespace ConsoleApplication
                         continue;
                     }
                     int interactionModesCount = CalculateInteractionModesCount(visualizationFilePath);
+
+                    string xmlContent = File.ReadAllText(logicFile);
+                    var xmlDoc = XDocument.Parse(xmlContent);
+                    var dimensionsElement = xmlDoc.Descendants("dimensions").FirstOrDefault();
+
+                    // Set default values.
+                    double width = 1, length = 1, stackHeight = 0.00;
+                    if (dimensionsElement != null)
+                    {
+                        if (dimensionsElement.Attribute("x") != null)
+                            width = double.Parse(dimensionsElement.Attribute("x").Value, CultureInfo.InvariantCulture);
+                        if (dimensionsElement.Attribute("y") != null)
+                            length = double.Parse(dimensionsElement.Attribute("y").Value, CultureInfo.InvariantCulture);
+                        if (dimensionsElement.Attribute("z") != null)
+                            stackHeight = double.Parse(dimensionsElement.Attribute("z").Value, CultureInfo.InvariantCulture);
+                    }
+
                     var itemData = furnidata["roomitemtypes"]["furnitype"]
                         .Concat(furnidata["wallitemtypes"]["furnitype"])
                         .FirstOrDefault(item => item["classname"]?.ToString() == fileName);
@@ -224,7 +241,7 @@ namespace ConsoleApplication
                     int id = startId++;
 
                     itemsBaseSQL.Add($@"INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`) VALUES 
-({id}, {spriteId}, '{classname}', '{classname}', 1, 1, 0.00, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', 'default', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");
+({id}, {spriteId}, '{classname}', '{classname}', {width.ToString(CultureInfo.InvariantCulture)}, {length.ToString(CultureInfo.InvariantCulture)}, {stackHeight.ToString(CultureInfo.InvariantCulture)}, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', 'default', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");
 
                     catalogItemsSQL.Add($@"INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`) VALUES 
 ({id}, '{spriteId}', {pageId}, {offerId}, 0, 99, '{classname}', 5, 0, 0, 1, 0, 0, '', '1', '0');");
@@ -234,9 +251,9 @@ namespace ConsoleApplication
                         processedFileSettings[fileName] = new FileSettings
                         {
                             InteractionModesCount = interactionModesCount,
-                            Width = 1,
-                            Length = 1,
-                            Height = 0.00,
+                            Width = width,
+                            Length = length,
+                            Height = stackHeight,
                             FileType = "SWF"
                         };
                     }
@@ -247,7 +264,6 @@ namespace ConsoleApplication
                 }
             }
         }
-
         private static void ProcessNitroFile(string nitroFilePath, JObject furnidata, HashSet<string> roomItems, HashSet<string> wallItems, List<string> itemsBaseSQL, List<string> catalogItemsSQL, ref int startId, int pageId)
         {
             string fileName = Path.GetFileNameWithoutExtension(nitroFilePath);
