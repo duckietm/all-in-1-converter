@@ -39,7 +39,7 @@ namespace ConsoleApplication
             {
                 lock (consoleLock)
                 {
-                    Console.WriteLine($"⚠️ Please place FurnitureData.json in the /Database/Variables/ directory");
+                    Console.WriteLine("⚠️ Please place FurnitureData.json in the /Database/Variables/ directory");
                 }
                 return;
             }
@@ -72,6 +72,7 @@ namespace ConsoleApplication
                 return;
             }
 
+            // Combine all furniture items from both room and wall types
             List<FurnitureItem> allItems = new List<FurnitureItem>();
             if (furnitureData.roomitemtypes?.furnitype != null)
                 allItems.AddRange(furnitureData.roomitemtypes.furnitype);
@@ -84,29 +85,31 @@ namespace ConsoleApplication
                 return;
             }
 
-            int totalItems = allItems.Count;
-            Console.WriteLine($"🔍 {totalItems} furniture items loaded from JSON.");
-            Dictionary<int, int> spriteIdToItemBaseId = new Dictionary<int, int>();
+            Console.WriteLine($"🔍 {allItems.Count} furniture items loaded from JSON.");
 
+            // Create a mapping from classname to offerid
+            Dictionary<string, int> offerMapping = allItems
+                .GroupBy(x => x.classname)
+                .ToDictionary(g => g.Key, g => g.First().offerid);
+
+            // Fetch catalog_items from the database
+            List<(int catalogId, string catalogName, int currentOfferId)> catalogItems = new List<(int, string, int)>();
             using (var connection = new MySqlConnection(DatabaseConfig.ConnectionString))
             {
                 try
                 {
                     await connection.OpenAsync();
-                    var spriteIds = allItems.Select(f => f.id).Distinct().ToList();
-                    string inClause = string.Join(",", spriteIds);
-                    string mappingQuery = $"SELECT id, sprite_id FROM items_base WHERE sprite_id IN ({inClause})";
-                    using (var cmd = new MySqlCommand(mappingQuery, connection))
+                    string query = "SELECT id, catalog_name, offer_id FROM catalog_items";
+                    using (var cmd = new MySqlCommand(query, connection))
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
                         {
-                            int itemBaseId = reader.GetInt32("id");
-                            int spriteId = reader.GetInt32("sprite_id");
-                            if (!spriteIdToItemBaseId.ContainsKey(spriteId))
-                            {
-                                spriteIdToItemBaseId[spriteId] = itemBaseId;
-                            }
+                            catalogItems.Add((
+                                reader.GetInt32("id"),
+                                reader.GetString("catalog_name"),
+                                reader.GetInt32("offer_id")
+                            ));
                         }
                     }
                 }
@@ -114,24 +117,33 @@ namespace ConsoleApplication
                 {
                     lock (consoleLock)
                     {
-                        Console.WriteLine("Error mapping sprite_ids: " + ex.Message);
+                        Console.WriteLine("Error fetching catalog_items: " + ex.Message);
                     }
                     return;
                 }
             }
 
-            List<(int itemBaseId, FurnitureItem item)> itemsToUpdate = allItems
-                .Where(f => spriteIdToItemBaseId.ContainsKey(f.id))
-                .Select(f => (spriteIdToItemBaseId[f.id], f))
-                .ToList();
-
-            int totalToUpdate = itemsToUpdate.Count;
-            if (totalToUpdate == 0)
+            if (catalogItems.Count == 0)
             {
-                Console.WriteLine("No matching items_base records found for any furniture items.");
+                Console.WriteLine("No items found in catalog_items.");
                 return;
             }
 
+            // Build the list of catalog_items that need an offer_id update
+            List<(int catalogId, int newOfferId)> itemsToUpdate = catalogItems
+                .Where(c => offerMapping.ContainsKey(c.catalogName) && offerMapping[c.catalogName] != c.currentOfferId)
+                .Select(c => (c.catalogId, offerMapping[c.catalogName]))
+                .ToList();
+
+            if (itemsToUpdate.Count == 0)
+            {
+                Console.WriteLine("No catalog_items need offer_id updates.");
+                return;
+            }
+
+            Console.WriteLine($"🔄 {itemsToUpdate.Count} catalog_items need offer_id updates.");
+
+            // Batch update using CASE statements
             var batches = Partition(itemsToUpdate, 100);
             int totalBatches = batches.Count;
             int processedBatches = 0;
@@ -151,82 +163,43 @@ namespace ConsoleApplication
 
             using (var connection = new MySqlConnection(DatabaseConfig.ConnectionString))
             {
-                await connection.OpenAsync();
-
-                foreach (var batch in batches)
+                try
                 {
-                    StringBuilder caseItemName = new StringBuilder("CASE id ");
-                    StringBuilder casePublicName = new StringBuilder("CASE id ");
-                    List<int> ids = new List<int>();
-
-                    foreach (var (itemBaseId, item) in batch)
+                    await connection.OpenAsync();
+                    foreach (var batch in batches)
                     {
-                        ids.Add(itemBaseId);
-                        string classname = item.classname.Replace("'", "''");
-                        caseItemName.AppendFormat("WHEN {0} THEN '{1}' ", itemBaseId, classname);
-                        casePublicName.AppendFormat("WHEN {0} THEN '{1}' ", itemBaseId, classname);
-                    }
+                        StringBuilder caseOfferId = new StringBuilder("CASE id ");
+                        List<int> ids = new List<int>();
+                        foreach (var (catalogId, newOfferId) in batch)
+                        {
+                            ids.Add(catalogId);
+                            caseOfferId.AppendFormat("WHEN {0} THEN {1} ", catalogId, newOfferId);
+                        }
+                        caseOfferId.Append("ELSE offer_id END");
 
-                    caseItemName.Append("ELSE item_name END");
-                    casePublicName.Append("ELSE public_name END");
-
-                    string updateItemsBaseQuery = "UPDATE items_base SET " +
-                        "item_name = " + caseItemName.ToString() + ", " +
-                        "public_name = " + casePublicName.ToString() +
-                        " WHERE id IN (" + string.Join(",", ids) + ")";
-
-                    StringBuilder caseCatalogName = new StringBuilder("CASE ");
-                    StringBuilder caseOfferId = new StringBuilder("CASE ");
-                    List<string> catalogConditions = new List<string>();
-
-                    foreach (var (itemBaseId, item) in batch)
-                    {
-                        string classname = item.classname.Replace("'", "''");
-                        caseCatalogName.AppendFormat("WHEN FIND_IN_SET('{0}', item_ids) > 0 THEN '{1}' ", itemBaseId, classname);
-                        caseOfferId.AppendFormat("WHEN FIND_IN_SET('{0}', item_ids) > 0 THEN {1} ", itemBaseId, item.offerid);
-                        catalogConditions.Add($"FIND_IN_SET('{itemBaseId}', item_ids) > 0");
-                    }
-
-                    caseCatalogName.Append("ELSE catalog_name END");
-                    caseOfferId.Append("ELSE offer_id END");
-
-                    string updateCatalogQuery = "UPDATE catalog_items SET " +
-                        "catalog_name = " + caseCatalogName.ToString() + ", " +
-                        "offer_id = " + caseOfferId.ToString() +
-                        " WHERE " + string.Join(" OR ", catalogConditions);
-
-                    using (var transaction = await connection.BeginTransactionAsync())
-                    {
+                        string updateQuery = $"UPDATE catalog_items SET offer_id = {caseOfferId} WHERE id IN ({string.Join(",", ids)})";
                         try
                         {
-                            using (var cmd = new MySqlCommand(updateItemsBaseQuery, connection, transaction))
+                            using (var cmd = new MySqlCommand(updateQuery, connection))
                             {
                                 await cmd.ExecuteNonQueryAsync();
                             }
-                            using (var cmd = new MySqlCommand(updateCatalogQuery, connection, transaction))
-                            {
-                                await cmd.ExecuteNonQueryAsync();
-                            }
-                            await transaction.CommitAsync();
                         }
                         catch (Exception ex)
                         {
-                            lock (consoleLock)
-                            {
-                                Console.WriteLine($"\nError updating batch: {ex.Message}");
-                            }
-                            try
-                            {
-                                await transaction.RollbackAsync();
-                            }
-                            catch { }
+                            Console.WriteLine($"\nError updating batch: {ex.Message}");
                         }
+                        processedBatches++;
                     }
-
-                    processedBatches++;
                 }
-
-                await connection.CloseAsync();
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error updating catalog_items: " + ex.Message);
+                }
+                finally
+                {
+                    await connection.CloseAsync();
+                }
             }
 
             timer.Stop();
