@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -8,6 +10,11 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
     {
         // Holds the latest image mapping dictionary (ID → original tag name) built in memory.
         public static Dictionary<string, string> LatestImageMapping { get; private set; } = new Dictionary<string, string>();
+
+        private static string ForceCFUpper(string name)
+        {
+            return Regex.Replace(name, @"(?<=^|_)(cf_)", "CF_", RegexOptions.IgnoreCase);
+        }
 
         public static async Task<Dictionary<string, Asset>> ParseAssetsFileAsync(
             string assetsFilePath,
@@ -100,6 +107,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     {
                         // Remove the SWF prefix from the tag name for asset mapping.
                         string cleanedName = RemoveSwfPrefix(originalTagName, swfPrefix);
+                        cleanedName = ForceCFUpper(cleanedName);
 
                         // Skip names with undesired parts.
                         if (cleanedName.Contains("_32_"))
@@ -120,7 +128,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                         if (!idTracker.Contains(tagId))
                         {
                             idTracker.Add(tagId);
-                            imageMapping[tagId] = originalTagName;
+                            // Optionally force CF uppercase here too.
+                            imageMapping[tagId] = ForceCFUpper(originalTagName);
                         }
                     }
                 }
@@ -150,8 +159,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                 if (parts.Length == 2)
                 {
                     string id = parts[0];
-                    string name = parts[1].ToLowerInvariant();
-
+                    // Instead of lower-casing, force CF uppercase.
+                    string name = ForceCFUpper(parts[1]);
                     if (sourceMap.ContainsKey(id))
                     {
                         // When a duplicate ID is encountered, update the asset's Source property.
@@ -183,10 +192,10 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
         }
 
         private static Dictionary<string, Asset> MapAssetsXML(
-    XElement root,
-    XElement manifestRoot,
-    Dictionary<string, string> imageSources,
-    string debugXmlPath)
+            XElement root,
+            XElement manifestRoot,
+            Dictionary<string, string> imageSources,
+            string debugXmlPath)
         {
             if (root == null || manifestRoot == null)
                 return new Dictionary<string, Asset>();
@@ -195,13 +204,13 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
             var manifestAssetNames = manifestRoot.Descendants("asset")
                 .Where(asset => asset.Attribute("mimeType")?.Value == "image/png")
-                .Select(asset => (asset.Attribute("name")?.Value ?? "").ToLowerInvariant())
+                .Select(asset => ForceCFUpper(asset.Attribute("name")?.Value ?? ""))
                 .Where(name => !name.Contains("_32_"))
                 .ToHashSet();
 
             foreach (var assetElement in root.Elements("asset"))
             {
-                string assetName = (assetElement.Attribute("name")?.Value ?? "").ToLowerInvariant();
+                string assetName = ForceCFUpper(assetElement.Attribute("name")?.Value ?? "");
 
                 if (assetName.Contains("_32_"))
                     continue;
@@ -216,18 +225,19 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     Y = int.TryParse(assetElement.Attribute("y")?.Value, out int y) ? y : 0,
                     FlipH = assetElement.Attribute("flipH")?.Value == "1",
                     FlipV = assetElement.Attribute("flipV")?.Value == "1",
-                    Source = assetElement.Attribute("source")?.Value?.ToLowerInvariant()
+                    Source = assetElement.Attribute("source") != null
+                                ? ForceCFUpper(assetElement.Attribute("source").Value)
+                                : null
                 };
 
                 output[assetName] = asset;
             }
 
-
             // Now apply the debug.xml mappings for assets that don't already have a source
             var debugMapping = DebugXmlParser.ParseDebugXml(debugXmlPath);
             var cleanedDebugMapping = debugMapping.ToDictionary(
-                kv => kv.Key.ToLowerInvariant(),
-                kv => kv.Value.ToLowerInvariant()
+                kv => ForceCFUpper(kv.Key),
+                kv => ForceCFUpper(kv.Value)
             );
 
             foreach (var kv in cleanedDebugMapping)
@@ -240,7 +250,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
             return output;
         }
-
 
         public static string RemoveFirstPrefix(string name)
         {

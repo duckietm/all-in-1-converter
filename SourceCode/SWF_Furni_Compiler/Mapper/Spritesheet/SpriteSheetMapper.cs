@@ -10,24 +10,21 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 {
     public static class SpriteSheetMapper
     {
-        /// <summary>
-        /// If disableCleanKey is false, duplicate prefixes are removed.
-        /// If true, the asset key is left intact.
-        /// </summary>
         public static string CleanAssetName(string name, bool disableCleanKey = false)
         {
-            string lowerName = name.ToLowerInvariant();
-            if (disableCleanKey)
+            string result = name;
+            if (!disableCleanKey)
             {
-                return lowerName;
+                result = Regex.Replace(name, @"^([^_]+)_\1_", "$1_");
             }
-            return Regex.Replace(lowerName, @"^([^_]+)_\1_", "$1_");
+            return result;
         }
 
-        /// <summary>
-        /// Generates a sprite sheet from the provided images.
-        /// The canonicalMapping maps from short names (cleaned asset names) to full asset names (from CSV).
-        /// </summary>
+        public static string ForceCFUpper(string name)
+        {
+            return Regex.Replace(name, @"(?<=^|_)(cf_)", "CF_", RegexOptions.IgnoreCase);
+        }
+
         public static (string ImagePath, SpriteSheetData SpriteData) GenerateSpriteSheet(
             Dictionary<string, Bitmap> images,
             string outputDirectory,
@@ -106,10 +103,14 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                     {
                         var image = imageItem.Image;
                         var key = images.Keys.ElementAt(imageIndex);
+                        // Clean the key as usual.
                         string shortKey = CleanAssetName(key, disableCleanKey: false);
+                        // Look up the canonical mapping; if not found, use the cleaned key.
                         string finalKey = canonicalMapping.ContainsKey(shortKey)
                             ? canonicalMapping[shortKey]
-                            : CleanAssetName(key, disableCleanKey);
+                            : shortKey;
+                        // Force "cf_" segments to be uppercase.
+                        finalKey = ForceCFUpper(finalKey);
 
                         // Draw the image onto the sprite sheet.
                         graphics.DrawImage(image, new Point(currentX, currentY));
