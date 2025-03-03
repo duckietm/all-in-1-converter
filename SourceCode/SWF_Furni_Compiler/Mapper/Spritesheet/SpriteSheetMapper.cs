@@ -159,6 +159,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                 spriteSheet.Save(imagePath, ImageFormat.Png);
 
                 return (imagePath, spriteSheetData);
+				
             }
         }
     }
