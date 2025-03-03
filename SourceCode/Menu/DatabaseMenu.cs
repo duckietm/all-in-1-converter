@@ -22,6 +22,7 @@ namespace ConsoleApplication
                 Console.WriteLine("3 => Fix the Offer_ID & Catalog_name in the database from the JSON           ");
                 Console.WriteLine("4 => Fix Sit / Lay / Walk in the items_base with the settings from the json  ");
                 Console.WriteLine("5 => Fix Sprite_ID and Item_IDS in the items_base from the JSON              ");
+                Console.WriteLine("!! Run Option 5 first when you have added new furni in the items base !!     ");
                 Console.WriteLine("                                                                             ");
                 Console.WriteLine("Type \"back\" to return to the main menu.                                      ");
                 Console.ResetColor();

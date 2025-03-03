@@ -161,24 +161,29 @@ namespace ConsoleApplication
                 Console.WriteLine("✅ No sprite_id updates needed.");
             }
 
-            // Update item_ids in catalog_items
+            // Update item_ids in catalog_items: match catalog_name with item_name in items_base
             List<(int catalogId, string newItemIds)> catalogItemsToUpdate = catalogItems
                 .Join(databaseItems,
-                catalogItem => catalogItem.catalogName,
-                databaseItem => databaseItem.itemName,
-                (catalogItem, databaseItem) => (catalogItem.catalogId, catalogItem.itemIds, newItemIds: databaseItem.id.ToString()))
-                .Where(x => !x.itemIds.Split(';').Contains(x.newItemIds))
+                      catalogItem => catalogItem.catalogName,      // catalog_name in catalog_items
+                      databaseItem => databaseItem.itemName,         // item_name in items_base
+                      (catalogItem, databaseItem) => new
+                      {
+                          catalogId = catalogItem.catalogId,
+                          newItemIds = databaseItem.id.ToString(),
+                          currentItemIds = catalogItem.itemIds
+                      })
+                .Where(x => x.currentItemIds != x.newItemIds)
                 .Select(x => (x.catalogId, x.newItemIds))
                 .ToList();
 
             if (catalogItemsToUpdate.Count > 0)
             {
-                Console.WriteLine($"🔄 {catalogItemsToUpdate.Count} items need item_id updates in catalog_items.");
+                Console.WriteLine($"🔄 {catalogItemsToUpdate.Count} catalog items need item_ids updates.");
                 await UpdateCatalogItemIdsAsync(catalogItemsToUpdate);
             }
             else
             {
-                Console.WriteLine("✅ No item_id updates needed in catalog_items.");
+                Console.WriteLine("✅ No item_ids updates needed in catalog_items.");
             }
         }
 
@@ -277,7 +282,7 @@ namespace ConsoleApplication
                         Console.WriteLine($"✅ {processedBatches}/{totalBatches} batches processed.");
                     }
 
-                    Console.WriteLine("✅ item_id updates in catalog_items completed.");
+                    Console.WriteLine("✅ item_ids updates in catalog_items completed.");
                 }
                 catch (Exception ex)
                 {
@@ -294,7 +299,7 @@ namespace ConsoleApplication
                 partitions.Add(source.GetRange(i, Math.Min(size, source.Count - i)));
             }
             return partitions;
-        }              
+        }
     }
 
     public class FixFurnitureData
