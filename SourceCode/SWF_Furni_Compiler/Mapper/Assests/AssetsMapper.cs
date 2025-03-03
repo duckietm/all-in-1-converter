@@ -193,15 +193,17 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
             var output = new Dictionary<string, Asset>();
 
+            // Remove .ToLowerInvariant() here to keep the original case.
             var manifestAssetNames = manifestRoot.Descendants("asset")
                 .Where(asset => asset.Attribute("mimeType")?.Value == "image/png")
-                .Select(asset => (asset.Attribute("name")?.Value ?? "").ToLowerInvariant())
+                .Select(asset => asset.Attribute("name")?.Value ?? "")
                 .Where(name => !name.Contains("_32_"))
                 .ToHashSet();
 
             foreach (var assetElement in root.Elements("asset"))
             {
-                string assetName = (assetElement.Attribute("name")?.Value ?? "").ToLowerInvariant();
+                // Remove .ToLowerInvariant() so the original name is kept.
+                string assetName = assetElement.Attribute("name")?.Value ?? "";
 
                 if (assetName.Contains("_32_"))
                     continue;
@@ -216,18 +218,19 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     Y = int.TryParse(assetElement.Attribute("y")?.Value, out int y) ? y : 0,
                     FlipH = assetElement.Attribute("flipH")?.Value == "1",
                     FlipV = assetElement.Attribute("flipV")?.Value == "1",
-                    Source = assetElement.Attribute("source")?.Value?.ToLowerInvariant()
+                    // Keep the source as-is instead of converting it.
+                    Source = assetElement.Attribute("source")?.Value
                 };
 
                 output[assetName] = asset;
             }
 
-
             // Now apply the debug.xml mappings for assets that don't already have a source
             var debugMapping = DebugXmlParser.ParseDebugXml(debugXmlPath);
+            // Remove conversion here if you want to maintain original capitalization
             var cleanedDebugMapping = debugMapping.ToDictionary(
-                kv => kv.Key.ToLowerInvariant(),
-                kv => kv.Value.ToLowerInvariant()
+                kv => kv.Key, // removed .ToLowerInvariant()
+                kv => kv.Value  // removed .ToLowerInvariant()
             );
 
             foreach (var kv in cleanedDebugMapping)
@@ -240,7 +243,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
             return output;
         }
-
 
         public static string RemoveFirstPrefix(string name)
         {

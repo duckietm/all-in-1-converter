@@ -16,12 +16,20 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
         /// </summary>
         public static string CleanAssetName(string name, bool disableCleanKey = false)
         {
-            string lowerName = name.ToLowerInvariant();
-            if (disableCleanKey)
+            string result = name;
+            if (!disableCleanKey)
             {
-                return lowerName;
+                result = Regex.Replace(name, @"^([^_]+)_\1_", "$1_");
             }
-            return Regex.Replace(lowerName, @"^([^_]+)_\1_", "$1_");
+            return result;
+        }
+
+        /// <summary>
+        /// Forces any occurrence of "cf_" (at the start or following an underscore) to be uppercase.
+        /// </summary>
+        public static string ForceCFUpper(string name)
+        {
+            return Regex.Replace(name, @"(?<=^|_)(cf_)", "CF_", RegexOptions.IgnoreCase);
         }
 
         /// <summary>
@@ -106,10 +114,14 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                     {
                         var image = imageItem.Image;
                         var key = images.Keys.ElementAt(imageIndex);
+                        // Clean the key as usual.
                         string shortKey = CleanAssetName(key, disableCleanKey: false);
+                        // Look up the canonical mapping; if not found, use the cleaned key.
                         string finalKey = canonicalMapping.ContainsKey(shortKey)
                             ? canonicalMapping[shortKey]
-                            : CleanAssetName(key, disableCleanKey);
+                            : shortKey;
+                        // Force "cf_" segments to be uppercase.
+                        finalKey = ForceCFUpper(finalKey);
 
                         // Draw the image onto the sprite sheet.
                         graphics.DrawImage(image, new Point(currentX, currentY));

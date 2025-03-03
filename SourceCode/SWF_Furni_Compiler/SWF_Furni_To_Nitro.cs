@@ -194,7 +194,7 @@ namespace Habbo_Downloader.Compiler
                 await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);
 
                 // Optionally delete the output directory after bundling.
-                DeleteDirectory(fileOutputDirectory);
+                // DeleteDirectory(fileOutputDirectory);
 
                 return true;
             }
