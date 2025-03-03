@@ -1,11 +1,21 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ConsoleApplication
 {
     internal static class NitroFurnitureDownloader
     {
         private static readonly HttpClient httpClient = new HttpClient();
+
+        // Dictionary to hold semaphores for each file path.
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> fileLocks = new ConcurrentDictionary<string, SemaphoreSlim>();
 
         internal static async Task DownloadFurnitureAsync()
         {
@@ -83,64 +93,95 @@ namespace ConsoleApplication
         {
             int nitroDownloadCount = 0;
             int iconDownloadCount = 0;
+            int maxConcurrency = 100;
+
+            using SemaphoreSlim globalSemaphore = new SemaphoreSlim(maxConcurrency);
+
+            List<Task> tasks = new List<Task>();
 
             foreach (var furni in furniTypes)
             {
-                string classname = furni.Classname;
-                string baseClassname = classname.Split('*')[0];
-                string nitroFilePath = $"./custom_downloads/nitro_furniture/{baseClassname}.nitro";
-                string iconFilePath = $"./custom_downloads/nitro_furniture/icons/{classname.Replace('*', '_')}_icon.png";
-
-                string nitroUrl = $"{furnitureUrl}/{baseClassname}.nitro";
-                string iconUrl = $"{furnitureIconUrl}/{classname.Replace('*', '_')}_icon.png";
-
-                if (!File.Exists(nitroFilePath))
+                tasks.Add(Task.Run(async () =>
                 {
-                    try
-                    {
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"Downloading: {baseClassname}.nitro");
-                        await DownloadFileAsync(nitroUrl, nitroFilePath, $"{baseClassname}.nitro");
-                        nitroDownloadCount++;
-                    }
-                    catch (HttpRequestException ex)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Downloading {baseClassname}.nitro => Failed: {ex.Message}");
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Downloading {baseClassname}.nitro => Failed: {ex.Message}");
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                    }
-                }
+                    string classname = furni.Classname;
+                    string baseClassname = classname.Split('*')[0];
+                    string nitroFilePath = $"./custom_downloads/nitro_furniture/{baseClassname}.nitro";
+                    string iconFilePath = $"./custom_downloads/nitro_furniture/icons/{classname.Replace('*', '_')}_icon.png";
 
-                if (!File.Exists(iconFilePath))
-                {
-                    try
+                    string nitroUrl = $"{furnitureUrl}/{baseClassname}.nitro";
+                    string iconUrl = $"{furnitureIconUrl}/{classname.Replace('*', '_')}_icon.png";
+
+                    if (!File.Exists(nitroFilePath))
                     {
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"Downloading: {classname.Replace('*', '_')}_icon.png");
-                        await DownloadFileAsync(iconUrl, iconFilePath, $"{classname.Replace('*', '_')}_icon.png");
-                        iconDownloadCount++;
+                        SemaphoreSlim fileLock = fileLocks.GetOrAdd(nitroFilePath, _ => new SemaphoreSlim(1, 1));
+                        await fileLock.WaitAsync();
+                        try
+                        {
+                            if (!File.Exists(nitroFilePath))
+                            {
+                                await globalSemaphore.WaitAsync();
+                                try
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Green;
+                                    Console.WriteLine($"Downloading: {baseClassname}.nitro");
+                                    await DownloadFileAsync(nitroUrl, nitroFilePath, $"{baseClassname}.nitro");
+                                    Interlocked.Increment(ref nitroDownloadCount);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Red;
+                                    Console.WriteLine($"Downloading {baseClassname}.nitro => Failed: {ex.Message}");
+                                }
+                                finally
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Gray;
+                                    globalSemaphore.Release();
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            fileLock.Release();
+                        }
                     }
-                    catch (HttpRequestException ex)
+
+                    if (!File.Exists(iconFilePath))
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Downloading {classname.Replace('*', '_')}_icon.png => Failed: {ex.Message}");
-                        Console.ForegroundColor = ConsoleColor.Gray;
+                        SemaphoreSlim fileLock = fileLocks.GetOrAdd(iconFilePath, _ => new SemaphoreSlim(1, 1));
+                        await fileLock.WaitAsync();
+                        try
+                        {
+                            if (!File.Exists(iconFilePath))
+                            {
+                                await globalSemaphore.WaitAsync();
+                                try
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Green;
+                                    Console.WriteLine($"Downloading: {classname.Replace('*', '_')}_icon.png");
+                                    await DownloadFileAsync(iconUrl, iconFilePath, $"{classname.Replace('*', '_')}_icon.png");
+                                    Interlocked.Increment(ref iconDownloadCount);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Red;
+                                    Console.WriteLine($"Downloading {classname.Replace('*', '_')}_icon.png => Failed: {ex.Message}");
+                                }
+                                finally
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Gray;
+                                    globalSemaphore.Release();
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            fileLock.Release();
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Downloading {classname.Replace('*', '_')}_icon.png => Failed: {ex.Message}");
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                    }
-                }
+                }));
             }
 
+            await Task.WhenAll(tasks);
             return (nitroDownloadCount, iconDownloadCount);
         }
 
@@ -150,6 +191,8 @@ namespace ConsoleApplication
             {
                 var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
+
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
 
                 using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
                 {

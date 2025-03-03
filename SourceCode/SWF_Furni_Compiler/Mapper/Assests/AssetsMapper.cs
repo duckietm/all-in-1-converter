@@ -11,6 +11,9 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
         // Holds the latest image mapping dictionary (ID → original tag name) built in memory.
         public static Dictionary<string, string> LatestImageMapping { get; private set; } = new Dictionary<string, string>();
 
+        /// <summary>
+        /// Forces any occurrence of "cf_" (at the start or following an underscore) to be uppercase ("CF_").
+        /// </summary>
         private static string ForceCFUpper(string name)
         {
             return Regex.Replace(name, @"(?<=^|_)(cf_)", "CF_", RegexOptions.IgnoreCase);
@@ -107,6 +110,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     {
                         // Remove the SWF prefix from the tag name for asset mapping.
                         string cleanedName = RemoveSwfPrefix(originalTagName, swfPrefix);
+                        // Force CF_ segments to be uppercase.
                         cleanedName = ForceCFUpper(cleanedName);
 
                         // Skip names with undesired parts.

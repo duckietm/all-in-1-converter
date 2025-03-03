@@ -10,6 +10,10 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 {
     public static class SpriteSheetMapper
     {
+        /// <summary>
+        /// If disableCleanKey is false, duplicate prefixes are removed.
+        /// If true, the asset key is left intact.
+        /// </summary>
         public static string CleanAssetName(string name, bool disableCleanKey = false)
         {
             string result = name;
@@ -20,11 +24,18 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
             return result;
         }
 
+        /// <summary>
+        /// Forces any occurrence of "cf_" (at the start or following an underscore) to be uppercase.
+        /// </summary>
         public static string ForceCFUpper(string name)
         {
             return Regex.Replace(name, @"(?<=^|_)(cf_)", "CF_", RegexOptions.IgnoreCase);
         }
 
+        /// <summary>
+        /// Generates a sprite sheet from the provided images.
+        /// The canonicalMapping maps from short names (cleaned asset names) to full asset names (from CSV).
+        /// </summary>
         public static (string ImagePath, SpriteSheetData SpriteData) GenerateSpriteSheet(
             Dictionary<string, Bitmap> images,
             string outputDirectory,
@@ -159,7 +170,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                 spriteSheet.Save(imagePath, ImageFormat.Png);
 
                 return (imagePath, spriteSheetData);
-				
             }
         }
     }
