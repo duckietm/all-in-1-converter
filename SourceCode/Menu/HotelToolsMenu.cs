@@ -99,7 +99,7 @@ namespace ConsoleApplication
 
                     case "9":
                         Console.WriteLine("DEBUG: Converting SWF Pets to Nitro...");
-                        await SWF_Pets_To_Nitro.RunDecoderPipelineAsync();
+                        await SWF_Pets_To_Nitro.ConvertSwfFilesAsync();
                         break;
 
                     case "10":

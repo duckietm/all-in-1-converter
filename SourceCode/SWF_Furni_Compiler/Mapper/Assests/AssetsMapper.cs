@@ -8,12 +8,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 {
     public static class AssetsMapper
     {
-        // Holds the latest image mapping dictionary (ID → original tag name) built in memory.
         public static Dictionary<string, string> LatestImageMapping { get; private set; } = new Dictionary<string, string>();
 
-        /// <summary>
-        /// Forces any occurrence of "cf_" (at the start or following an underscore) to be uppercase ("CF_").
-        /// </summary>
         private static string ForceCFUpper(string name)
         {
             return Regex.Replace(name, @"(?<=^|_)(cf_)", "CF_", RegexOptions.IgnoreCase);
@@ -46,7 +42,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     return new Dictionary<string, Asset>();
                 }
 
-                // Read and parse XML files
                 string assetsContent = await File.ReadAllTextAsync(assetsFilePath);
                 XElement root = XElement.Parse(assetsContent);
 
@@ -55,8 +50,15 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
                 var assets = MapAssetsXML(root, manifestRoot, imageSources, debugXmlPath);
 
-                // Build the mappings in memory (both asset mapping for updating assets and image mapping for image renaming).
                 await BuildMappingsInMemoryAsync(assets, debugXmlPath);
+
+                foreach (var asset in assets.Values)
+                {
+                    if (!string.IsNullOrEmpty(asset.Source))
+                    {
+                        asset.Source = ResolveSource(assets, asset.Source);
+                    }
+                }
 
                 return assets;
             }
@@ -78,17 +80,13 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
         {
             try
             {
-                // Get tag mappings from the debug XML.
                 var tagMappings = DebugXmlParser.ExtractSymbolClassTags(debugXmlPath);
 
-                // In-memory list for asset mapping lines (used to update assets).
                 var assetMappingLines = new List<string>();
-                assetMappingLines.Add("ID,Name"); // header (not used in processing, just for consistency)
+                assetMappingLines.Add("ID,Name");
 
-                // In-memory dictionary for image mapping (ID → original tag name).
                 var imageMapping = new Dictionary<string, string>();
 
-                // Extract the SWF prefix from tag id "0"
                 string swfPrefix = tagMappings.TryGetValue("0", out var swfNames) ? swfNames.FirstOrDefault() : "";
                 if (string.IsNullOrEmpty(swfPrefix))
                 {
@@ -96,9 +94,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     swfPrefix = "";
                 }
 
-                var idTracker = new HashSet<string>(); // to avoid duplicate image mappings
+                var idTracker = new HashSet<string>();
 
-                // Loop through the tag mappings (skip ID "0")
                 foreach (var kvp in tagMappings)
                 {
                     string tagId = kvp.Key;
@@ -108,12 +105,9 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
 
                     foreach (var originalTagName in originalTagNames)
                     {
-                        // Remove the SWF prefix from the tag name for asset mapping.
                         string cleanedName = RemoveSwfPrefix(originalTagName, swfPrefix);
-                        // Force CF_ segments to be uppercase.
                         cleanedName = ForceCFUpper(cleanedName);
 
-                        // Skip names with undesired parts.
                         if (cleanedName.Contains("_32_"))
                             continue;
                         if (cleanedName.EndsWith("visualization", StringComparison.OrdinalIgnoreCase) ||
@@ -125,23 +119,18 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                             continue;
                         }
 
-                        // Build the asset mapping (in memory).
                         assetMappingLines.Add($"{tagId},{cleanedName}");
 
-                        // Build the image mapping using the original tag name.
                         if (!idTracker.Contains(tagId))
                         {
                             idTracker.Add(tagId);
-                            // Optionally force CF uppercase here too.
                             imageMapping[tagId] = ForceCFUpper(originalTagName);
                         }
                     }
                 }
 
-                // Update the assets using the in-memory asset mapping lines.
                 await UpdateAssetsWithSourceFromCsvLinesAsync(assets, assetMappingLines.Skip(1));
 
-                // Store the in-memory image mapping.
                 LatestImageMapping = imageMapping;
             }
             catch (Exception ex)
@@ -163,11 +152,9 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                 if (parts.Length == 2)
                 {
                     string id = parts[0];
-                    // Instead of lower-casing, force CF uppercase.
                     string name = ForceCFUpper(parts[1]);
                     if (sourceMap.ContainsKey(id))
                     {
-                        // When a duplicate ID is encountered, update the asset's Source property.
                         string source = sourceMap[id];
                         if (assets.ContainsKey(name))
                         {
@@ -176,7 +163,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                     }
                     else
                     {
-                        // Store the name for a future asset with the same ID.
                         sourceMap[id] = name;
                     }
                 }
@@ -190,7 +176,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(swfPrefix))
                 return name;
 
-            // Remove the SWF prefix (SWF name + underscore) dynamically.
             string pattern = $"^{Regex.Escape(swfPrefix)}_";
             return Regex.Replace(name, pattern, "", RegexOptions.IgnoreCase);
         }
@@ -219,7 +204,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                 if (assetName.Contains("_32_"))
                     continue;
 
-                // Include the asset if it is in the manifest OR it has a source attribute.
                 if (!manifestAssetNames.Contains(assetName) && assetElement.Attribute("source") == null)
                     continue;
 
@@ -237,7 +221,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                 output[assetName] = asset;
             }
 
-            // Now apply the debug.xml mappings for assets that don't already have a source
             var debugMapping = DebugXmlParser.ParseDebugXml(debugXmlPath);
             var cleanedDebugMapping = debugMapping.ToDictionary(
                 kv => ForceCFUpper(kv.Key),
@@ -260,9 +243,22 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             if (string.IsNullOrEmpty(name))
                 return name;
 
-            // Remove the first prefix (the text up to and including the first underscore).
             string pattern = @"^[^_]+_";
             return Regex.Replace(name, pattern, "", RegexOptions.None);
+        }
+
+        private static string ResolveSource(Dictionary<string, Asset> assets, string source)
+        {
+            var visited = new HashSet<string>();
+            while (!string.IsNullOrEmpty(source) &&
+                   assets.TryGetValue(source, out var referencedAsset) &&
+                   !string.IsNullOrEmpty(referencedAsset.Source))
+            {
+                if (!visited.Add(source))
+                    break;
+                source = referencedAsset.Source;
+            }
+            return source;
         }
 
         public class Asset
