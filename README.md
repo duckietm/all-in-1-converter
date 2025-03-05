@@ -21,7 +21,7 @@ This will download all that is required.
 
 # What is new ?
 Blazing fast badge downloader for habbo badges.</br>
-Download all original HAbbo assets/br>
+Download all original Habbo assets</br>
 Added .nitro support so a easy way to download all furni / clothes / pets from every retro (instruction in the config.ini what to do!)</br>
 Multi Merge option for easy backtrack of all your custom and easy intergrate all your needs for Furni and clothes (i have added examples in the merge directory)</br>
 A new written Compile and Decompile for all .nitro files</br>
@@ -48,6 +48,8 @@ So more Copy & Paste and way more easyer to combine stuff from other resources!
 The SWF to Nitro generator</br>
 - Clothes
 - Furniture
+- Pets
+- Effects
 Here you can confurt all the above to .nitro files so they can be used for nitro based hotels
 
 Database tools</br>
