@@ -10,9 +10,10 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
     {
         public static Dictionary<string, string> LatestImageMapping { get; private set; } = new Dictionary<string, string>();
 
+        // Updated to force both "cf_" and "cfc_" to uppercase.
         private static string ForceCFUpper(string name)
         {
-            return Regex.Replace(name, @"(?<=^|_)(cf_)", "CF_", RegexOptions.IgnoreCase);
+            return Regex.Replace(name, @"(?<=^|_)(cfc_|cf_)", m => m.Value.ToUpperInvariant(), RegexOptions.IgnoreCase);
         }
 
         public static async Task<Dictionary<string, Asset>> ParseAssetsFileAsync(
