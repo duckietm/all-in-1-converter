@@ -35,7 +35,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         [JsonPropertyOrder(6)]
         [JsonPropertyName("colors")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        public Dictionary<int, Color> Colors { get; set; } = new();
+        public SortedDictionary<int, Color> Colors { get; set; } = new SortedDictionary<int, Color>();
 
         public Visualization(XElement xml)
         {
@@ -108,9 +108,9 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
             return animations;
         }
 
-        private Dictionary<int, Color> ParseColors(XElement colorsElement)
+        private SortedDictionary<int, Color> ParseColors(XElement colorsElement)
         {
-            var colors = new Dictionary<int, Color>();
+            var colors = new SortedDictionary<int, Color>();
             if (colorsElement == null) return colors;
 
             foreach (var colorElement in colorsElement.Elements("color"))
