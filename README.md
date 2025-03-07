@@ -66,3 +66,8 @@ For the custom Effects they are in the Addons\Custom Effects folder, please read
 - Credits for the Converter : Nitro Team https://discord.gg/yCXcMqrT (this is only used for the Pets)
 - AtlasOmega for "the Among Us effects" : Enable 880 until 903
 - Leet for the enables : Enable 500 until 688
+
+# Want to help !
+Discord: https://discord.gg/txfNucJv
+
+Please beware all is Free so don't get scammed !!
