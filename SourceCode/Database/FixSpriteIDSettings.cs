@@ -77,7 +77,7 @@ namespace ConsoleApplication
 
         private static async Task UpdateDatabaseSpriteIDs(Dictionary<string, int> furnitureData)
         {
-            List<(int id, string itemName, int currentSpriteId)> databaseItems = new List<(int, string, int)>();
+            List<(int id, string itemName, int currentSpriteId, string publicName)> databaseItems = new List<(int, string, int, string)>();
             List<(int catalogId, string catalogName, string itemIds)> catalogItems = new List<(int, string, string)>();
 
             using (var connection = new MySqlConnection(DatabaseConfig.ConnectionString))
@@ -85,8 +85,7 @@ namespace ConsoleApplication
                 try
                 {
                     await connection.OpenAsync();
-
-                    string query = "SELECT id, item_name, sprite_id FROM items_base";
+                    string query = "SELECT id, item_name, sprite_id, public_name FROM items_base";
                     using (var cmd = new MySqlCommand(query, connection))
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -95,7 +94,8 @@ namespace ConsoleApplication
                             databaseItems.Add((
                                 reader.GetInt32("id"),
                                 reader.GetString("item_name"),
-                                reader.GetInt32("sprite_id")
+                                reader.GetInt32("sprite_id"),
+                                reader.GetString("public_name")
                             ));
                         }
                     }
@@ -124,20 +124,11 @@ namespace ConsoleApplication
                 }
             }
 
-            if (databaseItems.Count == 0)
+            if (databaseItems.Count == 0 || catalogItems.Count == 0)
             {
                 lock (consoleLock)
                 {
-                    Console.WriteLine("❌ No items found in items_base.");
-                }
-                return;
-            }
-
-            if (catalogItems.Count == 0)
-            {
-                lock (consoleLock)
-                {
-                    Console.WriteLine("❌ No items found in catalog_items.");
+                    Console.WriteLine(databaseItems.Count == 0 ? "❌ No items found in items_base." : "❌ No items found in catalog_items.");
                 }
                 return;
             }
@@ -145,7 +136,7 @@ namespace ConsoleApplication
             Console.WriteLine($"✅ Loaded {databaseItems.Count} items from items_base.");
             Console.WriteLine($"✅ Loaded {catalogItems.Count} items from catalog_items.");
 
-            // Update sprite_ids in items_base
+            // Update sprite_ids in items_base (unchanged)
             List<(int id, int newSpriteId)> itemsToUpdate = databaseItems
                 .Where(item => furnitureData.TryGetValue(item.itemName, out var newSpriteId) && newSpriteId != item.currentSpriteId)
                 .Select(item => (item.id, furnitureData[item.itemName]))
@@ -161,25 +152,39 @@ namespace ConsoleApplication
                 Console.WriteLine("✅ No sprite_id updates needed.");
             }
 
-            // Update item_ids in catalog_items: match catalog_name with item_name in items_base
-            List<(int catalogId, string newItemIds)> catalogItemsToUpdate = catalogItems
-                .Join(databaseItems,
-                      catalogItem => catalogItem.catalogName,      // catalog_name in catalog_items
-                      databaseItem => databaseItem.itemName,         // item_name in items_base
-                      (catalogItem, databaseItem) => new
-                      {
-                          catalogId = catalogItem.catalogId,
-                          newItemIds = databaseItem.id.ToString(),
-                          currentItemIds = catalogItem.itemIds
-                      })
-                .Where(x => x.currentItemIds != x.newItemIds)
-                .Select(x => (x.catalogId, x.newItemIds))
-                .ToList();
+            // Debug: Log items before update
+            Console.WriteLine("🔍 Checking catalog_items to update:");
+            var catalogItemsToUpdate = catalogItems
+                .GroupJoin(databaseItems,
+                    catalogItem => catalogItem.catalogName,
+                    databaseItem => databaseItem.publicName, // Match on public_name instead of item_name
+                    (catalogItem, matchingBaseItems) => new
+                    {
+                        catalogId = catalogItem.catalogId,
+                        catalogName = catalogItem.catalogName,
+                        currentItemIds = catalogItem.itemIds,
+                        matchingBaseItems = matchingBaseItems.ToList()
+                    })
+                .SelectMany(x => x.matchingBaseItems.DefaultIfEmpty((0, null, 0, null)),
+                    (catalog, baseItem) => new
+                    {
+                        catalog.catalogId,
+                        catalog.catalogName,
+                        catalog.currentItemIds,
+                        newItemIds = baseItem.publicName != null ? baseItem.id.ToString() : null // Check if baseItem is valid
+                    })
+                .Where(x => x.newItemIds != null && x.currentItemIds != x.newItemIds)
+                .Select(x => (x.catalogId, x.newItemIds, x.currentItemIds));
 
-            if (catalogItemsToUpdate.Count > 0)
+            foreach (var item in catalogItemsToUpdate)
             {
-                Console.WriteLine($"🔄 {catalogItemsToUpdate.Count} catalog items need item_ids updates.");
-                await UpdateCatalogItemIdsAsync(catalogItemsToUpdate);
+                Console.WriteLine($"🔍 Catalog ID: {item.catalogId}, Current item_ids: {item.currentItemIds}, New item_ids: {item.newItemIds}");
+            }
+
+            if (catalogItemsToUpdate.Any())
+            {
+                Console.WriteLine($"🔄 {catalogItemsToUpdate.Count()} catalog items need item_ids updates.");
+                await UpdateCatalogItemIdsAsync(catalogItemsToUpdate.Select(x => (x.catalogId, x.newItemIds)).ToList());
             }
             else
             {
