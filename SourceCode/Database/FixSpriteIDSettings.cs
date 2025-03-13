@@ -152,27 +152,39 @@ namespace ConsoleApplication
                 Console.WriteLine("✅ No sprite_id updates needed.");
             }
 
+            // Find the wallpaper item ID from items_base
+            var wallpaperItem = databaseItems.FirstOrDefault(item => item.itemName == "wallpaper");
+            string wallpaperItemId = wallpaperItem.id > 0 ? wallpaperItem.id.ToString() : null;
+
+            if (wallpaperItemId == null)
+            {
+                Console.WriteLine("⚠️ No 'wallpaper' item found in items_base. Skipping wallpaper_single updates.");
+            }
+
             // Debug: Log items before update
             Console.WriteLine("🔍 Checking catalog_items to update:");
             var catalogItemsToUpdate = catalogItems
-                .GroupJoin(databaseItems,
-                    catalogItem => catalogItem.catalogName,
-                    databaseItem => databaseItem.publicName, // Match on public_name instead of item_name
-                    (catalogItem, matchingBaseItems) => new
+                .Select(catalogItem =>
+                {
+                    string newItemIds;
+                    if (catalogItem.catalogName.StartsWith("wallpaper_single") && wallpaperItemId != null)
+                    {
+                        newItemIds = wallpaperItemId; // Use the wallpaper item ID for wallpaper_single items
+                    }
+                    else
+                    {
+                        var matchingBaseItem = databaseItems.FirstOrDefault(dbItem => dbItem.publicName == catalogItem.catalogName);
+                        newItemIds = matchingBaseItem.id > 0 ? matchingBaseItem.id.ToString() : null;
+                    }
+
+                    return new
                     {
                         catalogId = catalogItem.catalogId,
                         catalogName = catalogItem.catalogName,
                         currentItemIds = catalogItem.itemIds,
-                        matchingBaseItems = matchingBaseItems.ToList()
-                    })
-                .SelectMany(x => x.matchingBaseItems.DefaultIfEmpty((0, null, 0, null)),
-                    (catalog, baseItem) => new
-                    {
-                        catalog.catalogId,
-                        catalog.catalogName,
-                        catalog.currentItemIds,
-                        newItemIds = baseItem.publicName != null ? baseItem.id.ToString() : null // Check if baseItem is valid
-                    })
+                        newItemIds
+                    };
+                })
                 .Where(x => x.newItemIds != null && x.currentItemIds != x.newItemIds)
                 .Select(x => (x.catalogId, x.newItemIds, x.currentItemIds));
 
