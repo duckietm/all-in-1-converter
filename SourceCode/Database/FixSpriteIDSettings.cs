@@ -136,7 +136,7 @@ namespace ConsoleApplication
             Console.WriteLine($"✅ Loaded {databaseItems.Count} items from items_base.");
             Console.WriteLine($"✅ Loaded {catalogItems.Count} items from catalog_items.");
 
-            // Update sprite_ids in items_base (unchanged)
+            // Update sprite_ids in items_base
             List<(int id, int newSpriteId)> itemsToUpdate = databaseItems
                 .Where(item => furnitureData.TryGetValue(item.itemName, out var newSpriteId) && newSpriteId != item.currentSpriteId)
                 .Select(item => (item.id, furnitureData[item.itemName]))
@@ -152,13 +152,38 @@ namespace ConsoleApplication
                 Console.WriteLine("✅ No sprite_id updates needed.");
             }
 
-            // Find the wallpaper item ID from items_base
+            // Find special items from items_base
             var wallpaperItem = databaseItems.FirstOrDefault(item => item.itemName == "wallpaper");
-            string wallpaperItemId = wallpaperItem.id > 0 ? wallpaperItem.id.ToString() : null;
+            var floorItem = databaseItems.FirstOrDefault(item => item.itemName == "floor");
+            var landscapeItem = databaseItems.FirstOrDefault(item => item.itemName == "landscape");
 
+            string wallpaperItemId = wallpaperItem.id > 0 ? wallpaperItem.id.ToString() : null;
+            string floorItemId = floorItem.id > 0 ? floorItem.id.ToString() : null;
+            string landscapeItemId = landscapeItem.id > 0 ? landscapeItem.id.ToString() : null;
+
+            // If not found in items_base, try catalog_items
             if (wallpaperItemId == null)
             {
-                Console.WriteLine("⚠️ No 'wallpaper' item found in items_base. Skipping wallpaper_single updates.");
+                var wallpaperCatalog = catalogItems.FirstOrDefault(item => item.catalogName == "wallpaper");
+                wallpaperItemId = wallpaperCatalog.catalogId > 0 ? wallpaperCatalog.itemIds : null;
+                if (wallpaperItemId == null)
+                    Console.WriteLine("⚠️ No 'wallpaper' item found in items_base or catalog_items. Skipping wallpaper_single updates.");
+            }
+
+            if (floorItemId == null)
+            {
+                var floorCatalog = catalogItems.FirstOrDefault(item => item.catalogName == "floor");
+                floorItemId = floorCatalog.catalogId > 0 ? floorCatalog.itemIds : null;
+                if (floorItemId == null)
+                    Console.WriteLine("⚠️ No 'floor' item found in items_base or catalog_items. Skipping floor_single updates.");
+            }
+
+            if (landscapeItemId == null)
+            {
+                var landscapeCatalog = catalogItems.FirstOrDefault(item => item.catalogName == "landscape");
+                landscapeItemId = landscapeCatalog.catalogId > 0 ? landscapeCatalog.itemIds : null;
+                if (landscapeItemId == null)
+                    Console.WriteLine("⚠️ No 'landscape' item found in items_base or catalog_items. Skipping landscape_single updates.");
             }
 
             // Debug: Log items before update
@@ -166,10 +191,18 @@ namespace ConsoleApplication
             var catalogItemsToUpdate = catalogItems
                 .Select(catalogItem =>
                 {
-                    string newItemIds;
+                    string newItemIds = null;
                     if (catalogItem.catalogName.StartsWith("wallpaper_single") && wallpaperItemId != null)
                     {
-                        newItemIds = wallpaperItemId; // Use the wallpaper item ID for wallpaper_single items
+                        newItemIds = wallpaperItemId;
+                    }
+                    else if (catalogItem.catalogName.StartsWith("floor_single") && floorItemId != null)
+                    {
+                        newItemIds = floorItemId;
+                    }
+                    else if (catalogItem.catalogName.StartsWith("landscape_single") && landscapeItemId != null)
+                    {
+                        newItemIds = landscapeItemId;
                     }
                     else
                     {
