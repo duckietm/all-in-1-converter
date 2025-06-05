@@ -264,6 +264,7 @@ namespace ConsoleApplication
                 }
             }
         }
+
         private static void ProcessNitroFile(string nitroFilePath, JObject furnidata, HashSet<string> roomItems, HashSet<string> wallItems, List<string> itemsBaseSQL, List<string> catalogItemsSQL, ref int startId, int pageId)
         {
             string fileName = Path.GetFileNameWithoutExtension(nitroFilePath);
@@ -300,8 +301,13 @@ namespace ConsoleApplication
                 int interactionModesCount = CalculateInteractionModesCountFromNitroJson(nitroJsonPath);
                 (double width, double length, double height) = GetDimensionsFromNitroJson(nitroJsonPath);
 
+                // Read interaction properties from itemData
+                bool canSitOn = itemData["cansiton"]?.ToObject<bool>() ?? false;
+                bool canLayOn = itemData["canlayon"]?.ToObject<bool>() ?? false;
+                bool canStandOn = itemData["canstandon"]?.ToObject<bool>() ?? false;
+
                 itemsBaseSQL.Add($@"INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`) VALUES 
-({id}, {spriteId}, '{classname}', '{classname}', {width.ToString(CultureInfo.InvariantCulture)}, {length.ToString(CultureInfo.InvariantCulture)}, {height.ToString(CultureInfo.InvariantCulture)}, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', 'default', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");
+({id}, {spriteId}, '{classname}', '{classname}', {width.ToString(CultureInfo.InvariantCulture)}, {length.ToString(CultureInfo.InvariantCulture)}, {height.ToString(CultureInfo.InvariantCulture)}, '0', '{(canSitOn ? "1" : "0")}', '{(canLayOn ? "1" : "0")}', '{(canStandOn ? "1" : "0")}', '1', '1', '0', '1', '1', '{type}', 'default', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");
 
                 catalogItemsSQL.Add($@"INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`) VALUES 
 ({id}, '{spriteId}', {pageId}, {offerId}, 0, 99, '{classname}', 5, 0, 0, 1, 0, 0, '', '1', '0');");
