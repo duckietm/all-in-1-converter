@@ -14,17 +14,17 @@ namespace ConsoleApplication
                 Console.Clear();
                 Console.BackgroundColor = ConsoleColor.Red;
                 Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("                          Hotel Database Menu                                ");
+                Console.WriteLine("                          Hotel Database Menu                                  ");
                 Console.ForegroundColor = ConsoleColor.Black;
                 Console.BackgroundColor = ConsoleColor.Gray;
-                Console.WriteLine("1 => Show Database General Information (version / databases etc.)            ");
-                Console.WriteLine("2 => Optimize your database (Runs optimize table on all your tables)         ");
-                Console.WriteLine("3 => Fix the Offer_ID in the database from the JSON                          ");
-                Console.WriteLine("4 => Fix Sit / Lay / Walk in the items_base with the settings from the json  ");
-                Console.WriteLine("5 => Fix Sprite_ID and Item_IDS in the items_base from the JSON              ");
-                Console.WriteLine("!! Run Option 5 first when you have added new furni in the items base !!     ");
-                Console.WriteLine("                                                                             ");
-                Console.WriteLine("Type \"back\" to return to the main menu.                                      ");
+                Console.WriteLine("1 => Show Database General Information (version / databases etc.)              ");
+                Console.WriteLine("2 => Optimize your database (Runs optimize table on all your tables)           ");
+                Console.WriteLine("3 => Fix the Offer_ID in the database and the JSON (copy file back to server!) ");
+                Console.WriteLine("4 => Fix Sit / Lay / Walk in the items_base with the settings from the json    ");
+                Console.WriteLine("5 => Fix Sprite_ID and Item_IDS in the items_base from the JSON                ");
+                Console.WriteLine("!! Run Option 5 first when you have added new furni in the items base !!       ");
+                Console.WriteLine("                                                                               ");
+                Console.WriteLine("Type \"back\" to return to the main menu.                                        ");
                 Console.ResetColor();
 
                 Console.ForegroundColor = ConsoleColor.White;

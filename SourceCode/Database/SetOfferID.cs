@@ -2,6 +2,8 @@
 using System.Text.Json;
 using MySql.Data.MySqlClient;
 using System.Data;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace ConsoleApplication
 {
@@ -26,6 +28,33 @@ namespace ConsoleApplication
         public int id { get; set; }
         public string classname { get; set; }
         public int offerid { get; set; } = -1;
+        public int revision { get; set; }
+        public string category { get; set; }
+        public int defaultdir { get; set; }
+        public int xdim { get; set; }
+        public int ydim { get; set; }
+        public PartColors partcolors { get; set; }
+        public string name { get; set; }
+        public string description { get; set; }
+        public string adurl { get; set; }
+        public bool buyout { get; set; }
+        public int rentofferid { get; set; }
+        public bool rentbuyout { get; set; }
+        public bool bc { get; set; }
+        public bool excludeddynamic { get; set; }
+        public string customparams { get; set; }
+        public int specialtype { get; set; }
+        public bool canstandon { get; set; }
+        public bool cansiton { get; set; }
+        public bool canlayon { get; set; }
+        public string furniline { get; set; }
+        public string environment { get; set; }
+        public bool rare { get; set; }
+    }
+
+    public class PartColors
+    {
+        public List<string> color { get; set; }
     }
 
     public static class SetOfferID
@@ -72,7 +101,6 @@ namespace ConsoleApplication
                 return;
             }
 
-            // Combine all furniture items from both room and wall types
             List<FurnitureItem> allItems = new List<FurnitureItem>();
             if (furnitureData.roomitemtypes?.furnitype != null)
                 allItems.AddRange(furnitureData.roomitemtypes.furnitype);
@@ -87,13 +115,9 @@ namespace ConsoleApplication
 
             Console.WriteLine($"🔍 {allItems.Count} furniture items loaded from JSON.");
 
-            // Create a mapping from classname to offerid
-            Dictionary<string, int> offerMapping = allItems
-                .GroupBy(x => x.classname)
-                .ToDictionary(g => g.Key, g => g.First().offerid);
-
-            // Fetch catalog_items from the database
+            // Fetch catalog_items from the database to get existing offer_ids
             List<(int catalogId, string catalogName, int currentOfferId)> catalogItems = new List<(int, string, int)>();
+            HashSet<int> usedOfferIds = new HashSet<int>();
             using (var connection = new MySqlConnection(DatabaseConfig.ConnectionString))
             {
                 try
@@ -105,11 +129,16 @@ namespace ConsoleApplication
                     {
                         while (await reader.ReadAsync())
                         {
+                            int offerId = reader.GetInt32("offer_id");
                             catalogItems.Add((
                                 reader.GetInt32("id"),
                                 reader.GetString("catalog_name"),
-                                reader.GetInt32("offer_id")
+                                offerId
                             ));
+                            if (offerId > 0)
+                            {
+                                usedOfferIds.Add(offerId);
+                            }
                         }
                     }
                 }
@@ -129,7 +158,39 @@ namespace ConsoleApplication
                 return;
             }
 
-            // Build the list of catalog_items that need an offer_id update
+            var groups = allItems.GroupBy(x => x.classname);
+            Dictionary<string, int> offerMapping = new Dictionary<string, int>();
+            Random rng = new Random();
+            int generatedCount = 0;
+
+            foreach (var g in groups)
+            {
+                int offerId = g.First().offerid;
+                if (offerId == -1)
+                {
+                    int newId;
+                    do
+                    {
+                        newId = rng.Next(60001, int.MaxValue);
+                    } while (usedOfferIds.Contains(newId));
+
+                    usedOfferIds.Add(newId);
+                    offerId = newId;
+                    generatedCount++;
+
+                    foreach (var item in g)
+                    {
+                        item.offerid = newId;
+                    }
+                }
+                offerMapping[g.Key] = offerId;
+            }
+
+            if (generatedCount > 0)
+            {
+                Console.WriteLine($"🔢 Generated {generatedCount} new unique offer IDs (>60000).");
+            }
+
             List<(int catalogId, int newOfferId)> itemsToUpdate = catalogItems
                 .Where(c => offerMapping.ContainsKey(c.catalogName) && offerMapping[c.catalogName] != c.currentOfferId)
                 .Select(c => (c.catalogId, offerMapping[c.catalogName]))
@@ -138,12 +199,21 @@ namespace ConsoleApplication
             if (itemsToUpdate.Count == 0)
             {
                 Console.WriteLine("No catalog_items need offer_id updates.");
+                try
+                {
+                    string updatedJson = JsonSerializer.Serialize(furnitureData, new JsonSerializerOptions { WriteIndented = true });
+                    await File.WriteAllTextAsync(jsonFilePath, updatedJson);
+                    Console.WriteLine("Updated JSON saved with new offer IDs.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error saving updated JSON: " + ex.Message);
+                }
                 return;
             }
 
             Console.WriteLine($"🔄 {itemsToUpdate.Count} catalog_items need offer_id updates.");
 
-            // Batch update using CASE statements
             var batches = Partition(itemsToUpdate, 100);
             int totalBatches = batches.Count;
             int processedBatches = 0;
@@ -204,6 +274,17 @@ namespace ConsoleApplication
 
             timer.Stop();
             timer.Dispose();
+
+            try
+            {
+                string updatedJson = JsonSerializer.Serialize(furnitureData, new JsonSerializerOptions { WriteIndented = true });
+                await File.WriteAllTextAsync(jsonFilePath, updatedJson);
+                Console.WriteLine("Updated JSON saved with new offer IDs.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error saving updated JSON: " + ex.Message);
+            }
 
             lock (consoleLock)
             {
