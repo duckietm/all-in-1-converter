@@ -1,4 +1,6 @@
-﻿namespace ConsoleApplication
+﻿using System.Text.Json;
+
+namespace ConsoleApplication
 {
     public static class VariablesDownloader
     {
@@ -31,8 +33,11 @@
                 {
                     try
                     {
-                        await DownloadFileAsync(externalvarsurl, Path.Combine("./Habbo_Default/files/txt", "external_variables.txt"), "external_variables.txt");
+                        string txtPath = Path.Combine("./Habbo_Default/files/txt", "external_variables.txt");
+                        await DownloadFileAsync(externalvarsurl, txtPath, "external_variables.txt");
                         WriteColoredMessage("External Variables Saved", ConsoleColor.Green);
+
+                        await ConvertVariablesToJsonAsync(txtPath);
                         return;
                     }
                     catch (HttpRequestException ex)
@@ -49,6 +54,40 @@
             catch (Exception ex)
             {
                 WriteColoredMessage("Error downloading external variables: " + ex.Message, ConsoleColor.Red);
+            }
+        }
+
+        private static async Task ConvertVariablesToJsonAsync(string txtPath)
+        {
+            try
+            {
+                var lines = await File.ReadAllLinesAsync(txtPath);
+                var variables = new Dictionary<string, string>();
+
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#"))
+                        continue;
+
+                    int separatorIndex = line.IndexOf('=');
+                    if (separatorIndex <= 0)
+                        continue;
+
+                    string key = line.Substring(0, separatorIndex).Trim();
+                    string value = line.Substring(separatorIndex + 1).Trim();
+                    variables[key] = value;
+                }
+
+                string jsonPath = Path.Combine(Path.GetDirectoryName(txtPath)!, "external_variables.json");
+                var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+                string jsonContent = JsonSerializer.Serialize(variables, jsonOptions);
+                await File.WriteAllTextAsync(jsonPath, jsonContent);
+
+                WriteColoredMessage("External Variables JSON Saved", ConsoleColor.Green);
+            }
+            catch (Exception ex)
+            {
+                WriteColoredMessage($"Error converting variables to JSON: {ex.Message}", ConsoleColor.Red);
             }
         }
 
