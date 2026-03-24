@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text;
 
 namespace Habbo_Downloader.Tools
@@ -39,7 +39,7 @@ namespace Habbo_Downloader.Tools
             _ = Task.Run(async () => await process.StandardOutput.ReadToEndAsync());
             _ = Task.Run(async () => await process.StandardError.ReadToEndAsync());
 
-            bool exited = await Task.Run(() => process.WaitForExit(20000)); // 20 seconds timeout
+            bool exited = await Task.Run(() => process.WaitForExit(60000)); // 60 seconds timeout
 
             if (!exited)
             {
@@ -84,7 +84,7 @@ namespace Habbo_Downloader.Tools
 
             string[] tmpFiles = Directory.GetFiles(tmpDir, "*.png", SearchOption.AllDirectories);
             var fileLookup = tmpFiles.ToDictionary(
-                f => Path.GetFileNameWithoutExtension(f),
+                f => Path.GetFileNameWithoutExtension(f).Replace("\"", ""),
                 f => f);
 
             string targetImagesFolder = Path.Combine(imageDir, "images");
@@ -116,7 +116,7 @@ namespace Habbo_Downloader.Tools
 
                 try
                 {
-                    File.Copy(originalFilePath, targetPath, overwrite: false);
+                    File.Move(originalFilePath, targetPath);
                 }
                 catch (Exception ex)
                 {
@@ -172,7 +172,7 @@ namespace Habbo_Downloader.Tools
                 if (id == 0)
                     continue;
 
-                string namePart = parts[1].Trim();
+                string namePart = parts[1].Trim().Replace("\"", "");
                 string name = namePart;
                 string comment = "";
                 int commentIndex = namePart.IndexOf(" <=");

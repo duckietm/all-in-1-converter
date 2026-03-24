@@ -1,4 +1,7 @@
-﻿namespace ConsoleApplication
+﻿using System.Text.Encodings.Web;
+using System.Text.Json;
+
+namespace ConsoleApplication
 {
     public static class TextsDownloader
     {
@@ -15,16 +18,57 @@
 
             try
             {
-                await DownloadFileAsync(externalTextUrl, "./Habbo_Default/files/external_flash_texts.txt", "external_flash_texts.txt");
+                string txtPath = "./Habbo_Default/files/txt/ExternalTexts.txt";
+                await DownloadFileAsync(externalTextUrl, txtPath, "ExternalTexts.txt");
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("External Flash Texts Saved");
                 Console.ForegroundColor = ConsoleColor.Gray;
+
+                await ConvertTextsToJsonAsync(txtPath);
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Error downloading external flash texts: " + ex.Message);
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+        }
+
+        private static async Task ConvertTextsToJsonAsync(string txtPath)
+        {
+            try
+            {
+                var lines = await File.ReadAllLinesAsync(txtPath);
+                var texts = new Dictionary<string, string>();
+
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#"))
+                        continue;
+
+                    int separatorIndex = line.IndexOf('=');
+                    if (separatorIndex <= 0)
+                        continue;
+
+                    string key = line.Substring(0, separatorIndex).Trim();
+                    string value = line.Substring(separatorIndex + 1).Trim();
+                    texts[key] = value;
+                }
+
+                string jsonPath = "./Habbo_Default/files/json/ExternalTexts.json";
+                var jsonOptions = new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+                string jsonContent = JsonSerializer.Serialize(texts, jsonOptions);
+                await File.WriteAllTextAsync(jsonPath, jsonContent);
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("External Flash Texts JSON Saved");
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error converting texts to JSON: {ex.Message}");
                 Console.ForegroundColor = ConsoleColor.Gray;
             }
         }

@@ -1,4 +1,4 @@
-﻿using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
+using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
 
 public static class AssetNameMapper
 {
@@ -25,7 +25,7 @@ public static class AssetNameMapper
             if (!int.TryParse(parts[0].Trim(), out int id) || id == 0)
                 continue;
 
-            string namePart = parts[1].Trim();
+            string namePart = parts[1].Trim().Replace("\"", "");
             if (namePart.Contains("_32_") ||
                 namePart.ToLower().Contains("manifest") ||
                 namePart.ToLower().Contains("assets") ||

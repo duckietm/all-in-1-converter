@@ -1,4 +1,4 @@
-﻿using Habbo_Downloader.SWF_Pets_Compiler.Mapper.Assests;
+using Habbo_Downloader.SWF_Pets_Compiler.Mapper.Assests;
 using Habbo_DownloaderSWF_Pets_Compiler.Mapper.Index;
 using Habbo_Downloader.SWFCompiler.Mapper.Logic;
 using Habbo_Downloader.SWF_Pets_Compiler.Mapper.Visualizations;
@@ -41,23 +41,19 @@ namespace Habbo_Downloader.Compiler
 
                 Console.WriteLine($"✅ Found {swfFiles.Length} SWF files.");
 
-                int convertedCount = 0;
+                var nitroFilesGenerated = new ConcurrentBag<int>();
+                int maxParallelism = (int)(Environment.ProcessorCount * 0.8);
+                if (maxParallelism < 1) maxParallelism = 1;
 
-                foreach (var swfFile in swfFiles)
+                await Parallel.ForEachAsync(swfFiles, new ParallelOptions { MaxDegreeOfParallelism = maxParallelism }, async (swfFile, _) =>
                 {
-                    Console.WriteLine($"\n🎬 Processing: {Path.GetFileName(swfFile)}");
-
-                    bool success = await ProcessSwfFileAsync(swfFile);
-
-                    if (success)
+                    if (await ProcessSwfFileAsync(swfFile))
                     {
-                        convertedCount++;
+                        nitroFilesGenerated.Add(1);
                     }
+                });
 
-                    Console.WriteLine($"✅ Completed: {Path.GetFileName(swfFile)}");
-                }
-
-                Console.WriteLine($"✅ All SWF files have been processed. {convertedCount} nitro files were generated.");
+                Console.WriteLine($"✅ All SWF files have been processed. {nitroFilesGenerated.Count} nitro files were generated.");
             }
             catch (Exception ex)
             {
