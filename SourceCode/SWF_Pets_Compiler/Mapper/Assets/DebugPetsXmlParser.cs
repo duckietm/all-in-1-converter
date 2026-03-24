@@ -1,4 +1,4 @@
-﻿public static class DebugPetsXmlParser
+public static class DebugPetsXmlParser
     {
         public static Dictionary<string, string> ParseDebugXml(string csvPath)
         {
@@ -23,7 +23,7 @@
                         continue;
 
                     string tag = parts[0].Trim();
-                    string name = parts[1].Trim();
+                    string name = parts[1].Trim().Replace("\"", "");
                     entries.Add((tag, name));
                 }
                 var groups = entries.GroupBy(e => e.Tag);
@@ -69,7 +69,7 @@
                         continue;
 
                     string tag = parts[0].Trim();
-                    string assetName = parts[1].Trim();
+                    string assetName = parts[1].Trim().Replace("\"", "");
 
                     if (!tagMapping.ContainsKey(tag))
                     {

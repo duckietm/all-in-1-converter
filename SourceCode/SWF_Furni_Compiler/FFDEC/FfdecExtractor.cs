@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text;
 
 namespace Habbo_Downloader.Tools
@@ -95,7 +95,7 @@ namespace Habbo_Downloader.Tools
             // For single-image SWFs: key = "{ID}_{MappingName}" (e.g. "17_pura_mdl3_pura_mdl3_64_a_2_0").
             string[] tmpFiles = Directory.GetFiles(tmpDir, "*.png", SearchOption.AllDirectories);
             var fileLookup = tmpFiles.ToDictionary(
-                f => Path.GetFileNameWithoutExtension(f),
+                f => Path.GetFileNameWithoutExtension(f).Replace("\"", ""),
                 f => f);
 
             // Here we prepare the target folder.
@@ -191,7 +191,7 @@ namespace Habbo_Downloader.Tools
                 if (id == 0)
                     continue;
 
-                string namePart = parts[1].Trim();
+                string namePart = parts[1].Trim().Replace("\"", "");
                 string name = namePart;
                 string comment = "";
                 int commentIndex = namePart.IndexOf(" <=");

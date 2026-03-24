@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -40,7 +40,7 @@ public static class ClothesDebugXmlParser
                 if (parts.Length < 2)
                     continue;
                 string tag = parts[0].Trim();
-                string name = parts[1].Trim();
+                string name = parts[1].Trim().Replace("\"", "");
                 entries.Add((tag, name));
             }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -37,7 +37,7 @@ public static class DebugXmlParser
                     continue;
 
                 string tag = parts[0].Trim();
-                string name = parts[1].Trim();
+                string name = parts[1].Trim().Replace("\"", "");
                 entries.Add((tag, name));
             }
 
@@ -90,7 +90,7 @@ public static class DebugXmlParser
                     continue;
 
                 string tag = parts[0].Trim();
-                string assetName = parts[1].Trim();
+                string assetName = parts[1].Trim().Replace("\"", "");
 
                 if (!tagMapping.ContainsKey(tag))
                 {

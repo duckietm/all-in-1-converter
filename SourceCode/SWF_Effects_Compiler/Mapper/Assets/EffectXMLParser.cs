@@ -1,4 +1,4 @@
-﻿using System.Xml.Linq;
+using System.Xml.Linq;
 
 public static class EffectXMLParser
 {
@@ -36,7 +36,7 @@ public static class EffectXMLParser
                 if (parts.Length < 2)
                     continue;
                 string tag = parts[0].Trim();
-                string name = parts[1].Trim();
+                string name = parts[1].Trim().Replace("\"", "");
                 entries.Add((tag, name));
             }
 
