@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text.Encodings.Web;
+using System.Text.Json;
 
 namespace ConsoleApplication
 {
@@ -79,7 +80,7 @@ namespace ConsoleApplication
                 }
 
                 string jsonPath = "./Habbo_Default/files/json/external_variables.json";
-                var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+                var jsonOptions = new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
                 string jsonContent = JsonSerializer.Serialize(variables, jsonOptions);
                 await File.WriteAllTextAsync(jsonPath, jsonContent);
 
