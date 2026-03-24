@@ -78,7 +78,7 @@ namespace ConsoleApplication
                     variables[key] = value;
                 }
 
-                string jsonPath = Path.Combine(Path.GetDirectoryName(txtPath)!, "external_variables.json");
+                string jsonPath = "./Habbo_Default/files/json/external_variables.json";
                 var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
                 string jsonContent = JsonSerializer.Serialize(variables, jsonOptions);
                 await File.WriteAllTextAsync(jsonPath, jsonContent);

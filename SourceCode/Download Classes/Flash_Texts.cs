@@ -17,8 +17,8 @@ namespace ConsoleApplication
 
             try
             {
-                string txtPath = "./Habbo_Default/files/external_flash_texts.txt";
-                await DownloadFileAsync(externalTextUrl, txtPath, "external_flash_texts.txt");
+                string txtPath = "./Habbo_Default/files/txt/ExternalTexts.txt";
+                await DownloadFileAsync(externalTextUrl, txtPath, "ExternalTexts.txt");
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("External Flash Texts Saved");
@@ -55,7 +55,7 @@ namespace ConsoleApplication
                     texts[key] = value;
                 }
 
-                string jsonPath = Path.Combine(Path.GetDirectoryName(txtPath)!, "external_flash_texts.json");
+                string jsonPath = "./Habbo_Default/files/json/ExternalTexts.json";
                 var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
                 string jsonContent = JsonSerializer.Serialize(texts, jsonOptions);
                 await File.WriteAllTextAsync(jsonPath, jsonContent);
