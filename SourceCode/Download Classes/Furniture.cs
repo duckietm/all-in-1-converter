@@ -38,6 +38,7 @@ namespace ConsoleApplication
             }
 
             int downloadedCount = 0;
+            int iconDownloadCount = 0;
 
             try
             {
@@ -118,7 +119,10 @@ namespace ConsoleApplication
                         {
                             try
                             {
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                Console.WriteLine($"Downloading: {iconName}_icon.png");
                                 await DownloadFileAsync(iconUrl, iconFilePath, $"{iconName}_icon.png");
+                                iconDownloadCount++;
                             }
                             catch (HttpRequestException ex)
                             {
@@ -132,7 +136,7 @@ namespace ConsoleApplication
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Downloading furniture completed!");
-                Console.WriteLine($"Downloaded {downloadedCount} new furniture items.");
+                Console.WriteLine($"Downloaded {downloadedCount} new .swf files and {iconDownloadCount} new icons.");
                 Console.ForegroundColor = ConsoleColor.Gray;
             }
             finally
