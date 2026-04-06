@@ -1,4 +1,5 @@
-﻿using System.Xml.Linq;
+﻿using System.Collections.Concurrent;
+using System.Xml.Linq;
 
 
 namespace ConsoleApplication
@@ -6,6 +7,7 @@ namespace ConsoleApplication
     internal static class FurnitureDownloader
     {
         private static readonly HttpClient httpClient = new HttpClient();
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> fileLocks = new ConcurrentDictionary<string, SemaphoreSlim>();
 
         internal static async Task DownloadFurnitureAsync()
         {
@@ -38,6 +40,7 @@ namespace ConsoleApplication
             }
 
             int downloadedCount = 0;
+            int iconDownloadCount = 0;
 
             try
             {
@@ -79,60 +82,98 @@ namespace ConsoleApplication
 
                 Console.WriteLine($"Found {furniEntries.Count} furniture entries.");
 
+                int maxConcurrency = 100;
+                using SemaphoreSlim globalSemaphore = new SemaphoreSlim(maxConcurrency);
+                var tasks = new List<Task>();
+
                 foreach (var (classname, revision) in furniEntries)
                 {
-                    string furnitureName = classname.Split('*')[0];
-                    string variant = classname.Contains('*') ? classname.Split('*')[1] : "";
-                    string iconName = string.IsNullOrEmpty(variant) ? furnitureName : $"{furnitureName}_{variant}";
-
-                    string swfFilePath = $"./Habbo_Default/hof_furni/{furnitureName}.swf";
-                    string iconFilePath = $"./Habbo_Default/hof_furni/icons/{iconName}_icon.png";
-
-                    if (!File.Exists(swfFilePath))
+                    tasks.Add(Task.Run(async () =>
                     {
-                        string swfUrl = $"{furnitureUrl}/{revision}/{furnitureName}.swf";
+                        string furnitureName = classname.Split('*')[0];
+                        string variant = classname.Contains('*') ? classname.Split('*')[1] : "";
+                        string iconName = string.IsNullOrEmpty(variant) ? furnitureName : $"{furnitureName}_{variant}";
 
-                        if (await FileExistsOnServerAsync(swfUrl))
+                        string swfFilePath = $"./Habbo_Default/hof_furni/{furnitureName}.swf";
+                        string iconFilePath = $"./Habbo_Default/hof_furni/icons/{iconName}_icon.png";
+
+                        if (!File.Exists(swfFilePath))
                         {
+                            SemaphoreSlim fileLock = fileLocks.GetOrAdd(swfFilePath, _ => new SemaphoreSlim(1, 1));
+                            await fileLock.WaitAsync();
                             try
                             {
-                                Console.ForegroundColor = ConsoleColor.Green;
-                                Console.WriteLine($"Downloading: {furnitureName}.swf");
-                                await DownloadFileAsync(swfUrl, swfFilePath, $"{furnitureName}.swf");
-                                downloadedCount++;
+                                if (!File.Exists(swfFilePath))
+                                {
+                                    await globalSemaphore.WaitAsync();
+                                    try
+                                    {
+                                        string swfUrl = $"{furnitureUrl}/{revision}/{furnitureName}.swf";
+                                        Console.ForegroundColor = ConsoleColor.Green;
+                                        Console.WriteLine($"Downloading: {furnitureName}.swf");
+                                        await DownloadFileAsync(swfUrl, swfFilePath, $"{furnitureName}.swf");
+                                        Interlocked.Increment(ref downloadedCount);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.ForegroundColor = ConsoleColor.Red;
+                                        Console.WriteLine($"Downloading {furnitureName}.swf => Failed: {ex.Message}");
+                                    }
+                                    finally
+                                    {
+                                        Console.ForegroundColor = ConsoleColor.Gray;
+                                        globalSemaphore.Release();
+                                    }
+                                }
                             }
-                            catch (HttpRequestException ex)
+                            finally
                             {
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($"Error downloading {furnitureName}.swf: {ex.Message}");
-                                Console.ForegroundColor = ConsoleColor.Gray;
+                                fileLock.Release();
                             }
                         }
-                    }
 
-                    if (!File.Exists(iconFilePath))
-                    {
-                        string iconUrl = $"{furnitureUrl}/{revision}/{iconName}_icon.png";
-
-                        if (await FileExistsOnServerAsync(iconUrl))
+                        if (!File.Exists(iconFilePath))
                         {
+                            SemaphoreSlim fileLock = fileLocks.GetOrAdd(iconFilePath, _ => new SemaphoreSlim(1, 1));
+                            await fileLock.WaitAsync();
                             try
                             {
-                                await DownloadFileAsync(iconUrl, iconFilePath, $"{iconName}_icon.png");
+                                if (!File.Exists(iconFilePath))
+                                {
+                                    await globalSemaphore.WaitAsync();
+                                    try
+                                    {
+                                        string iconUrl = $"{furnitureUrl}/{revision}/{iconName}_icon.png";
+                                        Console.ForegroundColor = ConsoleColor.Green;
+                                        Console.WriteLine($"Downloading: {iconName}_icon.png");
+                                        await DownloadFileAsync(iconUrl, iconFilePath, $"{iconName}_icon.png");
+                                        Interlocked.Increment(ref iconDownloadCount);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.ForegroundColor = ConsoleColor.Red;
+                                        Console.WriteLine($"Downloading {iconName}_icon.png => Failed: {ex.Message}");
+                                    }
+                                    finally
+                                    {
+                                        Console.ForegroundColor = ConsoleColor.Gray;
+                                        globalSemaphore.Release();
+                                    }
+                                }
                             }
-                            catch (HttpRequestException ex)
+                            finally
                             {
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($"Error downloading {iconName}_icon.png: {ex.Message}");
-                                Console.ForegroundColor = ConsoleColor.Gray;
+                                fileLock.Release();
                             }
                         }
-                    }
+                    }));
                 }
+
+                await Task.WhenAll(tasks);
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Downloading furniture completed!");
-                Console.WriteLine($"Downloaded {downloadedCount} new furniture items.");
+                Console.WriteLine($"Downloaded {downloadedCount} .swf files and {iconDownloadCount} .png icons.");
                 Console.ForegroundColor = ConsoleColor.Gray;
             }
             finally
@@ -142,19 +183,6 @@ namespace ConsoleApplication
                     File.Delete(file);
                 }
                 Directory.Delete("./temp");
-            }
-        }
-
-        private static async Task<bool> FileExistsOnServerAsync(string url)
-        {
-            try
-            {
-                var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
-                return response.IsSuccessStatusCode;
-            }
-            catch
-            {
-                return false;
             }
         }
 
