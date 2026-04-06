@@ -1,4 +1,3 @@
-﻿using System.Collections.Concurrent;
 using System.Xml.Linq;
 
 
@@ -7,7 +6,6 @@ namespace ConsoleApplication
     internal static class FurnitureDownloader
     {
         private static readonly HttpClient httpClient = new HttpClient();
-        private static readonly ConcurrentDictionary<string, SemaphoreSlim> fileLocks = new ConcurrentDictionary<string, SemaphoreSlim>();
 
         internal static async Task DownloadFurnitureAsync()
         {
@@ -80,105 +78,65 @@ namespace ConsoleApplication
                     }
                 }
 
-                // Deduplicate: multiple variants (e.g. chair*1, chair*2) share the same .swf
-                var uniqueSwfEntries = new Dictionary<string, int>();
-                var iconEntries = new List<(string iconName, int revision)>();
+                Console.WriteLine($"Found {furniEntries.Count} furniture entries.");
 
                 foreach (var (classname, revision) in furniEntries)
                 {
-                    string baseName = classname.Split('*')[0];
-                    if (!uniqueSwfEntries.ContainsKey(baseName))
-                        uniqueSwfEntries[baseName] = revision;
-
+                    string furnitureName = classname.Split('*')[0];
                     string variant = classname.Contains('*') ? classname.Split('*')[1] : "";
-                    string iconName = string.IsNullOrEmpty(variant) ? baseName : $"{baseName}_{variant}";
-                    iconEntries.Add((iconName, revision));
-                }
+                    string iconName = string.IsNullOrEmpty(variant) ? furnitureName : $"{furnitureName}_{variant}";
 
-                Console.WriteLine($"Found {furniEntries.Count} furniture entries ({uniqueSwfEntries.Count} unique SWF files, {iconEntries.Count} icons).");
+                    string swfFilePath = $"./Habbo_Default/hof_furni/{furnitureName}.swf";
+                    string iconFilePath = $"./Habbo_Default/hof_furni/icons/{iconName}_icon.png";
 
-                int maxConcurrency = 10;
-                int failedCount = 0;
-                int iconFailedCount = 0;
-                using SemaphoreSlim globalSemaphore = new SemaphoreSlim(maxConcurrency);
-                var tasks = new List<Task>();
-
-                // Download unique SWF files
-                foreach (var (furnitureName, revision) in uniqueSwfEntries)
-                {
-                    tasks.Add(Task.Run(async () =>
+                    if (!File.Exists(swfFilePath))
                     {
-                        string swfFilePath = $"./Habbo_Default/hof_furni/{furnitureName}.swf";
+                        string swfUrl = $"{furnitureUrl}/{revision}/{furnitureName}.swf";
 
-                        if (!File.Exists(swfFilePath))
+                        if (await FileExistsOnServerAsync(swfUrl))
                         {
-                            await globalSemaphore.WaitAsync();
                             try
                             {
-                                string swfUrl = $"{furnitureUrl}/{revision}/{furnitureName}.swf";
                                 Console.ForegroundColor = ConsoleColor.Green;
                                 Console.WriteLine($"Downloading: {furnitureName}.swf");
-                                await DownloadWithRetryAsync(swfUrl, swfFilePath, $"{furnitureName}.swf");
-                                Interlocked.Increment(ref downloadedCount);
+                                await DownloadFileAsync(swfUrl, swfFilePath, $"{furnitureName}.swf");
+                                downloadedCount++;
                             }
-                            catch (Exception ex)
+                            catch (HttpRequestException ex)
                             {
                                 Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($"Downloading {furnitureName}.swf => Failed: {ex.Message}");
-                                Interlocked.Increment(ref failedCount);
-                            }
-                            finally
-                            {
+                                Console.WriteLine($"Error downloading {furnitureName}.swf: {ex.Message}");
                                 Console.ForegroundColor = ConsoleColor.Gray;
-                                globalSemaphore.Release();
                             }
                         }
-                    }));
-                }
+                    }
 
-                // Download icons (each variant has its own icon)
-                foreach (var (iconName, revision) in iconEntries)
-                {
-                    tasks.Add(Task.Run(async () =>
+                    if (!File.Exists(iconFilePath))
                     {
-                        string iconFilePath = $"./Habbo_Default/hof_furni/icons/{iconName}_icon.png";
+                        string iconUrl = $"{furnitureUrl}/{revision}/{iconName}_icon.png";
 
-                        if (!File.Exists(iconFilePath))
+                        if (await FileExistsOnServerAsync(iconUrl))
                         {
-                            await globalSemaphore.WaitAsync();
                             try
                             {
-                                string iconUrl = $"{furnitureUrl}/{revision}/{iconName}_icon.png";
                                 Console.ForegroundColor = ConsoleColor.Green;
                                 Console.WriteLine($"Downloading: {iconName}_icon.png");
-                                await DownloadWithRetryAsync(iconUrl, iconFilePath, $"{iconName}_icon.png");
-                                Interlocked.Increment(ref iconDownloadCount);
+                                await DownloadFileAsync(iconUrl, iconFilePath, $"{iconName}_icon.png");
+                                iconDownloadCount++;
                             }
-                            catch (Exception ex)
+                            catch (HttpRequestException ex)
                             {
                                 Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($"Downloading {iconName}_icon.png => Failed: {ex.Message}");
-                                Interlocked.Increment(ref iconFailedCount);
-                            }
-                            finally
-                            {
+                                Console.WriteLine($"Error downloading {iconName}_icon.png: {ex.Message}");
                                 Console.ForegroundColor = ConsoleColor.Gray;
-                                globalSemaphore.Release();
                             }
                         }
-                    }));
+                    }
                 }
-
-                await Task.WhenAll(tasks);
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("Downloading furniture completed!");
-                Console.WriteLine($"Downloaded {downloadedCount} .swf files and {iconDownloadCount} .png icons.");
-                if (failedCount > 0 || iconFailedCount > 0)
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"Failed: {failedCount} .swf files and {iconFailedCount} .png icons.");
-                }
+                Console.WriteLine($"Downloaded {downloadedCount} new .swf files and {iconDownloadCount} new icons.");
                 Console.ForegroundColor = ConsoleColor.Gray;
             }
             finally
@@ -191,27 +149,16 @@ namespace ConsoleApplication
             }
         }
 
-        private static async Task DownloadWithRetryAsync(string url, string filePath, string fileName, int maxRetries = 4)
+        private static async Task<bool> FileExistsOnServerAsync(string url)
         {
-            for (int attempt = 0; attempt <= maxRetries; attempt++)
+            try
             {
-                try
-                {
-                    await DownloadFileAsync(url, filePath, fileName);
-                    return;
-                }
-                catch (HttpRequestException ex) when (attempt < maxRetries)
-                {
-                    // Don't retry on 404 - file genuinely doesn't exist
-                    if (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-                        throw;
-
-                    int delaySeconds = (int)Math.Pow(2, attempt + 1); // 2s, 4s, 8s, 16s
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"Retry {attempt + 1}/{maxRetries} for {fileName} in {delaySeconds}s...");
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    await Task.Delay(delaySeconds * 1000);
-                }
+                var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
             }
         }
 
