@@ -82,7 +82,7 @@ namespace ConsoleApplication
 
                 Console.WriteLine($"Found {furniEntries.Count} furniture entries.");
 
-                int maxConcurrency = 100;
+                int maxConcurrency = 10;
                 using SemaphoreSlim globalSemaphore = new SemaphoreSlim(maxConcurrency);
                 var tasks = new List<Task>();
 
@@ -111,7 +111,7 @@ namespace ConsoleApplication
                                         string swfUrl = $"{furnitureUrl}/{revision}/{furnitureName}.swf";
                                         Console.ForegroundColor = ConsoleColor.Green;
                                         Console.WriteLine($"Downloading: {furnitureName}.swf");
-                                        await DownloadFileAsync(swfUrl, swfFilePath, $"{furnitureName}.swf");
+                                        await DownloadWithRetryAsync(swfUrl, swfFilePath, $"{furnitureName}.swf");
                                         Interlocked.Increment(ref downloadedCount);
                                     }
                                     catch (Exception ex)
@@ -146,7 +146,7 @@ namespace ConsoleApplication
                                         string iconUrl = $"{furnitureUrl}/{revision}/{iconName}_icon.png";
                                         Console.ForegroundColor = ConsoleColor.Green;
                                         Console.WriteLine($"Downloading: {iconName}_icon.png");
-                                        await DownloadFileAsync(iconUrl, iconFilePath, $"{iconName}_icon.png");
+                                        await DownloadWithRetryAsync(iconUrl, iconFilePath, $"{iconName}_icon.png");
                                         Interlocked.Increment(ref iconDownloadCount);
                                     }
                                     catch (Exception ex)
@@ -183,6 +183,30 @@ namespace ConsoleApplication
                     File.Delete(file);
                 }
                 Directory.Delete("./temp");
+            }
+        }
+
+        private static async Task DownloadWithRetryAsync(string url, string filePath, string fileName, int maxRetries = 4)
+        {
+            for (int attempt = 0; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    await DownloadFileAsync(url, filePath, fileName);
+                    return;
+                }
+                catch (HttpRequestException ex) when (attempt < maxRetries)
+                {
+                    // Don't retry on 404 - file genuinely doesn't exist
+                    if (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+                        throw;
+
+                    int delaySeconds = (int)Math.Pow(2, attempt + 1); // 2s, 4s, 8s, 16s
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"Retry {attempt + 1}/{maxRetries} for {fileName} in {delaySeconds}s...");
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    await Task.Delay(delaySeconds * 1000);
+                }
             }
         }
 
