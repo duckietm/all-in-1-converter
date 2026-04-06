@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Xml.Linq;
 
 
 namespace ConsoleApplication
@@ -12,21 +12,21 @@ namespace ConsoleApplication
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
 
-            string furnidataUrl = config["AppSettings:furnidataTXT"];
+            string furnidataUrl = config["AppSettings:furnidataXML"];
             string furnitureUrl = config["AppSettings:furnitureurl"];
 
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             Directory.CreateDirectory("./Habbo_Default/hof_furni");
-            Directory.CreateDirectory("./Habbo_Default/icons");
+            Directory.CreateDirectory("./Habbo_Default/hof_furni/icons");
             Directory.CreateDirectory("./temp");
 
-            string furnidataTxtPath = "./temp/furnidata.txt";
+            string furnidataXmlPath = "./temp/furnidata.xml";
 
             try
             {
                 Console.WriteLine("Downloading furnidata...");
-                await DownloadFileAsync(furnidataUrl, furnidataTxtPath, "furnidata.txt");
+                await DownloadFileAsync(furnidataUrl, furnidataXmlPath, "furnidata.xml");
                 Console.WriteLine("Furnidata downloaded successfully.");
             }
             catch (Exception ex)
@@ -41,32 +41,56 @@ namespace ConsoleApplication
 
             try
             {
-                string furnidataContent = File.ReadAllText(furnidataTxtPath);
-                string pattern = @"\[""(.*?)"",""(.*?)"",""(.*?)"",""(.*?)""\]";
-                MatchCollection matches = Regex.Matches(furnidataContent, pattern);
-
-                Console.WriteLine($"Found {matches.Count} furniture entries.");
-
-                foreach (Match match in matches)
+                XDocument doc = XDocument.Load(furnidataXmlPath);
+                var root = doc.Element("furnidata");
+                if (root == null)
                 {
-                    if (match.Groups.Count < 5)
-                        continue;
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Error: Invalid furnidata XML format.");
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    return;
+                }
 
-                    string furnitureNameWithMetadata = match.Groups[3].Value.Replace("\"", "");
-                    string furnitureDirWithMetadata = match.Groups[4].Value.Replace("\"", "");
+                var furniEntries = new List<(string classname, int revision)>();
 
-                    string furnitureName = furnitureNameWithMetadata.Split('*')[0];
-                    string variant = furnitureNameWithMetadata.Contains('*') ? furnitureNameWithMetadata.Split('*')[1] : "";
+                var roomItems = root.Element("roomitemtypes");
+                if (roomItems != null)
+                {
+                    foreach (var item in roomItems.Elements("furnitype"))
+                    {
+                        string classname = (string)item.Attribute("classname") ?? "";
+                        int revision = (int?)item.Element("revision") ?? 0;
+                        if (!string.IsNullOrEmpty(classname))
+                            furniEntries.Add((classname, revision));
+                    }
+                }
 
+                var wallItems = root.Element("wallitemtypes");
+                if (wallItems != null)
+                {
+                    foreach (var item in wallItems.Elements("furnitype"))
+                    {
+                        string classname = (string)item.Attribute("classname") ?? "";
+                        int revision = (int?)item.Element("revision") ?? 0;
+                        if (!string.IsNullOrEmpty(classname))
+                            furniEntries.Add((classname, revision));
+                    }
+                }
+
+                Console.WriteLine($"Found {furniEntries.Count} furniture entries.");
+
+                foreach (var (classname, revision) in furniEntries)
+                {
+                    string furnitureName = classname.Split('*')[0];
+                    string variant = classname.Contains('*') ? classname.Split('*')[1] : "";
                     string iconName = string.IsNullOrEmpty(variant) ? furnitureName : $"{furnitureName}_{variant}";
-                    string furnitureDir = furnitureDirWithMetadata.Split(',')[0];
 
                     string swfFilePath = $"./Habbo_Default/hof_furni/{furnitureName}.swf";
                     string iconFilePath = $"./Habbo_Default/hof_furni/icons/{iconName}_icon.png";
 
                     if (!File.Exists(swfFilePath))
                     {
-                        string swfUrl = $"{furnitureUrl}/{furnitureDir}/{furnitureName}.swf";
+                        string swfUrl = $"{furnitureUrl}/{revision}/{furnitureName}.swf";
 
                         if (await FileExistsOnServerAsync(swfUrl))
                         {
@@ -88,7 +112,7 @@ namespace ConsoleApplication
 
                     if (!File.Exists(iconFilePath))
                     {
-                        string iconUrl = $"{furnitureUrl}/{furnitureDir}/{iconName}_icon.png";
+                        string iconUrl = $"{furnitureUrl}/{revision}/{iconName}_icon.png";
 
                         if (await FileExistsOnServerAsync(iconUrl))
                         {
