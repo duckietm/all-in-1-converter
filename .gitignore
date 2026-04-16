@@ -1,2 +1,5 @@
 .vs/
 /DownloadHabbo/SourceCode/obj
+SourceCode/obj/
+SourceCode/bin/Debug/net8.0/runtimes/
+SourceCode/bin/Debug/net8.0/Habbo Downloader
