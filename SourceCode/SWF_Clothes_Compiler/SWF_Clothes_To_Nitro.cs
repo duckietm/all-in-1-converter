@@ -1,10 +1,14 @@
 ﻿using Habbo_Downloader.SWFCompiler.Mapper.Assests;
 using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
+using Habbo_Downloader.SWFCompiler.Mapper.Logic;
+using Habbo_Downloader.SWF_Pets_Compiler.Mapper.Visualizations;
+using Habbo_DownloaderSWF_Pets_Compiler.Mapper.Index;
 using Habbo_Downloader.Tools;
 using System.Drawing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Concurrent;
+using System.Xml.Linq;
 
 namespace Habbo_Downloader.Compiler
 {
@@ -103,6 +107,17 @@ namespace Habbo_Downloader.Compiler
             // Process asset data.
             var assetDataResult = await GetAssetDataAsync(binaryOutputPath, imageSources, csvPath, fileOutputDirectory);
 
+            // Optional per-SWF data (needed for Buddy / pet_* clothes that have their own
+            // postures / animations — regular human figure parts simply don't ship these
+            // bins, so these helpers just return null and the fields are omitted).
+            var indexTask = GetIndexDataAsync(binaryOutputPath);
+            var logicTask = GetLogicDataAsync(binaryOutputPath);
+            var visualizationTask = GetVisualizationsDataAsync(binaryOutputPath);
+            await Task.WhenAll(indexTask, logicTask, visualizationTask);
+            var indexData = indexTask.Result;
+            var logicData = logicTask.Result;
+            var visualizations = visualizationTask.Result;
+
             // Image Processing.
             string imagesDirectory = Path.Combine(binaryOutputPath, "images");
             string tmpDirectory = Path.Combine(binaryOutputPath, "tmp");
@@ -129,15 +144,49 @@ namespace Habbo_Downloader.Compiler
                 }
 
                 var jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
+
+                object? logicObject = null;
+                if (logicData != null)
+                {
+                    logicObject = new
+                    {
+                        model = logicData.Model == null ? null : new
+                        {
+                            dimensions = logicData.Model.Dimensions,
+                            directions = logicData.Model.Directions
+                        },
+                        action = logicData.Action,
+                        maskType = logicData.MaskType,
+                        credits = logicData.Credits,
+                        soundSample = logicData.SoundSample,
+                        planetSystems = logicData.PlanetSystems?.Any() == true ? logicData.PlanetSystems : null,
+                        particleSystems = logicData.ParticleSystems?.Any() == true ? logicData.ParticleSystems : null,
+                        customVars = logicData.CustomVars?.Variables.Any() == true ? logicData.CustomVars : null
+                    };
+                }
+
+                var visualizationsList = visualizations?.Where(v => !IsVisualizationEmpty(v)).ToList();
+                if (visualizationsList != null && visualizationsList.Count == 0)
+                    visualizationsList = null;
+
+                string? indexName = indexData?.Name;
+                string resolvedName = !string.IsNullOrEmpty(indexName) ? indexName! : assetDataResult.LibraryName;
+
                 var jsonContent = JsonSerializer.Serialize(new
                 {
+                    type = indexData?.Type,
+                    name = resolvedName,
+                    logicType = indexData?.LogicType,
+                    visualizationType = indexData?.VisualizationType,
                     assets = assetDataResult.Assets,
-                    name = assetDataResult.LibraryName,
+                    logic = logicObject,
+                    visualizations = visualizationsList,
                     spritesheet = spriteSheetData
                 }, new JsonSerializerOptions
                 {
                     WriteIndented = true,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
                 });
 
                 await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
@@ -193,6 +242,68 @@ namespace Habbo_Downloader.Compiler
             }
 
             return await ClothesAssetsMapper.ParseAssetsFileAsync(null, imageSources, manifestFiles[0], csvPath, fileOutputDirectory);
+        }
+
+        private static async Task<IndexPetsData?> GetIndexDataAsync(string binaryOutputPath)
+        {
+            var binaryDataPath = Path.Combine(binaryOutputPath, "binaryData");
+            if (!Directory.Exists(binaryDataPath)) return null;
+
+            var indexFiles = Directory.GetFiles(binaryDataPath, "*_index.*", SearchOption.TopDirectoryOnly);
+            return indexFiles.Length > 0 ? await IndexPetsMapper.ParsePetsIndexFileAsync(indexFiles[0]) : null;
+        }
+
+        private static async Task<AssetLogicData?> GetLogicDataAsync(string binaryOutputPath)
+        {
+            var binaryDataPath = Path.Combine(binaryOutputPath, "binaryData");
+            if (!Directory.Exists(binaryDataPath)) return null;
+
+            var logicFiles = Directory.GetFiles(binaryDataPath, "*_logic.*", SearchOption.TopDirectoryOnly);
+            if (logicFiles.Length == 0) return null;
+
+            try
+            {
+                string logicContent = await File.ReadAllTextAsync(logicFiles[0]);
+                XElement logicElement = XElement.Parse(logicContent);
+                return LogicMapper.MapLogicXml(logicElement);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Error parsing logic for clothes SWF: {ex.Message}");
+                return null;
+            }
+        }
+
+        private static async Task<List<Visualization>?> GetVisualizationsDataAsync(string binaryOutputPath)
+        {
+            var binaryDataPath = Path.Combine(binaryOutputPath, "binaryData");
+            if (!Directory.Exists(binaryDataPath)) return null;
+
+            var visualizationFiles = Directory.GetFiles(binaryDataPath, "*_visualization.*", SearchOption.TopDirectoryOnly);
+            if (visualizationFiles.Length == 0) return null;
+
+            try
+            {
+                string visualizationContent = await File.ReadAllTextAsync(visualizationFiles[0]);
+                XElement visualizationElement = XElement.Parse(visualizationContent);
+                return VisualizationsMapper.MapVisualizationsXml(visualizationElement);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Error parsing visualization for clothes SWF: {ex.Message}");
+                return null;
+            }
+        }
+
+        private static bool IsVisualizationEmpty(Visualization v)
+        {
+            return v == null ||
+                   (v.Layers == null || v.Layers.Count == 0) &&
+                   (v.Directions == null || v.Directions.Count == 0) &&
+                   (v.Animations == null || v.Animations.Count == 0) &&
+                   (v.Colors == null || v.Colors.Count == 0) &&
+                   (v.Postures?.Postures == null || v.Postures.Postures.Count == 0) &&
+                   (v.Gestures == null || v.Gestures.Count == 0);
         }
 
         private static async Task BundleNitroFileAsync(string outputDirectory, string fileName, string nitroOutputDirectory, string spriteSheetPath)
