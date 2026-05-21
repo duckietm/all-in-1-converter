@@ -2,11 +2,12 @@ using System;
 
 namespace Habbo_Downloader.App
 {
-    public enum RunMode { Cli, Tui, Gui }
+    public enum RunMode { Cli, Tui, Gui, Quit }
 
     public sealed class Args
     {
         public RunMode Mode { get; set; } = RunMode.Tui;
+        public bool ModeExplicitlySet { get; set; } // true when the user passed --cli/--tui/--gui
         public bool ShowHelp { get; set; }
         public bool ShowVersion { get; set; }
         public string? Command { get; set; } // optional: directly invoke a top-level menu (cli mode only)
@@ -18,9 +19,9 @@ namespace Habbo_Downloader.App
             {
                 switch (argv[i].ToLowerInvariant())
                 {
-                    case "--gui":  a.Mode = RunMode.Gui; break;
-                    case "--tui":  a.Mode = RunMode.Tui; break;
-                    case "--cli":  a.Mode = RunMode.Cli; break;
+                    case "--gui":  a.Mode = RunMode.Gui; a.ModeExplicitlySet = true; break;
+                    case "--tui":  a.Mode = RunMode.Tui; a.ModeExplicitlySet = true; break;
+                    case "--cli":  a.Mode = RunMode.Cli; a.ModeExplicitlySet = true; break;
                     case "--help":
                     case "-h":     a.ShowHelp = true; break;
                     case "--version":

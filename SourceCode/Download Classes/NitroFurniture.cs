@@ -86,7 +86,7 @@ namespace ConsoleApplication
             }
 
             Console.WriteLine("Press Enter to exit...");
-            while (Console.ReadKey(true).Key != ConsoleKey.Enter) { }
+            Console.ReadLine(); // ReadLine is captured by TUI / GUI output windows; ReadKey is not.
         }
 
         private static async Task<(int NitroCount, int IconCount)> ProcessFurniTypeAsync(FurniType[] furniTypes, string furnitureUrl, string furnitureIconUrl)

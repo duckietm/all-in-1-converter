@@ -32,9 +32,13 @@ namespace ConsoleApplication
                 originalPath = Path.Combine(Directory.GetCurrentDirectory(), "Habbo_Default", "files", "json", "ProductData.json");
 
             JObject originalJson;
+            bool originalWasSplit;
             try
             {
+                originalWasSplit = Directory.Exists(originalPath) && ProductDataIO.IsSplitDirectory(originalPath);
                 originalJson = await ProductDataIO.LoadAsync(originalPath);
+                int n = (originalJson["productdata"]?["product"] as JArray)?.Count ?? 0;
+                Console.WriteLine($"Loaded original as {(originalWasSplit ? "SPLIT (manifest.json5)" : "FLAT (single .json)")} - {n} products");
             }
             catch (FileNotFoundException ex)
             {
@@ -48,38 +52,44 @@ namespace ConsoleApplication
                 var importEntries = CollectImportEntries(importDir);
                 if (importEntries.Count == 0)
                 {
-                    Console.WriteLine("No import entries found in Import_ProductData/ (expected: *.json files or sub-directories with manifest.json5).");
-                    return;
+                    Console.WriteLine("No import entries found in Import_ProductData/.");
+                    Console.WriteLine("Continuing anyway so you can convert the original between flat and split formats.");
                 }
-
-                bool replaceAll = false;
-                bool skipAll = false;
-
-                foreach (var entry in importEntries)
+                else
                 {
-                    Console.WriteLine($"Processing: {Path.GetFileName(entry)}");
-                    JObject importJson = await ProductDataIO.LoadAsync(entry);
-                    int importedCount = MergeJson(originalJson, importJson, "productdata", ref replaceAll, ref skipAll);
-                    totalImported += importedCount;
-                    Console.WriteLine($"  + {importedCount} items merged");
+                    bool replaceAll = false;
+                    bool skipAll = false;
+
+                    foreach (var entry in importEntries)
+                    {
+                        Console.WriteLine($"Processing: {Path.GetFileName(entry)}");
+                        JObject importJson = await ProductDataIO.LoadAsync(entry);
+                        int importedCount = MergeJson(originalJson, importJson, "productdata", ref replaceAll, ref skipAll);
+                        totalImported += importedCount;
+                        Console.WriteLine($"  + {importedCount} items merged");
+                    }
+
+                    SortJsonByCode(originalJson, "productdata");
                 }
 
-                SortJsonByCode(originalJson, "productdata");
-
-                Console.Write("Output format: (F)lat single ProductData.json or (S)plit manifest.json5+tier [default F]: ");
+                Console.WriteLine();
+                Console.WriteLine("Pick the output format:");
+                Console.WriteLine("  F = flat single ProductData.json (legacy)");
+                Console.WriteLine("  S = split manifest.json5 + core/products-NNN.json5 (chunks of 500)");
+                Console.Write("Output format [F/S, default F]: ");
                 var fmtChoice = Console.ReadLine()?.Trim().ToUpperInvariant();
                 if (fmtChoice == "S")
                 {
                     var splitOut = Path.Combine(mergedDir, "ProductData_split");
                     if (Directory.Exists(splitOut)) Directory.Delete(splitOut, true);
                     await ProductDataIO.SaveAsync(originalJson, splitOut, GamedataFormat.Split);
-                    Console.WriteLine($"ProductData merged and saved (split mode) to {splitOut}");
+                    Console.WriteLine($"ProductData saved (SPLIT mode) to {splitOut}");
                 }
                 else
                 {
                     var mergedFilePath = Path.Combine(mergedDir, ProductDataIO.FlatFileName);
                     await ProductDataIO.SaveAsync(originalJson, mergedFilePath, GamedataFormat.Flat);
-                    Console.WriteLine($"ProductData merged and saved (flat) to {mergedFilePath}");
+                    Console.WriteLine($"ProductData saved (FLAT mode) to {mergedFilePath}");
                 }
 
                 Console.WriteLine($"Total Products imported: {totalImported}");

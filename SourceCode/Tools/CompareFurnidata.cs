@@ -34,9 +34,14 @@ namespace ConsoleApplication
                 originalPath = Path.Combine(Directory.GetCurrentDirectory(), "Habbo_Default", "files", "json", "FurnitureData.json");
 
             JObject originalJson;
+            bool originalWasSplit;
             try
             {
+                originalWasSplit = Directory.Exists(originalPath) && FurnidataIO.IsSplitDirectory(originalPath);
                 originalJson = await FurnidataIO.LoadAsync(originalPath);
+                int floor = (originalJson["roomitemtypes"]?["furnitype"] as JArray)?.Count ?? 0;
+                int wall  = (originalJson["wallitemtypes"]?["furnitype"] as JArray)?.Count ?? 0;
+                Console.WriteLine($"Loaded original as {(originalWasSplit ? "SPLIT (manifest.json5)" : "FLAT (single .json)")} - floor={floor}, wall={wall}");
             }
             catch (FileNotFoundException ex)
             {
@@ -50,37 +55,44 @@ namespace ConsoleApplication
                 var importEntries = CollectImportEntries(importDir);
                 if (importEntries.Count == 0)
                 {
-                    Console.WriteLine("No import entries found in Import_Furnidata/ (expected: *.json files or sub-directories with manifest.json5).");
-                    return;
+                    Console.WriteLine("No import entries found in Import_Furnidata/.");
+                    Console.WriteLine("Continuing anyway so you can convert the original between flat and split formats.");
                 }
-
-                foreach (var entry in importEntries)
+                else
                 {
-                    Console.WriteLine($"Processing: {Path.GetFileName(entry)}");
-                    var importJson = await FurnidataIO.LoadAsync(entry);
-                    int importedCount = MergeJson(originalJson, importJson, "roomitemtypes");
-                    importedCount += MergeJson(originalJson, importJson, "wallitemtypes");
-                    totalImported += importedCount;
-                    Console.WriteLine($"  + {importedCount} items merged");
+                    foreach (var entry in importEntries)
+                    {
+                        Console.WriteLine($"Processing: {Path.GetFileName(entry)}");
+                        var importJson = await FurnidataIO.LoadAsync(entry);
+                        int importedCount = MergeJson(originalJson, importJson, "roomitemtypes");
+                        importedCount += MergeJson(originalJson, importJson, "wallitemtypes");
+                        totalImported += importedCount;
+                        Console.WriteLine($"  + {importedCount} items merged");
+                    }
+
+                    SortJsonByID(originalJson, "roomitemtypes");
+                    SortJsonByID(originalJson, "wallitemtypes");
                 }
 
-                SortJsonByID(originalJson, "roomitemtypes");
-                SortJsonByID(originalJson, "wallitemtypes");
-
-                Console.Write("Output format: (F)lat single FurnitureData.json or (S)plit manifest.json5+tier [default F]: ");
+                Console.WriteLine();
+                Console.WriteLine("Pick the output format:");
+                Console.WriteLine("  F = flat single FurnitureData.json (legacy, what duckietm originally produced)");
+                Console.WriteLine("  S = split manifest.json5 + core/floor-NNN.json5 + core/wall-NNN.json5");
+                Console.WriteLine("      (chunks of 300; same layout as Nitro-V3/scripts/split-gamedata.mjs)");
+                Console.Write("Output format [F/S, default F]: ");
                 var fmtChoice = Console.ReadLine()?.Trim().ToUpperInvariant();
                 if (fmtChoice == "S")
                 {
                     var splitOut = Path.Combine(mergedDir, "FurnitureData_split");
                     if (Directory.Exists(splitOut)) Directory.Delete(splitOut, true);
                     await FurnidataIO.SaveAsync(originalJson, splitOut, GamedataFormat.Split);
-                    Console.WriteLine($"Furnidata merged and saved (split mode) to {splitOut}");
+                    Console.WriteLine($"Furnidata saved (SPLIT mode) to {splitOut}");
                 }
                 else
                 {
                     var mergedFilePath = Path.Combine(mergedDir, FurnidataIO.FlatFileName);
                     await FurnidataIO.SaveAsync(originalJson, mergedFilePath, GamedataFormat.Flat);
-                    Console.WriteLine($"Furnidata merged and saved (flat) to {mergedFilePath}");
+                    Console.WriteLine($"Furnidata saved (FLAT mode) to {mergedFilePath}");
                 }
 
                 Console.WriteLine($"Total Furniture imported: {totalImported}");

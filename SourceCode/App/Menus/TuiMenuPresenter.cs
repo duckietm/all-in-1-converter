@@ -23,18 +23,15 @@ namespace Habbo_Downloader.App.Menus
 
                 if (picked.IsSubMenu)
                 {
-                    // The action opens another MenuHost.ShowAsync internally; let it
-                    // render its own mainframe screen instead of trapping it in the
-                    // output-capture window (which would just show an empty TextView
-                    // while the nested TUI is on screen).
                     await picked.Action();
                 }
                 else
                 {
-                    // Leaf action: capture its Console output in the mainframe-styled
-                    // TUI window so it matches the look of every menu screen.
                     await TuiOutputWindow.RunAsync($"{title} -> {picked.Label}", picked.Action);
                 }
+
+                // SWITCH UI MODE asks the runner to terminate; bail out of every menu.
+                if (MenuHost.SwitchRequested) return;
             }
         }
 

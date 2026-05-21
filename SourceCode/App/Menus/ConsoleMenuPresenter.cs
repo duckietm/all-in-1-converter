@@ -63,9 +63,16 @@ namespace Habbo_Downloader.App.Menus
                 {
                     Console.ResetColor();
                     Console.WriteLine();
-                    Console.WriteLine("Press any key to continue...");
-                    Console.ReadKey();
+                    if (!MenuHost.SwitchRequested)
+                    {
+                        Console.WriteLine("Press any key to continue...");
+                        Console.ReadKey();
+                    }
                 }
+
+                // The "Switch UI mode" action sets MenuHost.SwitchRequested. Bail out
+                // of every nested menu so App.RunAsync can restart the new runner.
+                if (MenuHost.SwitchRequested) return;
             }
         }
 

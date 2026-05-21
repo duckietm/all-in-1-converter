@@ -8,6 +8,11 @@
     <Nullable>enable</Nullable>
     <ApplicationIcon>favicon.ico</ApplicationIcon>
     <LangVersion>latest</LangVersion>
+    <!-- Publish targets supported by build-publish scripts. -->
+    <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+    <!-- Avalonia + Terminal.Gui include native libs that must be unpacked at
+         runtime when produced as a single-file bundle. -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +33,10 @@
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="Terminal.Gui" Version="1.19.0" />
+    <PackageReference Include="Avalonia" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.3" />
   </ItemGroup>
 
 </Project>

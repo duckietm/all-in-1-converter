@@ -44,7 +44,7 @@ namespace ConsoleApplication
                 if (figureDataEntries.Count == 0 && figureMapEntries.Count == 0)
                 {
                     Console.WriteLine("No FigureData* or FigureMap* import entries found in Import_ClothesData/.");
-                    return;
+                    Console.WriteLine("Continuing anyway so you can convert the originals between flat and split formats.");
                 }
 
                 foreach (var entry in figureDataEntries)
@@ -64,7 +64,11 @@ namespace ConsoleApplication
                     Console.WriteLine($"  + {n} merged into FigureMap");
                 }
 
-                Console.Write("Output format: (F)lat single FigureData.json+FigureMap.json or (S)plit manifest.json5+tier [default F]: ");
+                Console.WriteLine();
+                Console.WriteLine("Pick the output format for FigureData + FigureMap:");
+                Console.WriteLine("  F = flat single FigureData.json + FigureMap.json (legacy)");
+                Console.WriteLine("  S = split manifest.json5 + tier directories for both datasets");
+                Console.Write("Output format [F/S, default F]: ");
                 var fmtChoice = Console.ReadLine()?.Trim().ToUpperInvariant();
                 if (fmtChoice == "S")
                 {

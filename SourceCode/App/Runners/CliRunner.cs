@@ -27,6 +27,8 @@ namespace Habbo_Downloader.App.Runners
                 new("3",       "Hotel Tools",                         HotelToolsMenu.DisplayMenu,    IsSubMenu: true),
                 new("4",       "Database Tools",                      DatabaseMenu.DisplayMenu,      IsSubMenu: true),
                 new("version", "Fetch current Habbo client version",  DisplayVersionAsync),
+                new("credits", "Credits & contributors",               Habbo_Downloader.App.Credits.ShowAsync),
+                Habbo_Downloader.App.UiSwitcher.ForCurrentMode(),
                 new("help",    "Show help",                           DisplayHelpAsync),
             }, isTopLevel: true);
         }
