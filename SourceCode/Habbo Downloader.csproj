@@ -17,6 +17,12 @@
 
   <ItemGroup>
     <Content Include="favicon.ico" />
+    <!-- config.ini is loaded by every downloader / DatabaseConfig with a
+         relative path, so it must sit next to the binary in both build and
+         publish output. -->
+    <Content Include="config.ini">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -26,6 +32,22 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!-- Reliable copy of Compiled/Tools/ next to the published binary.
+       `Content` items alone get filtered when PublishSingleFile=true is on
+       (the publisher strips .exe / .jar / .swc / .ico as "runtime artifacts"),
+       so the release zip ends up with a half-empty Tools/ffdec/ and every
+       SWF -> Nitro conversion fails. Manual copy in AfterPublish bypasses
+       the filter and ships the entire 21 MB FFDec bundle untouched. -->
+  <Target Name="CopyExternalToolsToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <ExternalToolFile Include="..\Compiled\Tools\**\*.*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(ExternalToolFile)"
+      DestinationFiles="@(ExternalToolFile->'$(PublishDir)Tools\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="MySql.Data" Version="9.7.0" />

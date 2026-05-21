@@ -30,13 +30,25 @@ namespace ConsoleApplication
 
             string furnidataJsonPath = "./temp/furnidata.json";
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+            if (httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             try
             {
-                Console.WriteLine("Downloading furnidata...");
-                await DownloadFileAsync(furnidataUrl, furnidataJsonPath, "furnidata.json");
-                Console.WriteLine("Furnidata downloaded successfully.");
+                if (NitroSplitDownloader.LooksLikeSplitUrl(furnidataUrl))
+                {
+                    Console.WriteLine($"Downloading furnidata (JSON5 split layout) from {furnidataUrl} ...");
+                    var splitMirrorDir = "./temp/furnidata_split";
+                    var merged = await NitroSplitDownloader.FetchSplitAsync(httpClient, furnidataUrl, splitMirrorDir, "furnidata");
+                    await File.WriteAllTextAsync(furnidataJsonPath, merged.ToString(Newtonsoft.Json.Formatting.None));
+                    Console.WriteLine("Furnidata merged from split layout.");
+                }
+                else
+                {
+                    Console.WriteLine("Downloading furnidata (flat single-file)...");
+                    await DownloadFileAsync(furnidataUrl, furnidataJsonPath, "furnidata.json");
+                    Console.WriteLine("Furnidata downloaded successfully.");
+                }
             }
             catch (Exception ex)
             {
