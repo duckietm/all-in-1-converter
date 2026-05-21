@@ -1,116 +1,176 @@
-# Setup
-Place the files where you like</br>
-make sure you got
-- .NET SDK : https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-8.0.406-windows-x64-installer</br>
-- Latest NodeJS: https://nodejs.org/en/download
+# All-in-1 Converter
 
+A Habbo asset workstation that bundles every step of a hotel pipeline behind
+a single binary: download Habbo's official CDN assets, import custom packs,
+merge furnidata / clothesdata / productdata, convert SWF → Nitro, generate
+the SQL inserts for `items_base` + `catalog_items`, and fix the database in
+place.
 
-# Step 1
-Download all the swf's with the download tool : C:\Tools\DownloadHabbo\Habbo_Downloader.exe
+It ships with three interchangeable UI shells (same workflows behind each)
+plus a self-contained binary for Windows and Linux.
 
-Download all the required assets
+## At a glance
 
-```cmd
-Go to : C:\Repo\all-in-1-converter\DownloadHabbo\Compiled
-Check the config.ini to make sure you have selected the right language
-Run the : Habbo Downloader.exe
-Select option : 1
-type : Download All
+| | |
+|---|---|
+| Runtime | .NET 10 LTS, cross-platform (Windows x64, Linux x64) |
+| Spritesheet engine | SixLabors.ImageSharp 3.x (replaces System.Drawing) |
+| Terminal UI | Terminal.Gui 1.19 (mouse + keyboard) |
+| Desktop UI | Avalonia 12 (Mainframe + Matrix themes) |
+| Database | MySql.Data 9.7 (MariaDB / MySQL) |
+| SWF decompiler | JPEXS Free Flash Decompiler (`Tools/ffdec/`) |
+| Data formats | Flat JSON **or** JSON5 split-mode (`manifest.json5` + `core/custom/seasonal/` tiers, matches Nitro V3 `split-gamedata.mjs`) |
+
+## Three ways to drive it
+
+The same menus and tools sit behind each shell, so anything you learn in
+one carries over.
+
+- **TUI** — mouse-driven mainframe terminal (Terminal.Gui).
+  IBM 3270 / CICS look, mouse + keyboard, F-keys, captured output in a
+  scrollable log pane. **Recommended.**
+
+- **CLI** — same mainframe theme rendered with plain `Console.WriteLine`.
+  Keyboard only. Useful over SSH, piped, or in restricted terminals.
+
+- **GUI** — native desktop window (Avalonia). Two themes:
+  - **Mainframe** — cyan header bar, phosphor green body, red BACK/EXIT,
+    classic bank-terminal feel.
+  - **Matrix** — pure phosphor green on black, with a digital-rain
+    background of digits cascading behind the menus.
+
+When the binary is **double-clicked from a file manager** it opens straight
+into the GUI. When it's launched from a **terminal** it asks whether you
+want TUI or CLI (GUI is not offered from a terminal session because the
+operator usually wants to stay in the terminal). Inside any shell, the
+`s` menu entry hot-swaps between modes without restarting the process.
+
+```text
+Habbo Downloader            # mode selector if launched from a terminal,
+                            # GUI directly if double-clicked
+Habbo Downloader --tui      # mouse mainframe TUI
+Habbo Downloader --cli      # keyboard-only mainframe CLI
+Habbo Downloader --gui      # desktop window (prompts theme)
+Habbo Downloader --help     # flags + commands
+Habbo Downloader --version  # fetched current Habbo client version
 ```
-This will download all that is required.
 
-# What is new ?
-Blazing fast badge downloader for habbo badges.</br>
-Download all original Habbo assets</br>
-Added .nitro support so a easy way to download all furni / clothes / pets from every retro (instruction in the config.ini what to do!)</br>
-Multi Merge option for easy backtrack of all your custom and easy intergrate all your needs for Furni and clothes (i have added examples in the merge directory)</br>
-A new written Compile and Decompile for all .nitro files</br>
+## Top-level menus
 
-Also i changed the SQL-Generator to load variables from the .nitro furni
-- width
-- length
-- height
-- interaction count
-  
-The SQL Furni generator, this will generate all the SQL's for you.</br>
-- Step 1 => just place all .nitro or .swf files into the Generate/Furniture that you want in the SQL
-- Step 2 => place the FurnitureData.json in the Generate/Furnidata
-- Last step : in the download tool run the Generate SQL (option 4)
-So more Copy & Paste and way more easyer to combine stuff from other resources!
+Every menu has an auto-injected `?` entry that documents what each item
+does and what input it expects — **read it from inside the tool, no need
+to keep notes**.
 
-The SWF to Nitro generator</br>
-- Clothes
-- Furniture
-- Pets
-- Effects
-Here you can confurt all the above to .nitro files so they can be used for nitro based hotels
+1. **Habbo Original Downloads** — pull every official asset from the Habbo
+   CDN: badges, clothes (figuredata + figuremap), effects, furnidata,
+   furniture SWF, icons, MP3, productdata, quest images, reception art,
+   texts, variables. `all` runs the full bootstrap.
+2. **Nitro Custom Downloads** — multi-source import of custom furniture /
+   clothes packs.
+3. **Hotel Tools** — Merge Furnidata / Productdata / Clothesdata (with
+   dual flat ↔ JSON5 split-mode IO), Generate SQL for `items_base` +
+   `catalog_items`, Decompile / Compile `.nitro` bundles, SWF → Nitro for
+   Furniture / Clothes / Pets / Effects.
+4. **Database Tools** — show DB version, optimize tables, fix offer_id,
+   fix sit/lay/walk in `items_base`, fix sprite_id / item_id from JSON.
 
-Database tools</br>
-- show Database version
-- Database Optimize
-- Database fix the the offer_id.
-- Database Fix Settings lay / walk on / sit in the database.
-- Datavase Fixing Sprite_ID in items_base
+## JSON + JSON5 split-mode IO
 
-For the custom Effects they are in the Addons\Custom Effects folder, please read the README.md how to import this, ofcourse you can customize if you want !
+Every Merge tool and the SQL Generator auto-detect the input format:
 
-# Instructions
+- a `*.json` file → read as **flat** (the legacy single-blob layout)
+- a directory with `manifest.json5` + `core/` / `custom/` / `seasonal/`
+  tiers → merged in load order, later tier wins by id / classname / code
 
-There are 4 main functions:
-* Download all Default habbo Assets
-* Download furni / clothes from other retro's
-* Tools ==> Merge / Generate SQL / Decompile Nitro / Compile Nitro / All SWF to Nitro
-* Database Tools
+On output you're prompted **F** (flat single file) or **S** (split: `manifest.json5` + `core/floor-NNN.json5` + `core/wall-NNN.json5`, chunks of 300; same layout produced by Nitro V3's `scripts/split-gamedata.mjs`).
 
-Database ==>
-* Fix Sprite_ID and Item_IDS in the items_base from the JSON
-* Fix Sit / Lay / Walk in the items_base with the settings from the json
-* Fix the Offer_ID in the database from the JSON
-* Optimize your database
-* And show some info
+If you only want a one-shot conversion (flat → split or split → flat), run
+the Merge entry with an empty `Import_*/` directory and pick the desired
+output format — no merge, just a re-encode.
 
-There will be folders created :
+## SQL generator workflow
 
-Database / Variables ==> place here in the variables the FurnitureData.json you want to use to fix your database
+1. Drop `.nitro` (or `.swf`) files into `Generate/Furniture/` (recursive).
+2. Drop `FurnitureData.json` (or a split directory) into `Generate/Furnidata/`.
+3. Run Hotel Tools → Generate SQL.
+4. The tool reads width / length / height / interaction count straight
+   from each `.nitro` and asks for:
+   - Starting ID for `items_base` and `catalog_items` (e.g. `select * from
+     items_base order by id desc limit 1`).
+   - `Catalog_Page` ID where you want the items.
+5. Output goes to `Generate/Output_SQL/` with a timestamp, one INSERT per
+   item.
 
+## Runtime layout
 
-Generate has 3 folders:
-Furnidata ==> place here in the FurnitureData.json you want to use.
+These directories are created next to the binary on first run (do **not**
+commit them):
 
-Furniture ==> place here furniture you want to add to the SQL file this can be .nitro or .swf it will read all off them</br>
-And the Output SQL here will be the SQL files you generate, it will make on timestamp so you can keep a record.</br>
-The only thing you need to provide :</br>
-Enter the starting ID for items_base and catalog_items: 9000 <== Example of the starting id of the Items_Base (you can see the last entry by : 
-select * from items_base order by id desc
-)</br>
-Enter the Catalog_Page ID for catalog_items: 9000 <== this is the catalog_page id you want the furni in</br>
-Habbo Default is straight forward files are the JSON / Text if you use flash</br>
+```
+Habbo_Default/          downloaded official Habbo assets
+Merge/                  Original_/Import_/Merged_ for Furnidata, Productdata, Clothes
+Generate/               Furnidata/, Furniture/, Output_SQL/
+NitroCompiler/          compile/, compiled/, extract/, extracted/
+SWFCompiler/            import/, plus output directories per asset class
+Database/Variables/     drop FurnitureData.json here for the DB fix tools
+custom_downloads/       multi-source custom downloader output
+```
 
-Nitrocompile is also very simple:</br>
-compile  <== Place the JSON and Image file here and it will create the .nitro (example silo.json silo.png</br>
-compiled <== here will the output of the .niro from compile</br>
-extract <== place here the .nitro you want to extract</br>
-extracted <== here will be the output off the nitro so you can alter it etc.</br>
+## Build
 
-SWFCompiler this was the most work for me 🙂 here you can create SWF to Nitro file's</br>
-there are 4 folders for the output</br>
-- clothes
-- effects
-- furniture
-- pets
+```bash
+cd SourceCode
+dotnet build "Habbo Downloader.csproj"          # debug build
+dotnet run -- --tui                             # run with TUI mode
+```
 
-And one folder if you want to import SWF, just place the SWF in the right folder : funri / pet etc.  and as you will see i already added the latest Pets and also all the default + custom effects so you do not have to search</br>
+Prerequisites: **.NET SDK 10.x** + **Java** (for FFDec, used by every SWF → Nitro
+path) + **Node.js** (for some helpers).
 
-when you run one of the SWF to Nitro it will ask you for clothes / funri :</br>
-Do you want (H) Hof_Furni or (I) Imported clothes? (Default is H):  <== here you can choose to use the default habbo folder or the custom import folder.</br></br>
+## Self-contained single-file releases
 
-# Credits
-- The whole habbo community.
-- Credits for the Converter : Nitro Team https://discord.gg/yCXcMqrT (this is only used for the Pets)
-- AtlasOmega for "the Among Us effects" : Enable 880 until 903
-- Leet for the enables : Enable 500 until 688
+```bash
+./publish-win.bat        # → publish/win-x64/Habbo Downloader.exe (~70 MB)
+./publish-linux.sh       # → publish/linux-x64/Habbo Downloader  (~70 MB) + .desktop entry
+```
 
-# Want to help !
+Both scripts produce a self-contained single-file binary (no .NET runtime
+required on the target machine) with the FFDec tooling next to it. The
+Linux script also drops an `all-in-1-converter.desktop` so file managers
+can double-click straight into the GUI.
+
+## Continuous integration
+
+- `.github/workflows/build.yml` — on push / PR / manual dispatch, builds
+  both Windows and Linux targets and uploads them as 30-day artifacts.
+- `.github/workflows/release.yml` — on tag `v*` (or manual dispatch with a
+  tag input), builds both targets, zips / tar.gzs them, and publishes a
+  GitHub Release with the binaries attached.
+
+```bash
+git tag v2.0.0 && git push origin v2.0.0   # cuts a Release with both binaries
+```
+
+## Custom effects
+
+Drop-in custom effects live in `Addons/Custom Effects/` — read the README
+there for the file naming convention. The Among Us pack and the Leet pack
+are included as references.
+
+## Credits
+
+- **medievalshell** — .NET 10 modernization, cross-platform refactor,
+  ImageSharp migration, JSON5 split-mode IO, three UI shells (CLI / TUI /
+  GUI), Mainframe + Matrix themes, GitHub Actions pipeline.
+- **duckietm** — original all-in-1 downloader, SWF → Nitro pipeline, SQL
+  generator, database tools, upstream maintainer.
+- **Nitro Team** — pets converter base (`discord.gg/yCXcMqrT`).
+- **AtlasOmega** — "Among Us" effects (enable 880-903).
+- **Leet** — enables 500-688.
+- The whole Habbo retro community.
+
+## Want to help?
+
 Discord: https://discord.gg/txfNucJv
 
-Please beware all is Free so don't get scammed !!
+Everything here is free — don't get scammed.
