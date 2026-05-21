@@ -1,10 +1,10 @@
-﻿using Newtonsoft.Json;
+using Habbo_Downloader.IO;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace ConsoleApplication
 {
@@ -21,61 +21,68 @@ namespace ConsoleApplication
             Directory.CreateDirectory(importDir);
             Directory.CreateDirectory(mergedDir);
 
-            Console.WriteLine("👉 Where do you want to load the Original Furnidata from 👈");
-            Console.WriteLine("⏩ (D) From the Habbo Default directory");
-            Console.WriteLine("⏩ (I) From the Original_Furnidata folder in Merge");
-            Console.Write("💁 Please select (I) or (D) [default is D]: ");
+            Console.WriteLine("Where do you want to load the Original Furnidata from?");
+            Console.WriteLine("  (D) From the Habbo Default directory (Habbo_Default/files/json/FurnitureData.json)");
+            Console.WriteLine("  (I) From Original_Furnidata/ in Merge (flat file or split directory)");
+            Console.Write("Select (I) or (D) [default D]: ");
             var userSelection = Console.ReadLine();
 
-            string originalFilePath;
+            string originalPath;
             if (string.Equals(userSelection, "I", StringComparison.OrdinalIgnoreCase))
-            {
-                originalFilePath = Path.Combine(originalDir, "FurnitureData.json");
-            }
+                originalPath = originalDir; // auto-detects flat FurnitureData.json or split layout
             else
+                originalPath = Path.Combine(Directory.GetCurrentDirectory(), "Habbo_Default", "files", "json", "FurnitureData.json");
+
+            JObject originalJson;
+            try
             {
-                originalFilePath = Path.Combine(Directory.GetCurrentDirectory(), "Habbo_Default", "files", "json", "FurnitureData.json");
+                originalJson = await FurnidataIO.LoadAsync(originalPath);
             }
-
-            string mergedFilePath = Path.Combine(mergedDir, "FurnitureData.json");
-
-            if (!File.Exists(originalFilePath))
+            catch (FileNotFoundException ex)
             {
-                Console.WriteLine("Original FurnitureData.json file is missing.");
+                Console.WriteLine($"Original FurnitureData not found: {ex.Message}");
                 return;
             }
 
             try
             {
-                JObject originalJson = JObject.Parse(await File.ReadAllTextAsync(originalFilePath));
                 int totalImported = 0;
-
-                var importFiles = Directory.GetFiles(importDir, "*.json");
-
-                if (importFiles.Length == 0)
+                var importEntries = CollectImportEntries(importDir);
+                if (importEntries.Count == 0)
                 {
-                    Console.WriteLine("No JSON files found in the Import_Furnidata directory.");
+                    Console.WriteLine("No import entries found in Import_Furnidata/ (expected: *.json files or sub-directories with manifest.json5).");
                     return;
                 }
 
-                foreach (var importFile in importFiles)
+                foreach (var entry in importEntries)
                 {
-                    Console.WriteLine($"Processing file: {Path.GetFileName(importFile)}");
-
-                    JObject importJson = JObject.Parse(await File.ReadAllTextAsync(importFile));
+                    Console.WriteLine($"Processing: {Path.GetFileName(entry)}");
+                    var importJson = await FurnidataIO.LoadAsync(entry);
                     int importedCount = MergeJson(originalJson, importJson, "roomitemtypes");
                     importedCount += MergeJson(originalJson, importJson, "wallitemtypes");
-
                     totalImported += importedCount;
-                    Console.WriteLine($"Imported {importedCount} items from {Path.GetFileName(importFile)}");
+                    Console.WriteLine($"  + {importedCount} items merged");
                 }
 
                 SortJsonByID(originalJson, "roomitemtypes");
                 SortJsonByID(originalJson, "wallitemtypes");
 
-                await File.WriteAllTextAsync(mergedFilePath, originalJson.ToString(Formatting.None));
+                Console.Write("Output format: (F)lat single FurnitureData.json or (S)plit manifest.json5+tier [default F]: ");
+                var fmtChoice = Console.ReadLine()?.Trim().ToUpperInvariant();
+                if (fmtChoice == "S")
+                {
+                    var splitOut = Path.Combine(mergedDir, "FurnitureData_split");
+                    if (Directory.Exists(splitOut)) Directory.Delete(splitOut, true);
+                    await FurnidataIO.SaveAsync(originalJson, splitOut, GamedataFormat.Split);
+                    Console.WriteLine($"Furnidata merged and saved (split mode) to {splitOut}");
+                }
+                else
+                {
+                    var mergedFilePath = Path.Combine(mergedDir, FurnidataIO.FlatFileName);
+                    await FurnidataIO.SaveAsync(originalJson, mergedFilePath, GamedataFormat.Flat);
+                    Console.WriteLine($"Furnidata merged and saved (flat) to {mergedFilePath}");
+                }
 
-                Console.WriteLine($"Furnidata merged successfully and saved to {mergedFilePath}");
                 Console.WriteLine($"Total Furniture imported: {totalImported}");
             }
             catch (Exception ex)
@@ -84,49 +91,64 @@ namespace ConsoleApplication
             }
         }
 
+        private static List<string> CollectImportEntries(string importDir)
+        {
+            var entries = new List<string>();
+            // Directory entries (split-mode imports)
+            foreach (var sub in Directory.GetDirectories(importDir))
+            {
+                if (FurnidataIO.IsSplitDirectory(sub))
+                    entries.Add(sub);
+            }
+            // Flat JSON / JSON5 files
+            entries.AddRange(Directory.GetFiles(importDir, "*.json"));
+            entries.AddRange(Directory.GetFiles(importDir, "*.json5"));
+            return entries;
+        }
+
+        // Original additive merge: skip duplicates by classname OR by id.
         private static int MergeJson(JObject originalJson, JObject importJson, string itemType)
         {
-            var originalItemsByClassname = originalJson[itemType]["furnitype"]
-                .ToDictionary(item => item["classname"].ToString());
-            var originalItemsById = originalJson[itemType]["furnitype"]
-                .ToDictionary(item => item["id"].Value<int>());
+            var originalFurniArray = originalJson[itemType]?["furnitype"] as JArray;
+            var importFurniArray = importJson[itemType]?["furnitype"] as JArray;
+            if (originalFurniArray == null || importFurniArray == null) return 0;
 
-            // Create hash sets to track items processed from the current import
+            var originalByClass = originalFurniArray.Cast<JObject>()
+                .Where(j => j["classname"] != null)
+                .ToDictionary(j => j["classname"].ToString());
+            var originalById = originalFurniArray.Cast<JObject>()
+                .Where(j => j["id"] != null)
+                .ToDictionary(j => j["id"].Value<int>());
+
             var processedImportClassnames = new HashSet<string>();
             var processedImportIds = new HashSet<int>();
-
             int importedCount = 0;
 
-            foreach (var importItem in importJson[itemType]["furnitype"])
+            foreach (var importItem in importFurniArray.Cast<JObject>())
             {
-                var classname = importItem["classname"].ToString();
-                var id = importItem["id"].Value<int>();
+                var classname = importItem["classname"]?.ToString();
+                var idTok = importItem["id"];
+                if (classname == null || idTok == null) continue;
+                var id = idTok.Value<int>();
 
-                if (originalItemsByClassname.ContainsKey(classname) || processedImportClassnames.Contains(classname) ||
-                    originalItemsById.ContainsKey(id) || processedImportIds.Contains(id))
-                {
+                if (originalByClass.ContainsKey(classname) || processedImportClassnames.Contains(classname) ||
+                    originalById.ContainsKey(id) || processedImportIds.Contains(id))
                     continue;
-                }
 
-                ((JArray)originalJson[itemType]["furnitype"]).Add(importItem);
+                originalFurniArray.Add(importItem);
                 processedImportClassnames.Add(classname);
                 processedImportIds.Add(id);
                 importedCount++;
             }
-
             return importedCount;
         }
 
         private static void SortJsonByID(JObject json, string itemType)
         {
-            var furnitypeArray = json[itemType]["furnitype"] as JArray;
-            if (furnitypeArray != null)
-            {
-                var sortedArray = new JArray(
-                    furnitypeArray.OrderBy(item => item["id"].Value<int>())
-                );
-                json[itemType]["furnitype"] = sortedArray;
-            }
+            var furnitypeArray = json[itemType]?["furnitype"] as JArray;
+            if (furnitypeArray == null) return;
+            var sorted = new JArray(furnitypeArray.OrderBy(item => item["id"]?.Value<int>() ?? int.MaxValue));
+            json[itemType]["furnitype"] = sorted;
         }
     }
 }

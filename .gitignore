@@ -1,2 +1,16 @@
+# Build output
+**/bin/
+**/obj/
+
+# Visual Studio / Rider
 .vs/
+.idea/
+*.user
+*.suo
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Legacy
 /DownloadHabbo/SourceCode/obj

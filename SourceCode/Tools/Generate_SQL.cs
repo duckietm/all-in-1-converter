@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using Habbo_Downloader.IO;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using System.Xml.Linq;
@@ -16,7 +17,7 @@ namespace ConsoleApplication
             string furnidataDir = Path.Combine(baseDir, "Furnidata");
             string furnitureDir = Path.Combine(baseDir, "Furniture");
             string outputDir = Path.Combine(baseDir, "Output_SQL");
-            string ffdecPath = Path.Combine(Directory.GetCurrentDirectory(), "Tools\\ffdec\\ffdec.jar");
+            string ffdecPath = Path.Combine(Directory.GetCurrentDirectory(), "Tools", "ffdec", "ffdec.jar");
             Directory.CreateDirectory(outputDir);
 
             if (CheckForDuplicateFiles(furnitureDir))
@@ -29,14 +30,17 @@ namespace ConsoleApplication
             Console.Write("Enter the Catalog_Page ID for catalog_items: ");
             int pageId = int.Parse(Console.ReadLine());
 
-            string furnidataPath = Path.Combine(furnidataDir, "FurnitureData.json");
-            if (!File.Exists(furnidataPath))
+            // Auto-detect flat FurnitureData.json or split manifest.json5+tier under Generate/Furnidata/
+            JObject furnidata;
+            try
             {
-                Console.WriteLine("⚠️ FurnitureData.json file is missing.");
+                furnidata = FurnidataIO.LoadAsync(furnidataDir).GetAwaiter().GetResult();
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine("FurnitureData.json (or split manifest.json5) is missing in Generate/Furnidata/.");
                 return;
             }
-
-            JObject furnidata = JObject.Parse(File.ReadAllText(furnidataPath));
 
             // Build hash sets for room and wall items.
             var roomItems = furnidata["roomitemtypes"]["furnitype"]

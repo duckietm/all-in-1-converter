@@ -1,17 +1,18 @@
 ﻿using Habbo_Downloader.SWFCompiler.Mapper.Assests;
 using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
 using Habbo_Downloader.Tools;
-using System.Drawing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Concurrent;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Habbo_Downloader.Compiler
 {
     public static class SWF_clothes_To_Nitro
     {
         private static string ImportDirectory;
-        private const string OutputDirectory = @"SWFCompiler\clothes";
+        private static readonly string OutputDirectory = Path.Combine("SWFCompiler", "clothes");
 
         public static async Task ConvertSwfFilesAsync()
         {
@@ -21,8 +22,8 @@ namespace Habbo_Downloader.Compiler
                 string input = Console.ReadLine()?.Trim().ToUpper();
 
                 ImportDirectory = string.IsNullOrEmpty(input) || input == "H"
-                    ? @"Habbo_Default\clothes"
-                    : input == "I" ? @"SWFCompiler\import\clothes" : @"Habbo_Default\hof_furni";
+                    ? Path.Combine("Habbo_Default", "clothes")
+                    : input == "I" ? Path.Combine("SWFCompiler", "import", "clothes") : Path.Combine("Habbo_Default", "hof_furni");
 
                 Console.WriteLine($"✅ Converting SWF to Nitro from source {ImportDirectory}");
 
@@ -155,9 +156,9 @@ namespace Habbo_Downloader.Compiler
             }
         }
 
-        private static Dictionary<string, Bitmap> LoadImages(string imagesDirectory)
+        private static Dictionary<string, Image<Rgba32>> LoadImages(string imagesDirectory)
         {
-            var images = new Dictionary<string, Bitmap>();
+            var images = new Dictionary<string, Image<Rgba32>>();
             foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
             {
                 string imageName = Path.GetFileNameWithoutExtension(imageFile);
@@ -166,10 +167,9 @@ namespace Habbo_Downloader.Compiler
 
                 try
                 {
-                    using var bitmap = new Bitmap(imageFile);
                     if (!images.ContainsKey(imageName))
                     {
-                        images[imageName] = new Bitmap(bitmap);
+                        images[imageName] = Image.Load<Rgba32>(imageFile);
                     }
                 }
                 catch (Exception ex)

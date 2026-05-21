@@ -1,18 +1,19 @@
 ﻿using Habbo_Downloader.Tools;
-using System.Drawing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Habbo_Downloader.SWF_Effects_Compiler.Mapper.Assets;
 using Habbo_Downloader.SWF_Effects_Compiler.Spritesheet;
 using Habbo_Downloader.SWF_Effects_Compiler.Mapper.Animation;
 using System.Collections.Concurrent;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Habbo_Downloader.Compiler
 {
     public static class SWF_Effects_To_Nitro
     {
-        private static string ImportDirectory = @"SWFCompiler\import\effects";
-        private const string OutputDirectory = @"SWFCompiler\effects";
+        private static readonly string ImportDirectory = Path.Combine("SWFCompiler", "import", "effects");
+        private static readonly string OutputDirectory = Path.Combine("SWFCompiler", "effects");
 
         public static async Task ConvertSwfFilesAsync()
         {
@@ -160,9 +161,9 @@ namespace Habbo_Downloader.Compiler
         }
 
 
-        private static Dictionary<string, Bitmap> LoadImages(string imagesDirectory)
+        private static Dictionary<string, Image<Rgba32>> LoadImages(string imagesDirectory)
         {
-            var images = new Dictionary<string, Bitmap>();
+            var images = new Dictionary<string, Image<Rgba32>>();
             foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
             {
                 string imageName = Path.GetFileNameWithoutExtension(imageFile);
@@ -171,10 +172,9 @@ namespace Habbo_Downloader.Compiler
 
                 try
                 {
-                    using var bitmap = new Bitmap(imageFile);
                     if (!images.ContainsKey(imageName))
                     {
-                        images[imageName] = new Bitmap(bitmap);
+                        images[imageName] = Image.Load<Rgba32>(imageFile);
                     }
                 }
                 catch (Exception ex)
