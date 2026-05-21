@@ -11,15 +11,6 @@ namespace Habbo_Downloader.App.Runners
     public sealed class TuiRunner : IAppRunner
     {
         public Task RunAsync(Args args) =>
-            MenuHost.ShowAsync("Main Menu: Select a Topic", new MenuItem[]
-            {
-                new("1",       "Habbo Original Downloads",            HabboOriginalMenu.DisplayMenu, IsSubMenu: true),
-                new("2",       "Nitro Custom Downloads",              NitroCustomMenu.DisplayMenu,   IsSubMenu: true),
-                new("3",       "Hotel Tools",                         HotelToolsMenu.DisplayMenu,    IsSubMenu: true),
-                new("4",       "Database Tools",                      DatabaseMenu.DisplayMenu,      IsSubMenu: true),
-                new("version", "Fetch current Habbo client version",  CliRunner.DisplayVersionAsync),
-                new("credits", "Credits & contributors",               Habbo_Downloader.App.Credits.ShowAsync),
-                Habbo_Downloader.App.UiSwitcher.ForCurrentMode(),
-            }, isTopLevel: true);
+            MenuHost.ShowAsync("Main Menu: Select a Topic", MainMenuFactory.Build(), isTopLevel: true);
     }
 }

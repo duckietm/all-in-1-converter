@@ -20,17 +20,7 @@ namespace Habbo_Downloader.App.Runners
                 return;
             }
 
-            await MenuHost.ShowAsync("Main Menu: Select a Topic", new MenuItem[]
-            {
-                new("1",       "Habbo Original Downloads",            HabboOriginalMenu.DisplayMenu, IsSubMenu: true),
-                new("2",       "Nitro Custom Downloads",              NitroCustomMenu.DisplayMenu,   IsSubMenu: true),
-                new("3",       "Hotel Tools",                         HotelToolsMenu.DisplayMenu,    IsSubMenu: true),
-                new("4",       "Database Tools",                      DatabaseMenu.DisplayMenu,      IsSubMenu: true),
-                new("version", "Fetch current Habbo client version",  DisplayVersionAsync),
-                new("credits", "Credits & contributors",               Habbo_Downloader.App.Credits.ShowAsync),
-                Habbo_Downloader.App.UiSwitcher.ForCurrentMode(),
-                new("help",    "Show help",                           DisplayHelpAsync),
-            }, isTopLevel: true);
+            await MenuHost.ShowAsync("Main Menu: Select a Topic", MainMenuFactory.Build(), isTopLevel: true);
         }
 
         private static async Task DispatchDirect(string command)
