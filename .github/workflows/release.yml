@@ -1,14 +1,20 @@
 name: Release
 
+# Auto-publishes a GitHub Release every time main moves (direct commit or
+# merge of an approved PR). PR runs themselves never trigger this workflow,
+# so a contributor's draft branch can't accidentally cut a release.
+#
+# Version is generated as v<YYYY.MM.DD>.<run-number> (e.g. v2026.05.22.7).
+# Manual dispatch is also available with a custom tag input.
+
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v2.0.0)'
-        required: true
+        description: 'Override tag (default: auto v<date>.<run>)'
+        required: false
 
 jobs:
   build-windows:
@@ -92,10 +98,11 @@ jobs:
       - name: Resolve tag
         id: tag
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
             echo "value=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
           else
-            echo "value=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            DATE=$(date -u +%Y.%m.%d)
+            echo "value=v${DATE}.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
           fi
       - name: Create release
         uses: softprops/action-gh-release@v2

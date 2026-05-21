@@ -1,8 +1,11 @@
 name: Build
 
+# Validation builds for pull requests and manual dispatch only.
+# Push to main goes through Release (which builds AND publishes).
+# This workflow just compiles + publishes to a temp folder to make sure the
+# PR doesn't break the cross-platform build before a maintainer merges.
+
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -16,27 +19,15 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Restore
-        working-directory: SourceCode
-        run: dotnet restore "Habbo Downloader.csproj"
-      - name: Publish win-x64 (self-contained, single file)
+      - name: Publish win-x64 (verify)
         working-directory: SourceCode
         run: |
           dotnet publish "Habbo Downloader.csproj" `
-            -c Release `
-            -r win-x64 `
-            --self-contained true `
+            -c Release -r win-x64 --self-contained true `
             -p:PublishSingleFile=true `
             -p:EnableCompressionInSingleFile=true `
-            -p:DebugType=none `
-            -p:DebugSymbols=false `
+            -p:DebugType=none -p:DebugSymbols=false `
             -o ../publish/win-x64
-      - uses: actions/upload-artifact@v4
-        with:
-          name: all-in-1-converter-win-x64
-          path: publish/win-x64/
-          if-no-files-found: error
-          retention-days: 30
 
   build-linux:
     name: Build Linux x64
@@ -46,37 +37,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Restore
-        working-directory: SourceCode
-        run: dotnet restore "Habbo Downloader.csproj"
-      - name: Publish linux-x64 (self-contained, single file)
+      - name: Publish linux-x64 (verify)
         working-directory: SourceCode
         run: |
           dotnet publish "Habbo Downloader.csproj" \
-            -c Release \
-            -r linux-x64 \
-            --self-contained true \
+            -c Release -r linux-x64 --self-contained true \
             -p:PublishSingleFile=true \
             -p:EnableCompressionInSingleFile=true \
-            -p:DebugType=none \
-            -p:DebugSymbols=false \
+            -p:DebugType=none -p:DebugSymbols=false \
             -o ../publish/linux-x64
-      - name: chmod +x
-        run: chmod +x "publish/linux-x64/Habbo Downloader"
-      - name: Add .desktop file for double-click GUI launch
-        run: |
-          cat > publish/linux-x64/all-in-1-converter.desktop <<'EOF'
-          [Desktop Entry]
-          Type=Application
-          Name=All-in-1 Converter
-          Comment=Habbo asset workstation (Mainframe / Matrix GUI)
-          Exec=./Habbo\ Downloader --gui
-          Terminal=false
-          Categories=Development;Utility;
-          EOF
-      - uses: actions/upload-artifact@v4
-        with:
-          name: all-in-1-converter-linux-x64
-          path: publish/linux-x64/
-          if-no-files-found: error
-          retention-days: 30
