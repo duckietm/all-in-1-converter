@@ -23,6 +23,10 @@ namespace ConsoleApplication
         {
             try { Console.OutputEncoding = System.Text.Encoding.UTF8; } catch { }
 
+            // Unpack FFDec etc. from the embedded zip on first launch.
+            // No-op when the files are already on disk.
+            EmbeddedToolsExtractor.EnsureExtracted();
+
             var args = Args.Parse(argv);
 
             if (args.ShowHelp)    { Console.WriteLine(Habbo_Downloader.App.Args.HelpText); return 0; }
