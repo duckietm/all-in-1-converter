@@ -1,6 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿using Habbo_Downloader.IO;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,71 +16,98 @@ namespace ConsoleApplication
             string baseDir = Path.Combine(Directory.GetCurrentDirectory(), "Merge");
             string importDir = Path.Combine(baseDir, "Import_ProductData");
             string mergedDir = Path.Combine(baseDir, "Merged_ProductData");
+            Directory.CreateDirectory(importDir);
+            Directory.CreateDirectory(mergedDir);
 
-
-            Console.WriteLine("👉 Where do you want to load the Original Productdata from 👈");
-            Console.WriteLine("⏩ (D) From the Habbo Default directory");
-            Console.WriteLine("⏩ (I) From the Original_ProductData folder in Merge");
-            Console.Write("💁 Please select (I) or (D) [default is D]: ");
+            Console.WriteLine("Where do you want to load the Original ProductData from?");
+            Console.WriteLine("  (D) From the Habbo Default directory (Habbo_Default/files/json/ProductData.json)");
+            Console.WriteLine("  (I) From Original_ProductData/ in Merge (flat file or split directory)");
+            Console.Write("Select (I) or (D) [default D]: ");
             string choice = Console.ReadLine()?.Trim().ToUpper();
 
-            string originalFilePath;
-            if (string.IsNullOrEmpty(choice) || choice == "D")
-            {
-                originalFilePath = Path.Combine(Directory.GetCurrentDirectory(), "Habbo_Default", "files", "json", "ProductData.json");
-            }
-            else if (choice == "I")
-            {
-                string originalDir = Path.Combine(baseDir, "Original_ProductData");
-                originalFilePath = Path.Combine(originalDir, "ProductData.json");
-            }
+            string originalPath;
+            if (choice == "I")
+                originalPath = Path.Combine(baseDir, "Original_ProductData");
             else
-            {
-                originalFilePath = Path.Combine(Directory.GetCurrentDirectory(), "Habbo_Default", "files", "json", "ProductData.json");
-            }
+                originalPath = Path.Combine(Directory.GetCurrentDirectory(), "Habbo_Default", "files", "json", "ProductData.json");
 
-            if (!File.Exists(originalFilePath))
+            JObject originalJson;
+            bool originalWasSplit;
+            try
             {
-                Console.WriteLine($"Original ProductData.json file is missing at: {originalFilePath}");
+                originalWasSplit = Directory.Exists(originalPath) && ProductDataIO.IsSplitDirectory(originalPath);
+                originalJson = await ProductDataIO.LoadAsync(originalPath);
+                int n = (originalJson["productdata"]?["product"] as JArray)?.Count ?? 0;
+                Console.WriteLine($"Loaded original as {(originalWasSplit ? "SPLIT (manifest.json5)" : "FLAT (single .json)")} - {n} products");
+            }
+            catch (FileNotFoundException ex)
+            {
+                Console.WriteLine($"Original ProductData not found: {ex.Message}");
                 return;
             }
 
             try
             {
-                JObject originalJson = JObject.Parse(await File.ReadAllTextAsync(originalFilePath));
                 int totalImported = 0;
-
-                var importFiles = Directory.GetFiles(importDir, "*.json");
-                if (importFiles.Length == 0)
+                var importEntries = CollectImportEntries(importDir);
+                if (importEntries.Count == 0)
                 {
-                    Console.WriteLine("No JSON files found in the Import_ProductData directory.");
-                    return;
+                    Console.WriteLine("No import entries found in Import_ProductData/.");
+                    Console.WriteLine("Continuing anyway so you can convert the original between flat and split formats.");
+                }
+                else
+                {
+                    bool replaceAll = false;
+                    bool skipAll = false;
+
+                    foreach (var entry in importEntries)
+                    {
+                        Console.WriteLine($"Processing: {Path.GetFileName(entry)}");
+                        JObject importJson = await ProductDataIO.LoadAsync(entry);
+                        int importedCount = MergeJson(originalJson, importJson, "productdata", ref replaceAll, ref skipAll);
+                        totalImported += importedCount;
+                        Console.WriteLine($"  + {importedCount} items merged");
+                    }
+
+                    SortJsonByCode(originalJson, "productdata");
                 }
 
-                bool replaceAll = false;
-                bool skipAll = false;
-
-                foreach (var importFile in importFiles)
+                Console.WriteLine();
+                Console.WriteLine("Pick the output format:");
+                Console.WriteLine("  F = flat single ProductData.json (legacy)");
+                Console.WriteLine("  S = split manifest.json5 + core/products-NNN.json5 (chunks of 500)");
+                Console.Write("Output format [F/S, default F]: ");
+                var fmtChoice = Console.ReadLine()?.Trim().ToUpperInvariant();
+                if (fmtChoice == "S")
                 {
-                    Console.WriteLine($"Processing file: {Path.GetFileName(importFile)}");
-                    JObject importJson = JObject.Parse(await File.ReadAllTextAsync(importFile));
-                    int importedCount = MergeJson(originalJson, importJson, "productdata", ref replaceAll, ref skipAll);
-                    totalImported += importedCount;
-                    Console.WriteLine($"Imported {importedCount} items from {Path.GetFileName(importFile)}");
+                    var splitOut = Path.Combine(mergedDir, "ProductData_split");
+                    if (Directory.Exists(splitOut)) Directory.Delete(splitOut, true);
+                    await ProductDataIO.SaveAsync(originalJson, splitOut, GamedataFormat.Split);
+                    Console.WriteLine($"ProductData saved (SPLIT mode) to {splitOut}");
+                }
+                else
+                {
+                    var mergedFilePath = Path.Combine(mergedDir, ProductDataIO.FlatFileName);
+                    await ProductDataIO.SaveAsync(originalJson, mergedFilePath, GamedataFormat.Flat);
+                    Console.WriteLine($"ProductData saved (FLAT mode) to {mergedFilePath}");
                 }
 
-                SortJsonByCode(originalJson, "productdata");
-                string mergedFilePath = Path.Combine(mergedDir, "ProductData.json");
-
-                await File.WriteAllTextAsync(mergedFilePath, originalJson.ToString(Formatting.None));
-
-                Console.WriteLine($"ProductData merged successfully and saved to {mergedFilePath}");
                 Console.WriteLine($"Total Products imported: {totalImported}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error merging ProductData: " + ex.Message);
             }
+        }
+
+        private static List<string> CollectImportEntries(string importDir)
+        {
+            var entries = new List<string>();
+            foreach (var sub in Directory.GetDirectories(importDir))
+                if (ProductDataIO.IsSplitDirectory(sub)) entries.Add(sub);
+            entries.AddRange(Directory.GetFiles(importDir, "*.json"));
+            entries.AddRange(Directory.GetFiles(importDir, "*.json5"));
+            return entries;
         }
 
         private static int MergeJson(JObject originalJson, JObject importJson, string itemType, ref bool replaceAll, ref bool skipAll)

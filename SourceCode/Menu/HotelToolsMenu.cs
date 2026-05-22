@@ -1,128 +1,65 @@
-﻿using Habbo_Downloader.Compiler;
-using System.Text;
+using Habbo_Downloader.App.Menus;
+using Habbo_Downloader.Compiler;
+using System.Threading.Tasks;
 
 namespace ConsoleApplication
 {
     public static class HotelToolsMenu
     {
-        public static async Task DisplayMenu()
+        public static Task DisplayMenu() => MenuHost.ShowAsync("Hotel Tools Menu", new MenuItem[]
         {
-            while (true)
-            {
-                Console.ResetColor();
-                Console.Clear();
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("                          Hotel Tools Menu                                   ");
-                Console.ForegroundColor = ConsoleColor.Black;
-                Console.BackgroundColor = ConsoleColor.Gray;
-                Console.WriteLine("1 => Merge Furnidata                                                         ");
-                Console.WriteLine("2 => Merge Productdata                                                       ");
-                Console.WriteLine("3 => Merge Clothes                                                           ");
-                Console.WriteLine("4 => Generate SQL                                                            ");
-                Console.WriteLine("5 => Decompile NitroFil                                                      ");
-                Console.WriteLine("6 => Compile NitroFiles                                                      ");
-                Console.WriteLine("7 => SWF Furniture to Nitro                                                  ");
-                Console.WriteLine("8 => SWF Clothes to Nitro                                                    ");
-                Console.WriteLine("9 => SWF Pets to Nitro                                                       ");
-                Console.WriteLine("10 => SWF Effects to Nitro                                                   ");
-                Console.WriteLine("                                                                             ");
-                Console.WriteLine("Type \"back\" to return to the main menu.                                      ");
-                Console.ResetColor();
+            new("1",  "Merge Furnidata", CompareFurnidata.Compare, HowToUse:
+                "Combines Original_Furnidata + Import_Furnidata into Merged_Furnidata.\n" +
+                "Skips duplicates by classname OR by id (additive only, no override).\n" +
+                "Input auto-detects flat FurnitureData.json or split-mode (directory\n" +
+                "with manifest.json5 + core/custom/seasonal tiers).\n" +
+                "Output prompt: (F)lat single file or (S)plit manifest.json5 + chunks of 300."),
 
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.BackgroundColor = ConsoleColor.Black;
-                Console.Write("Command:> ");
-                Console.OutputEncoding = Encoding.UTF8;
+            new("2",  "Merge Productdata", CompareProductData.Compare, HowToUse:
+                "Combines Original_ProductData + Import_ProductData into Merged_ProductData.\n" +
+                "For each conflict on `code` you can answer (Y) replace, (A) yes-to-all,\n" +
+                "(N) skip, (Z) no-to-all. Input flat .json or split-mode dir. Output (F/S)."),
 
-                string input = Console.ReadLine()?.ToLower() ?? string.Empty;
+            new("3",  "Merge Clothes", CompareClothesData.Compare, HowToUse:
+                "Merges FigureData (palettes + setTypes) AND FigureMap (libraries)\n" +
+                "from Original_ClothesData + Import_ClothesData.\n" +
+                "Both datasets are written into Merged_ClothesData/. Each can be flat or split."),
 
-                if (input == "back")
-                {
-                    Console.WriteLine("Returning to the main menu...");
-                    break;
-                }
+            new("4",  "Generate SQL", () => { SQLGenerator.GenerateSQL(); return Task.CompletedTask; }, HowToUse:
+                "Reads FurnitureData.json (or split manifest) from Generate/Furnidata/\n" +
+                "and every .nitro / .swf inside Generate/Furniture/ (recursive).\n" +
+                "Asks: starting ID for items_base + catalog_items, plus Catalog_Page ID.\n" +
+                "Produces SQL files in Generate/Output_SQL/ with timestamp, one INSERT per item.\n" +
+                "Width / length / height / interactions are read from each .nitro automatically."),
 
-                await HandleCommand(input);
-            }
-        }
+            new("5",  "Decompile NitroFiles", NitroExtractor.Extract, HowToUse:
+                "Drop .nitro bundles into NitroCompiler/extract/{furni,clothing,effects,pets}/\n" +
+                "Output: JSON manifest + spritesheet PNG in NitroCompiler/extracted/<tier>/<name>/"),
 
-        private static async Task HandleCommand(string inputData)
-        {
-            try
-            {
-                string[] starupconsole = inputData.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            new("6",  "Compile NitroFiles", NitroFurniCompile.Compile, HowToUse:
+                "Inverse of (5). Pack a folder containing <name>.json + <name>.png into a\n" +
+                ".nitro bundle inside NitroCompiler/compiled/. Reads from NitroCompiler/compile/."),
 
-                if (starupconsole.Length == 0)
-                {
-                    Console.WriteLine("No command entered. Type 'help' for a list of commands.");
-                    return;
-                }
+            new("7",  "SWF Furniture to Nitro", SWF_Furni_To_Nitro.ConvertSwfFilesAsync, HowToUse:
+                "Convert legacy Flash .swf furniture to modern .nitro format.\n" +
+                "Source prompt: (H) Habbo_Default/hof_furni or (I) SWFCompiler/import/furniture.\n" +
+                "Uses FFDec (Tools/ffdec/) to extract assets, then ImageSharp to build the\n" +
+                "spritesheet (cross-platform: Windows + Linux). Output: SWFCompiler/furniture/."),
 
-                switch (starupconsole[0].ToLower())
-                {
-                    case "1":
-                        await CompareFurnidata.Compare();
-                        break;
+            new("8",  "SWF Clothes to Nitro", SWF_clothes_To_Nitro.ConvertSwfFilesAsync, HowToUse:
+                "Convert clothing .swf files to .nitro. Source (H) Habbo_Default/clothes or\n" +
+                "(I) SWFCompiler/import/clothes. Skips hh_human_fx.swf (effects file).\n" +
+                "Output: SWFCompiler/clothes/."),
 
-                    case "2":
-                        await CompareProductData.Compare();
-                        break;
+            new("9",  "SWF Pets to Nitro", SWF_Pets_To_Nitro.ConvertSwfFilesAsync, HowToUse:
+                "Convert pet .swf files to .nitro. Reads SWFCompiler/import/pets/.\n" +
+                "Includes palette extraction (PaletteExtractor) and visualization XML parsing.\n" +
+                "Output: SWFCompiler/pets/. Skips files already converted."),
 
-                    case "3":
-                        await CompareClothesData.Compare();
-                        break;
-
-                    case "4":
-                        SQLGenerator.GenerateSQL();
-                        break;
-
-                    case "5":
-                        Console.WriteLine("DEBUG: Decompiling NitroFiles...");
-                        await NitroExtractor.Extract();
-                        break;
-
-                    case "6":
-                        Console.WriteLine("DEBUG: Compiling NitroFiles...");
-                        await NitroFurniCompile.Compile();
-                        break;
-
-                    case "7":
-                        Console.WriteLine("DEBUG: Converting SWF Furniture to Nitro...");
-                        await SWF_Furni_To_Nitro.ConvertSwfFilesAsync();
-                        break;
-
-                    case "8":
-                        Console.WriteLine("DEBUG: Converting SWF Clothes to Nitro...");
-                        await SWF_clothes_To_Nitro.ConvertSwfFilesAsync();
-                        break;
-
-                    case "9":
-                        Console.WriteLine("DEBUG: Converting SWF Pets to Nitro...");
-                        await SWF_Pets_To_Nitro.ConvertSwfFilesAsync();
-                        break;
-
-                    case "10":
-                        Console.WriteLine("DEBUG: Converting SWF Pets to Nitro...");
-                        await SWF_Effects_To_Nitro.ConvertSwfFilesAsync();
-                        break;
-
-                    default:
-                        Console.WriteLine($"Unknown command: {inputData}");
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error executing command: {ex.Message}");
-            }
-            finally
-            {
-                Console.ResetColor();
-                Console.WriteLine("Press any key to continue...");
-                Console.ReadKey();
-            }
-        }
+            new("10", "SWF Effects to Nitro", SWF_Effects_To_Nitro.ConvertSwfFilesAsync, HowToUse:
+                "Convert effect .swf files to .nitro. Reads SWFCompiler/import/effects/.\n" +
+                "Custom XML can be dropped in SWFCompiler/import/effects/CustomXML/.\n" +
+                "Output: SWFCompiler/effects/."),
+        });
     }
 }

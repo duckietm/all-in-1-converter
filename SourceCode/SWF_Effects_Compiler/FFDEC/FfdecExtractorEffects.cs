@@ -5,8 +5,6 @@ namespace Habbo_Downloader.Tools
 {
     public static class FfdecExtractorEffects
     {
-        private const string FfdecExecutable = @"Tools\ffdec\ffdec-cli.exe";
-
         public static async Task ExtractSWFAsync(string swfFilePath, string outputDirectory)
         {
             ClearOutputDirectory(outputDirectory);
@@ -22,15 +20,7 @@ namespace Habbo_Downloader.Tools
         {
             using var process = new Process
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = FfdecExecutable,
-                    Arguments = command,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
+                StartInfo = FfdecInvocation.BuildStartInfo(command)
             };
 
             process.Start();

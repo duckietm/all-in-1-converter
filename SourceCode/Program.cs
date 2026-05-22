@@ -1,48 +1,38 @@
-﻿using System.Text;
+using System;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
+using Habbo_Downloader.App;
+using Habbo_Downloader.App.Gui;
+using Habbo_Downloader.App.Menus;
+using Habbo_Downloader.App.Runners;
+using HabboMenuItem = Habbo_Downloader.App.Menus.MenuItem;
 
 namespace ConsoleApplication
 {
-    internal class Program
+    internal static class Program
     {
-        private static readonly HttpClient httpClient;
-
-        static Program()
+        /// <summary>
+        /// STA + synchronous entry-point. Avalonia (used in GUI mode) refuses to
+        /// initialise its dispatcher on a thread that has already pumped through
+        /// .GetAwaiter().GetResult() of an async path, so we keep the main thread
+        /// virgin here and only branch into the async runner for CLI/TUI modes.
+        /// </summary>
+        [STAThread]
+        private static int Main(string[] argv)
         {
-            httpClient = new HttpClient(new HttpClientHandler { MaxConnectionsPerServer = 100 });
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent.Replace("User-Agent: ", ""));
-        }
-        private static bool IsJavaAvailable()
-        {
-            try
-            {
-                System.Diagnostics.Process process = new System.Diagnostics.Process
-                {
-                    StartInfo = new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = "java",
-                        Arguments = "-version",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
+            try { Console.OutputEncoding = System.Text.Encoding.UTF8; } catch { }
 
-                process.Start();
-                process.WaitForExit();
+            // Unpack FFDec etc. from the embedded zip on first launch.
+            // No-op when the files are already on disk.
+            EmbeddedToolsExtractor.EnsureExtracted();
 
-                return process.ExitCode == 0;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+            var args = Args.Parse(argv);
 
+            if (args.ShowHelp)    { Console.WriteLine(Habbo_Downloader.App.Args.HelpText); return 0; }
+            if (args.ShowVersion) { CliRunner.DisplayVersionAsync().GetAwaiter().GetResult(); return 0; }
 
-        private static async Task Main(string[] args)
-        {
-            if (!IsJavaAvailable())
+            if (!Bootstrap.IsJavaAvailable())
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Java is not installed or not accessible from the command line.");
@@ -52,205 +42,86 @@ namespace ConsoleApplication
                 Console.ResetColor();
                 Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
-                return;
+                return 1;
             }
 
-            ShowStartupAnimation();
-            CreateDirectories();
-
-            while (true)
-            {
-                DisplayMainMenu();
-
-                string input = Console.ReadLine()?.ToLower() ?? string.Empty;
-
-                switch (input)
-                {
-                    case "1":
-                        await HabboOriginalMenu.DisplayMenu();
-                        break;
-                    case "2":
-                        await NitroCustomMenu.DisplayMenu();
-                        break;
-                    case "3":
-                        await HotelToolsMenu.DisplayMenu();
-                        break;
-                    case "4":
-                        await DatabaseMenu.DisplayMenu();
-                        break;
-                    case "help":
-                        DisplayHelp();
-                        break;
-                    case "version":
-                        await DisplayVersionAsync();
-                        break;
-                    case "exit":
-                        Console.WriteLine("Exiting the program...");
-                        return;
-                    default:
-                        Console.WriteLine("Invalid choice. Please try again.");
-                        break;
-                }
-            }
-        }
-
-        private static void CreateDirectories()
-        {
-            var directoryStructure = new Dictionary<string, string[]>
-            {
-                { "./NitroCompiler/compile", new[] { "furni", "clothing", "effects", "pets" } },
-                { "./NitroCompiler/compiled", new[] { "furni", "clothing", "effects", "pets" } },
-                { "./NitroCompiler/extract", new[] { "furni", "clothing", "effects", "pets" } },
-                { "./NitroCompiler/extracted", new[] { "furni", "clothing", "effects", "pets" } },
-                { "./Habbo_Default", new[] { "badges", "clothes", "files", "files/txt", "files/xml", "files/json", "hof_furni", "hof_furni/icons", "icons", "mp3", "quests", "reception", "reception/web_promo_small" } },
-                { "./Merge", new[] { "Original_Furnidata", "Import_Furnidata", "Merged_Furnidata", "Original_ClothesData", "Import_ClothesData", "Merged_ClothesData", "Original_Productdata", "Import_Productdata", "Merged_Productdata" } },
-                { "./Generate", new[] { "Furnidata", "Furniture", "Output_SQL" } },
-                { "./SWFCompiler", new[] { "clothes", "furniture", "import", "import/clothes", "import/furniture", "import/pets", "import/effects", "import/effects/CustomXML" } },
-                { "./Database", new[] { "Variables" } },
-                { "./custom_downloads", new[] { "clothes", "nitro_furniture", "nitro_furniture/icons" } }
-            };
-
-            try
-            {
-                foreach (var (baseDir, subDirs) in directoryStructure)
-                {
-                    CreateDirectoryAndSubdirectories(baseDir, subDirs);
-                }
-            }
+            try { Bootstrap.CreateDirectories(); }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"Error creating directories: {ex.Message}");
                 Console.ResetColor();
             }
-        }
 
-        private static void CreateDirectoryAndSubdirectories(string baseDir, string[] subDirs)
-        {
-            Directory.CreateDirectory(baseDir);
-
-            foreach (var subDir in subDirs)
+            // Decide the initial UI mode: Explorer launch -> GUI direct,
+            // terminal -> ModeSelector with TUI/CLI only.
+            if (!args.ModeExplicitlySet && string.IsNullOrEmpty(args.Command))
             {
-                string fullPath = Path.Combine(baseDir, subDir);
-                Directory.CreateDirectory(fullPath);
-            }
-        }
-
-        private static void ShowStartupAnimation()
-        {
-            Console.BackgroundColor = ConsoleColor.Blue;
-            Console.Clear();
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("          ***** DuckieTM 64BIT BASIC V2.0 The New Generation *****         ");
-            Console.WriteLine("                   64K RAM SYSTEM 38911 BASIC BYTES FREE                   ");
-            Console.WriteLine("READY.                                                                     ");
-            string myText = "LOAD " + (char)34 + "Habboloader" + (char)34 + ",8,1";
-            for (int i = 0; i < myText.Length; i++)
-            {
-                Console.Write(myText[i]);
-                Thread.Sleep(10);
-            }
-            Console.WriteLine("                                                     ");
-            Console.WriteLine("LOADING                                                                    ");
-            Thread.Sleep(150);
-            Console.WriteLine("READY.                                                                     ");
-            string myText1 = "SYS 2048";
-            for (int i = 0; i < myText1.Length; i++)
-            {
-                Console.Write(myText1[i]);
-                Thread.Sleep(10);
-            }
-            Console.WriteLine("");
-            Console.BackgroundColor = ConsoleColor.Gray;
-            Console.ForegroundColor = ConsoleColor.Black;
-            Console.WriteLine("                                                                           ");
-            Console.WriteLine("Lets get the Show started : Booter loading....                             ");
-            Console.WriteLine("                                                                           ");
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Title = "Loading The core ....";
-            Console.WriteLine("");
-            Console.BackgroundColor = ConsoleColor.Blue;
-            Console.ForegroundColor = ConsoleColor.White;
-            Thread.Sleep(2000);
-            Console.Clear();
-        }
-
-        private static void DisplayMainMenu()
-        {
-            Console.ResetColor();
-            Console.Clear();
-            Console.BackgroundColor = ConsoleColor.Red;
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("                          Main Menu: Select a Topic                        ");
-            Console.ForegroundColor = ConsoleColor.Black;
-            Console.BackgroundColor = ConsoleColor.Gray;
-            Console.WriteLine("1. Habbo Original Downloads                                                ");
-            Console.WriteLine("2. Nitro Custom Downloads                                                  ");
-            Console.WriteLine("3. Hotel Tools                                                             ");
-            Console.WriteLine("4. Database Tools                                                          ");
-            Console.WriteLine("                                                                           ");
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(" Type 1, 2 or 3 in the command to go to the required section               ");
-            Console.ForegroundColor = ConsoleColor.Black;
-            Console.WriteLine("                                                                           ");
-            Console.WriteLine("-> Help                                                                    ");
-            Console.WriteLine("-> Version (Shows habbo version used for download assets)                  ");
-            Console.WriteLine("-> Exit                                                                    ");
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.BackgroundColor = ConsoleColor.Black;
-            Console.Write("Command:> ");
-            Console.OutputEncoding = Encoding.UTF8;
-        }
-
-        private static void DisplayHelp()
-        {
-            Console.WriteLine("Help Menu:");
-            Console.WriteLine("1 - Habbo Original Downloads: Download assets from the original Habbo.");
-            Console.WriteLine("2 - Nitro Custom Downloads: Download custom Nitro assets.");
-            Console.WriteLine("3 - Hotel Tools: Manage and compile hotel tools.");
-            Console.WriteLine("4 - Database Tools: Manage tools for your database.");
-            Console.WriteLine("Type 'version' to display the current Habbo release version.");
-            Console.WriteLine("Type 'exit' to quit the application.");
-            Console.WriteLine("Press any key to return to the main menu...");
-            Console.ReadKey();
-        }
-
-        private static async Task DisplayVersionAsync()
-        {
-            Console.WriteLine("Fetching the current Habbo version...");
-            string version = await GetHabboVersionAsync();
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"Current Habbo Version: {version}");
-            Console.ResetColor();
-            Console.WriteLine("Press any key to return to the main menu...");
-            Console.ReadKey();
-        }
-
-        private static async Task<string> GetHabboVersionAsync()
-        {
-            try
-            {
-                string externalVariablesUrl = "https://www.habbo.com/gamedata/external_variables/1";
-                string source = await httpClient.GetStringAsync(externalVariablesUrl);
-
-                foreach (string line in source.Split(Environment.NewLine.ToCharArray()))
+                if (!LaunchContext.IsFromTerminal)
                 {
-                    if (line.Contains("flash.client.url="))
+                    args.Mode = RunMode.Gui;
+                }
+                else
+                {
+                    args.Mode = ModeSelector.Prompt(args.Mode == RunMode.Gui ? RunMode.Tui : args.Mode);
+                    if (args.Mode == RunMode.Quit)
                     {
-                        return line.Substring(0, line.Length - 1).Split('/')[4];
+                        Console.WriteLine("Bye.");
+                        return 0;
                     }
                 }
+            }
 
-                return "Unknown";
-            }
-            catch (Exception ex)
+            // Outer loop. GUI mode runs on the virgin main STA thread; CLI / TUI
+            // go through the async runner path.
+            while (true)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error fetching Habbo version: {ex.Message}");
-                Console.ResetColor();
-                return "Unknown";
+                MenuHost.SwitchRequested = false;
+                MenuHost.Mode = args.Mode;
+
+                if (args.Mode == RunMode.Gui)
+                {
+                    RunGui();
+                }
+                else
+                {
+                    Habbo_Downloader.App.App.RunSelectedRunnerAsync(args).GetAwaiter().GetResult();
+                }
+
+                if (!MenuHost.SwitchRequested) break;
+                args.Mode = MenuHost.NextMode;
             }
+            return Environment.ExitCode;
+        }
+
+        private static void RunGui()
+        {
+            GuiMenuPresenter.ActiveTheme = GuiRunner.PromptThemeFromConsole();
+
+            AppBuilder.Configure<AvaloniaApp>()
+                .UsePlatformDetect()
+                .WithInterFont()
+                .LogToTrace()
+                .AfterSetup(_ =>
+                {
+                    Dispatcher.UIThread.Post(async () =>
+                    {
+                        try
+                        {
+                            await MenuHost.ShowAsync("Main Menu: Select a Topic", MainMenuFactory.Build(), isTopLevel: true);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.Error.WriteLine($"[gui] menu loop crashed: {ex.Message}");
+                        }
+                        finally
+                        {
+                            if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime life)
+                                life.Shutdown();
+                        }
+                    });
+                })
+                .StartWithClassicDesktopLifetime(Array.Empty<string>(), Avalonia.Controls.ShutdownMode.OnExplicitShutdown);
         }
     }
 

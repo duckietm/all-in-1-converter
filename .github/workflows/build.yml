@@ -1,0 +1,48 @@
+name: Build
+
+# Validation builds for pull requests and manual dispatch only.
+# Push to main goes through Release (which builds AND publishes).
+# This workflow just compiles + publishes to a temp folder to make sure the
+# PR doesn't break the cross-platform build before a maintainer merges.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish win-x64 (verify)
+        working-directory: SourceCode
+        run: |
+          dotnet publish "Habbo Downloader.csproj" `
+            -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=none -p:DebugSymbols=false `
+            -o ../publish/win-x64
+
+  build-linux:
+    name: Build Linux x64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish linux-x64 (verify)
+        working-directory: SourceCode
+        run: |
+          dotnet publish "Habbo Downloader.csproj" \
+            -c Release -r linux-x64 --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:EnableCompressionInSingleFile=true \
+            -p:DebugType=none -p:DebugSymbols=false \
+            -o ../publish/linux-x64

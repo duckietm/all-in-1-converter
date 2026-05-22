@@ -1,81 +1,38 @@
-﻿using System;
+using Habbo_Downloader.App.Menus;
 using System.Threading.Tasks;
 
 namespace ConsoleApplication
 {
     public static class NitroCustomMenu
     {
-        public static async Task DisplayMenu()
+        public static Task DisplayMenu() => MenuHost.ShowAsync("Nitro Custom Downloads", new MenuItem[]
         {
-            while (true)
-            {
-                Console.ResetColor();
-                Console.Clear();
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("                          Nitro Custom Downloads                           ");
-                Console.ForegroundColor = ConsoleColor.Black;
-                Console.BackgroundColor = ConsoleColor.Gray;
-                Console.WriteLine("1 => Download NitroFurniture                                               ");
-                Console.WriteLine("2 => Download NitroClothes                                                 ");
-                Console.WriteLine("                                                                           ");
-                Console.WriteLine("Type \"back\" to return to the main menu.                                    ");
-                Console.ResetColor();
+            new("1", "Download NitroFurniture", NitroFurnitureDownloader.DownloadFurnitureAsync, HowToUse:
+                "Pulls every .nitro furniture file from a Nitro V3 retro into\n" +
+                "custom_downloads/nitro_furniture/.\n" +
+                "Reads three config.ini keys: nitro_furnidataJSON, nitro_furnitureurl,\n" +
+                "nitro_furniture_icon_url.\n" +
+                "\n" +
+                "Two formats are auto-detected from the URL:\n" +
+                "  * nitro_furnidataJSON ending with .json  -> legacy flat layout.\n" +
+                "  * nitro_furnidataJSON ending with \"/\"    -> JSON5 split layout\n" +
+                "    (manifest.json5 + core/custom/seasonal/ tiers). The downloader\n" +
+                "    mirrors every tier locally and merges them in load order, then\n" +
+                "    proceeds exactly like the flat case.\n" +
+                "\n" +
+                "Replace ##DOMAIN## in config.ini with the retro's hostname before\n" +
+                "running."),
 
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.BackgroundColor = ConsoleColor.Black;
-                Console.Write("Command:> ");
-
-                string input = Console.ReadLine()?.ToLower() ?? string.Empty;
-
-                if (input == "back")
-                {
-                    Console.WriteLine("Returning to the main menu...");
-                    break;
-                }
-
-                await HandleCommand(input);
-            }
-        }
-
-        private static async Task HandleCommand(string inputData)
-        {
-            try
-            {
-                string[] starupconsole = inputData.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                if (starupconsole.Length == 0)
-                {
-                    Console.WriteLine("No command entered. Type 'help' for a list of commands.");
-                    return;
-                }
-
-                switch (starupconsole[0].ToLower())
-                {
-                    case "1":
-                        await NitroFurnitureDownloader.DownloadFurnitureAsync();
-                        break;
-
-                    case "2":
-                        await NitroClothesDownloader.DownloadCustomClothesAsync();
-                        break;
-
-                    default:
-                        Console.WriteLine($"Unknown command: {inputData}");
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error executing command: {ex.Message}");
-            }
-            finally
-            {
-                Console.ResetColor();
-                Console.WriteLine("Press any key to continue...");
-                Console.ReadKey();
-            }
-        }
+            new("2", "Download NitroClothes", NitroClothesDownloader.DownloadCustomClothesAsync, HowToUse:
+                "Pulls FigureData.json + FigureMap.json from a Nitro V3 retro and then\n" +
+                "every .nitro clothing library listed in FigureMap, into\n" +
+                "custom_downloads/clothes/.\n" +
+                "Reads three config.ini keys: nitro_clothes_dir, nitro_figuredata,\n" +
+                "nitro_figuremap.\n" +
+                "\n" +
+                "Same dual-format support as option 1: trailing \"/\" on the URL means\n" +
+                "JSON5 split layout. Skips hh_human_fx and hh_pets libraries (those\n" +
+                "belong to Effects / Pets respectively)."),
+        });
     }
 }

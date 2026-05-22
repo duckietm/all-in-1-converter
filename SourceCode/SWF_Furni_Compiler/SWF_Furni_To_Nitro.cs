@@ -7,21 +7,21 @@ using Habbo_Downloader.Tools;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Habbo_Downloader.Compiler
 {
     public static class SWF_Furni_To_Nitro
     {
         private static string ImportDirectory;
-        private const string OutputDirectory = @"SWFCompiler\furniture";
+        private static readonly string OutputDirectory = Path.Combine("SWFCompiler", "furniture");
 
         public static async Task ConvertSwfFilesAsync()
         {
@@ -31,8 +31,8 @@ namespace Habbo_Downloader.Compiler
                 string input = Console.ReadLine()?.Trim().ToUpper();
 
                 ImportDirectory = string.IsNullOrEmpty(input) || input == "H"
-                    ? @"Habbo_Default\hof_furni"
-                    : input == "I" ? @"SWFCompiler\import\furniture" : @"Habbo_Default\hof_furni";
+                    ? Path.Combine("Habbo_Default", "hof_furni")
+                    : input == "I" ? Path.Combine("SWFCompiler", "import", "furniture") : Path.Combine("Habbo_Default", "hof_furni");
 
                 Console.WriteLine($"✅ Converting SWF to Nitro from source {ImportDirectory}");
 
@@ -205,9 +205,9 @@ namespace Habbo_Downloader.Compiler
             }
         }
 
-        private static Dictionary<string, Bitmap> LoadImages(string imagesDirectory)
+        private static Dictionary<string, Image<Rgba32>> LoadImages(string imagesDirectory)
         {
-            var images = new Dictionary<string, Bitmap>();
+            var images = new Dictionary<string, Image<Rgba32>>();
             foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
             {
                 string imageName = Path.GetFileNameWithoutExtension(imageFile);
@@ -215,10 +215,9 @@ namespace Habbo_Downloader.Compiler
 
                 try
                 {
-                    using var bitmap = new Bitmap(imageFile);
                     if (!images.ContainsKey(imageName))
                     {
-                        images[imageName] = new Bitmap(bitmap);
+                        images[imageName] = Image.Load<Rgba32>(imageFile);
                     }
                 }
                 catch (Exception ex)

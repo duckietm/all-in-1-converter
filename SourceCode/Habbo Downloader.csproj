@@ -2,22 +2,57 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Habbo_Downloader</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationIcon>favicon.ico</ApplicationIcon>
+    <LangVersion>latest</LangVersion>
+    <!-- Publish targets supported by build-publish scripts. -->
+    <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+    <!-- Avalonia + Terminal.Gui include native libs that must be unpacked at
+         runtime when produced as a single-file bundle. -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>
     <Content Include="favicon.ico" />
+    <!-- config.ini is loaded by every downloader / DatabaseConfig with a
+         relative path, so it must sit next to the binary in both build and
+         publish output. -->
+    <Content Include="config.ini">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Bundle ../Compiled/Tools/ as a single zipped EmbeddedResource so the
+       published binary truly is self-contained (no Tools/ folder shipped
+       alongside it). EmbeddedToolsExtractor unpacks it next to the binary
+       on first launch, into ./Tools/. -->
+  <Target Name="ZipEmbeddedTools" BeforeTargets="BeforeBuild;BeforePublish">
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <ZipDirectory
+      SourceDirectory="..\Compiled\Tools"
+      DestinationFile="$(IntermediateOutputPath)EmbeddedTools.zip"
+      Overwrite="true" />
+  </Target>
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(IntermediateOutputPath)EmbeddedTools.zip"
+                      LogicalName="Habbo_Downloader.EmbeddedTools.zip"
+                      Visible="false" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MySql.Data" Version="9.2.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="MySql.Data" Version="9.7.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageReference Include="Terminal.Gui" Version="1.19.0" />
+    <PackageReference Include="Avalonia" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.3" />
   </ItemGroup>
 
 </Project>

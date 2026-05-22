@@ -1,104 +1,48 @@
-﻿using ConsoleApplication.FixSettings;
+using ConsoleApplication.FixSettings;
+using Habbo_Downloader.App.Menus;
 using Habbo_Downloader.Compiler;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace ConsoleApplication
 {
     public static class DatabaseMenu
     {
-        public static async Task DisplayMenu()
+        public static Task DisplayMenu() => MenuHost.ShowAsync("Hotel Database Menu", new MenuItem[]
         {
-            while (true)
-            {
-                Console.ResetColor();
-                Console.Clear();
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("                          Hotel Database Menu                                  ");
-                Console.ForegroundColor = ConsoleColor.Black;
-                Console.BackgroundColor = ConsoleColor.Gray;
-                Console.WriteLine("1 => Show Database General Information (version / databases etc.)              ");
-                Console.WriteLine("2 => Optimize your database (Runs optimize table on all your tables)           ");
-                Console.WriteLine("3 => Fix the Offer_ID in the database and the JSON (copy file back to server!) ");
-                Console.WriteLine("4 => Fix Sit / Lay / Walk in the items_base with the settings from the json    ");
-                Console.WriteLine("5 => Fix Sprite_ID and Item_IDS in the items_base from the JSON                ");
-                Console.WriteLine("!! Run Option 5 first when you have added new furni in the items base !!       ");
-                Console.WriteLine("                                                                               ");
-                Console.WriteLine("Type \"back\" to return to the main menu.                                        ");
-                Console.ResetColor();
+            new("1", "Database General Information (version / databases)", DatabaseGeneralInfo.ShowDatabaseVersionAsync, HowToUse:
+                "Connects to the MariaDB / MySQL server defined in config.ini under\n" +
+                "[Database Settings] and prints: server version, list of databases\n" +
+                "with size in MB, current user table count. Read-only.\n" +
+                "Use this first to sanity-check that the credentials work before\n" +
+                "running any of the destructive options below."),
 
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.BackgroundColor = ConsoleColor.Black;
-                Console.Write("Command:> ");
-                Console.OutputEncoding = Encoding.UTF8;
+            new("2", "Optimize Database (OPTIMIZE TABLE on all tables)", DatabaseOptimizer.OptimizeDatabaseTablesAsync, HowToUse:
+                "Runs OPTIMIZE TABLE on every table of the configured database.\n" +
+                "This rebuilds indexes and reclaims fragmented space. Safe but slow\n" +
+                "on big tables (room_items, users_items, etc.). Best run during\n" +
+                "maintenance windows because OPTIMIZE locks each table while it\n" +
+                "rewrites it on disk."),
 
-                string input = Console.ReadLine()?.ToLower() ?? string.Empty;
+            new("3", "Fix Offer_ID in database and JSON", SetOfferID.RunAsync, HowToUse:
+                "Walks Generate/Variables/FurnitureData.json and aligns each\n" +
+                "items_base row's offer_id with the catalogue offer_id read from\n" +
+                "the JSON. Useful when offer_ids have drifted between your DB and\n" +
+                "the FurnitureData you actually serve to the client.\n" +
+                "Writes back into both the DB and the JSON (copy the JSON to the\n" +
+                "Nitro server afterwards)."),
 
-                if (input == "back")
-                {
-                    Console.WriteLine("Returning to the main menu...");
-                    break;
-                }
+            new("4", "Fix Sit / Lay / Walk in items_base from JSON", FixItemSettings.RunAsync, HowToUse:
+                "Reads canstandon / cansiton / canlayon from FurnitureData.json and\n" +
+                "writes them back into items_base.allow_walk / allow_sit / allow_lay\n" +
+                "for every matching classname. Run after adding new furniture so\n" +
+                "the emulator stops dropping users mid-room."),
 
-                await HandleCommand(input);
-            }
-        }
-
-        private static async Task HandleCommand(string inputData)
-        {
-            try
-            {
-                string[] starupconsole = inputData.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                if (starupconsole.Length == 0)
-                {
-                    Console.WriteLine("No command entered. Type 'help' for a list of commands.");
-                    return;
-                }
-
-                switch (starupconsole[0].ToLower())
-                {
-                    case "1":
-                        Console.WriteLine("✅ Loading Database version!");
-                        await DatabaseGeneralInfo.ShowDatabaseVersionAsync();
-                        break;
-
-                    case "2":
-                        Console.WriteLine("✅ Loading Database Optimize!");
-                        await DatabaseOptimizer.OptimizeDatabaseTablesAsync();
-                        break;
-
-                    case "3":
-                        Console.WriteLine("✅ Loading Database and start proccessing the offer_id");
-                        await SetOfferID.RunAsync();
-                        break;
-
-                    case "4":
-                        Console.WriteLine("✅ Loading Database Fix Settings!");
-                        await FixItemSettings.RunAsync();
-                        break;
-
-                    case "5":
-                        Console.WriteLine("✅ Fixing Sprite_ID and Item_IDS in items_base from JSON!");
-                        await FixSpriteIDSettings.RunAsync();
-                        break;
-
-                    default:
-                        Console.WriteLine($"Unknown command: {inputData}");
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error executing command: {ex.Message}");
-            }
-            finally
-            {
-                Console.ResetColor();
-                Console.WriteLine("Press any key to continue...");
-                Console.ReadKey();
-            }
-        }
+            new("5", "Fix Sprite_ID + Item_IDS in items_base from JSON", FixSpriteIDSettings.RunAsync, HowToUse:
+                "Updates items_base.sprite_id and items_base.item_ids from the\n" +
+                "FurnitureData.json so the catalogue is in sync with the DB.\n" +
+                "RUN THIS BEFORE option 3 / 4 when you have just added new\n" +
+                "furniture - otherwise the offer_id / sit-lay-walk fixes have\n" +
+                "nothing to match against."),
+        });
     }
 }

@@ -25,26 +25,45 @@ namespace ConsoleApplication
                 return;
             }
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+            if (httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
 
             try
             {
-                string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-                string figureMapUrlWithTimestamp = $"{nitroFigureMap}?timestamp={timestamp}";
-
-                string figureMapContent = await httpClient.GetStringAsync(figureMapUrlWithTimestamp);
-
                 string currentDirectory = Environment.CurrentDirectory;
                 string downloadDirectory = Path.Combine(currentDirectory, "./custom_downloads/clothes");
-
                 Directory.CreateDirectory(downloadDirectory);
 
-                string figureDataUrlWithTimestamp = $"{nitroFigureData}?timestamp={timestamp}";
-                await DownloadFileAsync(figureDataUrlWithTimestamp, Path.Combine(downloadDirectory, "FigureData.json"), "FigureData.json");
-
-                await DownloadFileAsync(figureMapUrlWithTimestamp, Path.Combine(downloadDirectory, "FigureMap.json"), "FigureMap.json");
-
                 string figureMapFilePath = Path.Combine(downloadDirectory, "FigureMap.json");
+                string figureDataFilePath = Path.Combine(downloadDirectory, "FigureData.json");
+
+                // FigureMap: split layout if URL ends with "/", else flat single file.
+                if (NitroSplitDownloader.LooksLikeSplitUrl(nitroFigureMap))
+                {
+                    Console.WriteLine($"Downloading FigureMap (JSON5 split layout) from {nitroFigureMap} ...");
+                    var merged = await NitroSplitDownloader.FetchSplitAsync(httpClient, nitroFigureMap, Path.Combine(downloadDirectory, "FigureMap_split"), "figuremap");
+                    await File.WriteAllTextAsync(figureMapFilePath, merged.ToString(Newtonsoft.Json.Formatting.None));
+                }
+                else
+                {
+                    string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                    string figureMapUrlWithTimestamp = $"{nitroFigureMap}?timestamp={timestamp}";
+                    await DownloadFileAsync(figureMapUrlWithTimestamp, figureMapFilePath, "FigureMap.json");
+                }
+
+                // FigureData: same dual-mode detection.
+                if (NitroSplitDownloader.LooksLikeSplitUrl(nitroFigureData))
+                {
+                    Console.WriteLine($"Downloading FigureData (JSON5 split layout) from {nitroFigureData} ...");
+                    var merged = await NitroSplitDownloader.FetchSplitAsync(httpClient, nitroFigureData, Path.Combine(downloadDirectory, "FigureData_split"), "figuredata");
+                    await File.WriteAllTextAsync(figureDataFilePath, merged.ToString(Newtonsoft.Json.Formatting.None));
+                }
+                else
+                {
+                    string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                    string figureDataUrlWithTimestamp = $"{nitroFigureData}?timestamp={timestamp}";
+                    await DownloadFileAsync(figureDataUrlWithTimestamp, figureDataFilePath, "FigureData.json");
+                }
 
                 try
                 {

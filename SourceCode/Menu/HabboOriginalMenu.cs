@@ -1,197 +1,102 @@
-﻿using System.Text;
+using Habbo_Downloader.App.Menus;
+using System.Threading.Tasks;
 
 namespace ConsoleApplication
 {
     public static class HabboOriginalMenu
     {
-        public static async Task DisplayMenu()
+        public static Task DisplayMenu() => MenuHost.ShowAsync("Habbo Original Downloads", new MenuItem[]
         {
-            while (true)
-            {
-                Console.ResetColor();
-                Console.Clear();
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("                          Habbo Original Downloads                             ");
-                Console.ForegroundColor = ConsoleColor.Black;
-                Console.BackgroundColor = ConsoleColor.Gray;
-                Console.WriteLine("1 => Download Badges                                                           ");
-                Console.WriteLine("2 => Download Clothes + figuredata & figuremap json and xml                    ");
-                Console.WriteLine("3 => Download Effects and convurt effectmap & HabboAvatarActions.json          ");
-                Console.WriteLine("4 => Download Furnidata and convurt to FurnitureData.json                      ");
-                Console.WriteLine("5 => Download Furniture as SWF                                                 ");
-                Console.WriteLine("6 => Download Icons                                                            ");
-                Console.WriteLine("7= > Download MP3                                                              ");
-                Console.WriteLine("8 => Download Productdata                                                      ");
-                Console.WriteLine("9 => Download Quests Images                                                    ");
-                Console.WriteLine("10 => Download Reception images                                                ");
-                Console.WriteLine("11 => Download Texts                                                           ");
-                Console.WriteLine("12 => Download Variables                                                       ");
-                Console.WriteLine("                                                                               ");
-                Console.WriteLine("=> 'Download All' this will download all that is required for confurting)      ");
-                Console.WriteLine("                                                                               ");
-                Console.WriteLine("Type \"back\" to return to the main menu.                                        ");
-                Console.ResetColor();
+            new("1",   "Download Badges",
+                Badges.DownloadBadgesAsync,
+                HowToUse:
+                    "Pulls every badge .gif/.png from the official Habbo CDN.\n" +
+                    "Output: Habbo_Default/badges/. Skips files already on disk."),
 
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.BackgroundColor = ConsoleColor.Black;
-                Console.Write("Command:> ");
-                Console.OutputEncoding = Encoding.UTF8;
+            new("2",   "Download Clothes (figuredata + figuremap)",
+                ClothesDownloader.DownloadClothesAsync,
+                HowToUse:
+                    "Downloads FigureData.json (palettes + setTypes) and FigureMap.json\n" +
+                    "(libraries) from Habbo. Saves to Habbo_Default/files/json/ for use by\n" +
+                    "Merge Clothes (option 3 of Hotel Tools)."),
 
-                string input = Console.ReadLine()?.ToLower() ?? string.Empty;
+            new("3",   "Download Effects (effectmap + HabboAvatarActions)",
+                EffectsDownloader.DownloadEffectsAsync,
+                HowToUse:
+                    "Fetches effect map metadata and the HabboAvatarActions.json file.\n" +
+                    "Required for SWF Effects to Nitro conversion."),
 
-                if (input == "back")
-                {
-                    Console.WriteLine("Returning to the main menu...");
-                    break;
-                }
+            new("4",   "Download Furnidata -> FurnitureData.json",
+                FurnidataDownloader.DownloadFurnidata,
+                HowToUse:
+                    "Downloads the XML furniture catalog from Habbo and converts it to\n" +
+                    "FurnitureData.json in Habbo_Default/files/json/. Used by Merge Furnidata\n" +
+                    "and Generate SQL."),
 
-                await HandleCommand(input);
-            }
-        }
+            new("5",   "Download Furniture (SWF)",
+                FurnitureDownloader.DownloadFurnitureAsync,
+                HowToUse:
+                    "Pulls every .swf furniture asset from Habbo CDN into Habbo_Default/hof_furni/.\n" +
+                    "These are the files SWF Furniture to Nitro (Hotel Tools option 7, H mode) reads."),
 
-        private static async Task HandleCommand(string inputData)
+            new("6",   "Download Catalogue icons",
+                IconDownloader.DownloadIcons,
+                HowToUse:
+                    "Downloads the small icon PNGs shown in the catalogue UI.\n" +
+                    "Output: Habbo_Default/hof_furni/icons/ and Habbo_Default/icons/."),
+
+            new("7",   "Download MP3",
+                Mp3Downloader.DownloadMp3sAsync,
+                HowToUse:
+                    "Downloads sound samples (.mp3) used by traxmachine and various furni.\n" +
+                    "Output: Habbo_Default/mp3/."),
+
+            new("8",   "Download Productdata",
+                ProductDataDownloader.DownloadProductDataAsync,
+                HowToUse:
+                    "Downloads ProductData.json (catalogue product names + descriptions).\n" +
+                    "Used by Merge Productdata in Hotel Tools."),
+
+            new("9",   "Download Quests images",
+                QuestsDownloader.DownloadQuestsAsync,
+                HowToUse:
+                    "Downloads quest banner / icon images. Output: Habbo_Default/quests/."),
+
+            new("10",  "Download Reception images",
+                ReceptionDownloader.DownloadReceptionImages,
+                HowToUse:
+                    "Downloads the rotating reception / promo art shown on the lobby page.\n" +
+                    "Output: Habbo_Default/reception/ and reception/web_promo_small/."),
+
+            new("11",  "Download Texts",
+                TextsDownloader.DownloadTextsAsync,
+                HowToUse:
+                    "Downloads external_flash_texts / external_texts (UI strings + chat lines).\n" +
+                    "Now saved as JSON. Output: Habbo_Default/files/txt/ and .../json/."),
+
+            new("12",  "Download Variables",
+                VariablesDownloader.DownloadVariablesAsync,
+                HowToUse:
+                    "Downloads external_variables (URLs, feature flags, host config).\n" +
+                    "Useful for inspecting which CDN endpoints Habbo currently advertises."),
+
+            new("all", "Download All (clothes + furni + product + ...)",
+                DownloadAllAsync,
+                HowToUse:
+                    "Runs the full bootstrap sequence in order: clothes, furnidata, productdata,\n" +
+                    "furniture SWF, variables, texts, icons. Useful when initializing a fresh\n" +
+                    "hotel - everything Merge / Generate SQL / SWF->Nitro will need afterwards."),
+        });
+
+        private static async Task DownloadAllAsync()
         {
-            try
-            {
-                string[] starupconsole = inputData.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                if (starupconsole.Length == 0)
-                {
-                    Console.WriteLine("No command entered. Type 'help' for a list of commands.");
-                    return;
-                }
-
-                switch (starupconsole[0].ToLower())
-                {
-                    case "download":
-                        Console.WriteLine("Starting Download...");
-                        if (starupconsole.Length > 1)
-                        {
-                            Console.WriteLine($"DEBUG: Downloading {starupconsole[1]}");
-                            await HandleDownload(starupconsole[1].ToLower());
-                        }
-                        else
-                        {
-                            Console.WriteLine("Missing argument for 'download' command.");
-                        }
-                        break;
-
-                    case "1":
-                        Console.WriteLine("Starting Download badges!");
-                        await Badges.DownloadBadgesAsync();
-                        break;
-
-                    case "2":
-                        Console.WriteLine("Starting Download clothes!");
-                        await ClothesDownloader.DownloadClothesAsync();
-                        break;
-
-                    case "3":
-                        Console.WriteLine("Starting Download effects!");
-                        await EffectsDownloader.DownloadEffectsAsync();
-                        break;
-
-                    case "4":
-                        await FurnidataDownloader.DownloadFurnidata();
-                        break;
-
-                    case "5":
-                        Console.WriteLine("Starting Download furniture with icons!");
-                        await FurnitureDownloader.DownloadFurnitureAsync();
-                        break;
-                    
-                    case "6":
-                        Console.WriteLine("Starting Download Catalogue icons!");
-                        await IconDownloader.DownloadIcons();
-                        break;
-
-                    case "7":
-                        Console.WriteLine("Starting Download MP3!");
-                        await Mp3Downloader.DownloadMp3sAsync();
-                        break;
-                    case "8":
-                        Console.WriteLine("Starting Download Productdata!");
-                        await ProductDataDownloader.DownloadProductDataAsync();
-                        break;
-
-                    case "9":
-                        Console.WriteLine("Starting Download Quests images!");
-                        await QuestsDownloader.DownloadQuestsAsync();
-                        break;
-                    
-                    case "10":
-                        Console.WriteLine("Starting Download Reception images!");
-                        await ReceptionDownloader.DownloadReceptionImages();
-                        break;
-
-                    case "11":
-                        Console.WriteLine("Starting Download Texts!");
-                        await TextsDownloader.DownloadTextsAsync();
-                        break;
-
-                    case "12":
-                        Console.WriteLine("Starting Download Variables!");
-                        await VariablesDownloader.DownloadVariablesAsync();
-                        break;
-
-                    default:
-                        Console.WriteLine($"Unknown command: {inputData}");
-                        break;
-                }
-
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error executing command: {ex.Message}");
-            }
-            finally
-            {
-                Console.ResetColor();
-                Console.WriteLine("Press any key to continue...");
-                Console.ReadKey();
-            }
-        }
-
-        private static async Task HandleDownload(string downloadType)
-        {
-            switch (downloadType)
-            {
-                case "reception":
-                    
-
-                case "nitrofurniture":
-                    await NitroFurnitureDownloader.DownloadFurnitureAsync();
-                    break;
-
-                case "nitroclothes":
-                    await NitroClothesDownloader.DownloadCustomClothesAsync();
-                    break;
- 
-                case "texts":
-                    await TextsDownloader.DownloadTextsAsync();
-                    break;
-
-                case "variables":
-                    
-
-                case "all":
-                    Console.WriteLine("Starting 'Download All'...");
-                    await ClothesDownloader.DownloadClothesAsync();
-                    await FurnidataDownloader.DownloadFurnidata();
-                    await ProductDataDownloader.DownloadProductDataAsync();
-                    await FurnitureDownloader.DownloadFurnitureAsync();
-                    await VariablesDownloader.DownloadVariablesAsync();
-                    await TextsDownloader.DownloadTextsAsync();
-                    await IconDownloader.DownloadIcons();
-                    Console.WriteLine("'Download All' completed.");
-                    break;
-
-                default:
-                    Console.WriteLine($"Unknown download type: {downloadType}");
-                    break;
-            }
+            await ClothesDownloader.DownloadClothesAsync();
+            await FurnidataDownloader.DownloadFurnidata();
+            await ProductDataDownloader.DownloadProductDataAsync();
+            await FurnitureDownloader.DownloadFurnitureAsync();
+            await VariablesDownloader.DownloadVariablesAsync();
+            await TextsDownloader.DownloadTextsAsync();
+            await IconDownloader.DownloadIcons();
         }
     }
 }

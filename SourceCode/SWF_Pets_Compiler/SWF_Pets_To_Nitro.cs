@@ -6,8 +6,6 @@ using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
 using Habbo_Downloader.Tools;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -15,19 +13,21 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Habbo_Downloader.SWF_Pets_Compiler.Mapper.palette;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Habbo_Downloader.Compiler
 {
     public static class SWF_Pets_To_Nitro
     {
         private static string ImportDirectory;
-        private const string OutputDirectory = @"SWFCompiler\pets";
+        private static readonly string OutputDirectory = Path.Combine("SWFCompiler", "pets");
 
         public static async Task ConvertSwfFilesAsync()
         {
             try
             {
-                ImportDirectory = @"SWFCompiler\import\pets";
+                ImportDirectory = Path.Combine("SWFCompiler", "import", "pets");
                 Console.WriteLine($"✅ Converting SWF to Nitro from source {ImportDirectory}");
 
                 Directory.CreateDirectory(OutputDirectory);
@@ -198,9 +198,9 @@ namespace Habbo_Downloader.Compiler
                 return false;
             }
         }
-        private static Dictionary<string, Bitmap> LoadImages(string imagesDirectory)
+        private static Dictionary<string, Image<Rgba32>> LoadImages(string imagesDirectory)
         {
-            var images = new Dictionary<string, Bitmap>();
+            var images = new Dictionary<string, Image<Rgba32>>();
             foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
             {
                 string imageName = Path.GetFileNameWithoutExtension(imageFile);
@@ -208,11 +208,9 @@ namespace Habbo_Downloader.Compiler
 
                 try
                 {
-                    using var bitmap = new Bitmap(imageFile);
                     if (!images.ContainsKey(imageName))
                     {
-                        // Create a copy of the bitmap to avoid disposing issues.
-                        images[imageName] = new Bitmap(bitmap);
+                        images[imageName] = Image.Load<Rgba32>(imageFile);
                     }
                 }
                 catch (Exception ex)
