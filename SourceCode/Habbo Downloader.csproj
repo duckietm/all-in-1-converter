@@ -32,7 +32,7 @@
   <Target Name="ZipEmbeddedTools" BeforeTargets="BeforeBuild;BeforePublish">
     <MakeDir Directories="$(IntermediateOutputPath)" />
     <ZipDirectory
-      SourceDirectory="..\Compiled\Tools"
+      SourceDirectory="Tools"
       DestinationFile="$(IntermediateOutputPath)EmbeddedTools.zip"
       Overwrite="true" />
   </Target>
