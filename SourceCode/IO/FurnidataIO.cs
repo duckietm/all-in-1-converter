@@ -26,13 +26,11 @@ namespace Habbo_Downloader.IO
                 return await JsonReadHelper.LoadJObjectAsync(path);
 
             if (Directory.Exists(path))
-                return await LoadSplitAsync(path);
-
-            // Path may point to a directory that contains FurnitureData.json
-            var flatProbe = Path.Combine(path, FlatFileName);
-            if (File.Exists(flatProbe))
-                return await JsonReadHelper.LoadJObjectAsync(flatProbe);
-
+            {
+                if (IsSplitDirectory(path)) return await LoadSplitAsync(path);
+                var flatProbe = Path.Combine(path, FlatFileName);
+                if (File.Exists(flatProbe)) return await JsonReadHelper.LoadJObjectAsync(flatProbe);
+            }
             throw new FileNotFoundException($"FurnitureData not found at: {path}");
         }
 
