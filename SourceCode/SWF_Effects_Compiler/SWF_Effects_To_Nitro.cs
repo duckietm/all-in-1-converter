@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Habbo_Downloader.SWF_Effects_Compiler.Mapper.Assets;
 using Habbo_Downloader.SWF_Effects_Compiler.Spritesheet;
 using Habbo_Downloader.SWF_Effects_Compiler.Mapper.Animation;
+using Habbo_Downloader.SWFCompiler.Mapper;
 using System.Collections.Concurrent;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -124,7 +125,34 @@ namespace Habbo_Downloader.Compiler
             {
                 var jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
 
-                // If assetsData is empty, set it to null.
+                if ((assetsData == null || assetsData.Count == 0)
+                    && spriteSheetData is SpriteSheetData sheetForAssets
+                    && sheetForAssets.Frames != null
+                    && sheetForAssets.Frames.Count > 0)
+                {
+                    var derivedAssets = new Dictionary<string, EffectAssetsMapper.Asset>();
+                    string libPrefix = fileName + "_";
+
+                    foreach (var frameName in sheetForAssets.Frames.Keys)
+                    {
+                        string lookupName = frameName.StartsWith(libPrefix)
+                            ? frameName.Substring(libPrefix.Length)
+                            : frameName;
+
+                        if (!derivedAssets.ContainsKey(lookupName))
+                        {
+                            derivedAssets[lookupName] = new EffectAssetsMapper.Asset { X = 0, Y = 0 };
+                        }
+                    }
+
+                    if (derivedAssets.Count > 0)
+                    {
+                        assetsData = derivedAssets;
+                        Console.WriteLine($"ℹ️ {fileName}: no offset assets in manifest; derived {derivedAssets.Count} asset entries from the spritesheet frames.");
+                    }
+                }
+
+                // If assetsData is still empty, set it to null so it is omitted.
                 if (assetsData == null || assetsData.Count == 0)
                 {
                     assetsData = null;
