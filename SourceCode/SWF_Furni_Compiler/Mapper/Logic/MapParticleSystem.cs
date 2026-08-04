@@ -7,7 +7,6 @@ public static class MapParticleSystem
     public static List<ParticleSystem> MapParticleSystems(IEnumerable<XElement> particleElements)
     {
         return particleElements
-            .Where(p => !(int.TryParse(p.Attribute("size")?.Value, out var size) && size == 32)) // Exclude systems with Size = 32
             .Select(p => new ParticleSystem
             {
                 Size = int.TryParse(p.Attribute("size")?.Value, out var size) ? size : (int?)null,

@@ -26,8 +26,7 @@ public static class AssetNameMapper
                 continue;
 
             string namePart = parts[1].Trim().Replace("\"", "");
-            if (namePart.Contains("_32_") ||
-                namePart.ToLower().Contains("manifest") ||
+            if (namePart.ToLower().Contains("manifest") ||
                 namePart.ToLower().Contains("assets") ||
                 namePart.ToLower().Contains("logic") ||
                 namePart.ToLower().Contains("visualization") ||

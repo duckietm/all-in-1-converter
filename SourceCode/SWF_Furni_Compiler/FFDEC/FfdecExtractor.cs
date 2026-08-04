@@ -54,8 +54,9 @@ namespace Habbo_Downloader.Tools
 
         // CSV rules for the furni
         // - Skip any line with ID 0 As this is the Furni name
-        // - Skip any mapping whose name contains "_32_" or whose comment contains any of:
+        // - Skip any mapping whose comment contains any of:
         //   "manifest", "assets", "logic", "visualization", or "index".
+        //   (size-32 sprites are kept so furni stay crisp when zoomed out.)
         // - For a given CSV ID:
         //     • If there are multiple rows (e.g. ID 1), the extracted file is named "{ID}.png".
         //       The first row (marked "source" or the first row if none is marked) is used as the physical image.
@@ -190,9 +191,6 @@ namespace Habbo_Downloader.Tools
                     name = namePart.Substring(0, commentIndex).Trim();
                     comment = namePart.Substring(commentIndex + 3).Trim();
                 }
-
-                if (name.Contains("_32_"))
-                    continue;
 
                 string lowerComment = comment.ToLower();
                 if (lowerComment.Contains("manifest") ||

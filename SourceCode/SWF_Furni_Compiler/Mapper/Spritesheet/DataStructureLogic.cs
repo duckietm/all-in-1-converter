@@ -164,8 +164,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper
 
                         if (imageTag.ClassName.StartsWith("sh_")) continue;
 
-                        if (imageTag.ClassName.Contains("_32_")) continue;
-
                         string key = names[i].Substring(documentClass.Length + 1);
                         string value = imageTag.ClassName.Substring(documentClass.Length + 1);
                         ImageSources[key] = value;
@@ -173,8 +171,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper
                 }
 
                 if (imageTag.ClassName.StartsWith("sh_")) continue;
-
-                if (imageTag.ClassName.Contains("_32_")) continue;
 
                 string className = imageTag.ClassName;
 

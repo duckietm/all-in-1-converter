@@ -211,7 +211,7 @@ namespace Habbo_Downloader.Compiler
             foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
             {
                 string imageName = Path.GetFileNameWithoutExtension(imageFile);
-                if (imageName.StartsWith("sh_") || imageName.Contains("_32_")) continue;
+                if (imageName.StartsWith("sh_")) continue;
 
                 try
                 {

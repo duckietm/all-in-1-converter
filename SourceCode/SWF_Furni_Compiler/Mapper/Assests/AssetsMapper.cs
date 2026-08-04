@@ -109,8 +109,6 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                         string cleanedName = RemoveSwfPrefix(originalTagName, swfPrefix);
                         cleanedName = ForceCFUpper(cleanedName);
 
-                        if (cleanedName.Contains("_32_"))
-                            continue;
                         if (cleanedName.EndsWith("visualization", StringComparison.OrdinalIgnoreCase) ||
                             cleanedName.EndsWith("logic", StringComparison.OrdinalIgnoreCase) ||
                             cleanedName.EndsWith("index", StringComparison.OrdinalIgnoreCase) ||
@@ -195,15 +193,11 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
             var manifestAssetNames = manifestRoot.Descendants("asset")
                 .Where(asset => asset.Attribute("mimeType")?.Value == "image/png")
                 .Select(asset => ForceCFUpper(asset.Attribute("name")?.Value ?? ""))
-                .Where(name => !name.Contains("_32_"))
                 .ToHashSet();
 
             foreach (var assetElement in root.Elements("asset"))
             {
                 string assetName = ForceCFUpper(assetElement.Attribute("name")?.Value ?? "");
-
-                if (assetName.Contains("_32_"))
-                    continue;
 
                 if (!manifestAssetNames.Contains(assetName) && assetElement.Attribute("source") == null)
                     continue;
