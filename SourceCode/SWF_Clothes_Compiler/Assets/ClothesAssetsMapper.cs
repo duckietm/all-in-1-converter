@@ -97,10 +97,9 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                 if (string.IsNullOrEmpty(assetName))
                     continue;
 
-                // ✅ Skip assets that should be ignored
-                if (assetName.StartsWith("sh_") || assetName.Contains("_32_"))
-                    continue;
-
+                // Keep the small-scale (`sh_`) assets so the zoomed-out avatar
+                // (room geometry scale 32 -> avatar scale `sh`) has its offsets and
+                // ends up in the spritesheet. Dropping them left the avatar invisible.
                 var paramElement = assetElement.Elements("param")
                                                .FirstOrDefault(p => p.Attribute("key")?.Value == "offset");
                 if (paramElement == null)
@@ -166,9 +165,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
                         // Remove the SWF prefix from the tag name.
                         string cleanedName = RemoveSwfPrefix(originalTagName, swfPrefix);
 
-                        // Skip names with undesired parts.
-                        if (cleanedName.Contains("_32_"))
-                            continue;
+                        // Skip names with undesired parts. (`sh_`/small-scale names
+                        // are intentionally kept now so zoomed-out avatars render.)
                         if (cleanedName.EndsWith("visualization", StringComparison.OrdinalIgnoreCase) ||
                             cleanedName.EndsWith("logic", StringComparison.OrdinalIgnoreCase) ||
                             cleanedName.EndsWith("index", StringComparison.OrdinalIgnoreCase) ||

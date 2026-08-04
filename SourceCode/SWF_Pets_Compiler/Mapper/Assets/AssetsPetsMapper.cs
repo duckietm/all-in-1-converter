@@ -69,7 +69,7 @@ namespace Habbo_Downloader.SWF_Pets_Compiler.Mapper.Assests
                     foreach (var tagName in kvp.Value)
                     {
                         string cleanedName = RemoveSwfPrefix(tagName, tagMappings.ContainsKey("0") ? tagMappings["0"].FirstOrDefault() ?? "" : "");
-                        if (Regex.IsMatch(cleanedName, "_32_|visualization|logic|index|assets|manifest$")) continue;
+                        if (Regex.IsMatch(cleanedName, "visualization|logic|index|assets|manifest$")) continue;
 
                         if (!idTracker.Contains(tagId))
                         {
@@ -121,13 +121,11 @@ namespace Habbo_Downloader.SWF_Pets_Compiler.Mapper.Assests
             var manifestAssetNames = manifestRoot.Descendants("asset")
                 .Where(a => a.Attribute("mimeType")?.Value == "image/png")
                 .Select(a => a.Attribute("name")?.Value?.ToLowerInvariant() ?? "")
-                .Where(name => !name.Contains("_32_"))
                 .ToHashSet();
 
             foreach (var assetElement in root.Elements("asset"))
             {
                 string assetName = assetElement.Attribute("name")?.Value?.ToLowerInvariant() ?? "";
-                if (assetName.Contains("_32_")) continue;
 
                 if (!manifestAssetNames.Contains(assetName) && assetElement.Attribute("source") == null)
                     continue;

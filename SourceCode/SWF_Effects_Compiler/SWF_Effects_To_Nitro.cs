@@ -125,6 +125,11 @@ namespace Habbo_Downloader.Compiler
             {
                 var jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
 
+                // If the manifest yielded no offset-based assets, derive the assets
+                // section from the generated spritesheet frames. The renderer looks up
+                // effect sprites by the un-prefixed name (scale_member_dir_frame) and
+                // needs an assets entry to bridge it to the library-prefixed texture;
+                // without it the effect loads but draws nothing.
                 if ((assetsData == null || assetsData.Count == 0)
                     && spriteSheetData is SpriteSheetData sheetForAssets
                     && sheetForAssets.Frames != null
@@ -195,9 +200,10 @@ namespace Habbo_Downloader.Compiler
             foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
             {
                 string imageName = Path.GetFileNameWithoutExtension(imageFile);
-                if (imageName.StartsWith("sh_") || imageName.Contains("_32_"))
-                    continue;
-
+                // Keep the small-scale (`sh_`) effect sprites: the client renders
+                // avatars (and their effects) at scale `sh` when the room geometry
+                // is zoomed out (scale 32). Dropping them left zoomed-out effects
+                // (dances, held items, etc.) invisible.
                 try
                 {
                     if (!images.ContainsKey(imageName))

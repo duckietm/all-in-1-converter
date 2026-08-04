@@ -169,9 +169,6 @@ namespace Habbo_Downloader.Tools
                     comment = namePart.Substring(commentIndex + 3).Trim();
                 }
 
-                if (name.Contains("_32_"))
-                    continue;
-
                 string lowerComment = comment.ToLower();
                 if (lowerComment.Contains("manifest") ||
                     lowerComment.Contains("assets") ||

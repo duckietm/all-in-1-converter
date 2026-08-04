@@ -127,9 +127,8 @@ namespace Habbo_Downloader.SWF_Effects_Compiler.Mapper.Assets
                 if (string.IsNullOrEmpty(assetName))
                     continue;
 
-                if (assetName.StartsWith("sh_") || assetName.Contains("_32_"))
-                    continue;
-
+                // Keep the small-scale (`sh_`) effect assets so their offsets are
+                // written and they end up in the spritesheet for zoomed-out avatars.
                 var paramElement = assetElement.Elements("param")
                                                .FirstOrDefault(p => p.Attribute("key")?.Value == "offset");
                 if (paramElement == null)
@@ -176,8 +175,9 @@ namespace Habbo_Downloader.SWF_Effects_Compiler.Mapper.Assets
                     continue;
 
                 string link = aliasElement.Attribute("link")?.Value;
-                if (string.IsNullOrEmpty(link) ||
-                    link.StartsWith("sh_") || link.Contains("_32_"))
+                // Keep small-scale (`sh_`) aliases too, so flipped/duplicate small
+                // effect assets still resolve to their source at scale `sh`.
+                if (string.IsNullOrEmpty(link))
                 {
                     continue;
                 }
@@ -245,8 +245,8 @@ namespace Habbo_Downloader.SWF_Effects_Compiler.Mapper.Assets
                     {
                         string cleanedName = RemoveSwfPrefix(originalTagName, swfPrefix);
 
-                        if (cleanedName.Contains("_32_"))
-                            continue;
+                        // `sh_`/small-scale names are intentionally kept now so
+                        // zoomed-out avatar effects render.
                         if (cleanedName.EndsWith("visualization", StringComparison.OrdinalIgnoreCase) ||
                             cleanedName.EndsWith("logic", StringComparison.OrdinalIgnoreCase) ||
                             cleanedName.EndsWith("index", StringComparison.OrdinalIgnoreCase) ||

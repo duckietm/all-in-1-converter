@@ -114,7 +114,25 @@ namespace Habbo_Downloader.Compiler
 
             await ImageRestorer.RestoreImagesFromTmpAsync(tmpDirectory, imagesDirectory, AssetsPetsMapper.LatestImageMapping);
 
-            var images = LoadImages(imagesDirectory);
+            // Some pets ship an INCOMPLETE size-32 variant (fewer animations, or
+            // most of the size-32 frames missing) that cannot render and breaks
+            // catalog loading (e.g. monkey, turtle). Keep size-32 only when it is
+            // as complete as size-64; otherwise drop the size-32 visualization,
+            // its assets and its images so the pet renders at size-64 like before.
+            bool keepSize32 = ShouldKeepSize32(visualizations, assetData);
+            if (!keepSize32)
+            {
+                if (visualizations != null) visualizations = visualizations.Where(v => v.Size != 32).ToList();
+
+                foreach (var key in assetData.Keys.Where(k => k.Contains("_32_")).ToList())
+                {
+                    assetData.Remove(key);
+                }
+
+                Console.WriteLine($"ℹ️ {fileName}: size-32 art incomplete - keeping size-64 only.");
+            }
+
+            var images = LoadImages(imagesDirectory, keepSize32);
             if (images.Count == 0)
             {
                 Console.WriteLine($"⚠️ No valid images found for {fileName}. Skipping sprite sheet generation.");
@@ -198,13 +216,46 @@ namespace Habbo_Downloader.Compiler
                 return false;
             }
         }
-        private static Dictionary<string, Image<Rgba32>> LoadImages(string imagesDirectory)
+        // Pets ship an INCOMPLETE size-32 variant for some animals; ShouldKeepSize32
+        // decides whether this pet's size-32 art is usable. Only include the _32_
+        // frames when it is (sh_ never applies to pets).
+        private static bool ShouldKeepSize32(
+            List<Visualization> visualizations,
+            Dictionary<string, AssetsPetsMapper.Asset> assets)
+        {
+            if (visualizations == null || assets == null) return false;
+
+            var size32 = visualizations.FirstOrDefault(v => v.Size == 32);
+            var size64 = visualizations.FirstOrDefault(v => v.Size == 64);
+
+            // No size-32 to keep, or no size-64 baseline to compare against.
+            if (size32 == null || size64 == null) return false;
+
+            // Animation completeness: size-32 must declare at least as many
+            // animations as size-64 (monkey has 32 vs 33 -> dropped).
+            int anims32 = size32.Animations?.Count ?? 0;
+            int anims64 = size64.Animations?.Count ?? 0;
+            if (anims32 < anims64) return false;
+
+            // Frame completeness: size-32 must ship a comparable number of assets
+            // to size-64. Some pets declare the animations but ship almost no
+            // size-32 frames (turtle: 198 vs 697 -> dropped).
+            int assets32 = assets.Keys.Count(k => k.Contains("_32_"));
+            int assets64 = assets.Keys.Count(k => k.Contains("_64_"));
+            if (assets64 > 0 && assets32 < (int)(assets64 * 0.9)) return false;
+
+            return true;
+        }
+
+        private static Dictionary<string, Image<Rgba32>> LoadImages(string imagesDirectory, bool includeSize32)
         {
             var images = new Dictionary<string, Image<Rgba32>>();
             foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
             {
                 string imageName = Path.GetFileNameWithoutExtension(imageFile);
-                if (imageName.StartsWith("sh_") || imageName.Contains("_32_")) continue;
+                // Drop size-32 frames unless this pet's size-32 art passed the
+                // completeness check (sh_ never applies to pets).
+                if (imageName.StartsWith("sh_") || (!includeSize32 && imageName.Contains("_32_"))) continue;
 
                 try
                 {

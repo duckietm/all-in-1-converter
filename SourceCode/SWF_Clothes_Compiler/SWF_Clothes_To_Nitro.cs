@@ -162,9 +162,10 @@ namespace Habbo_Downloader.Compiler
             foreach (var imageFile in Directory.GetFiles(imagesDirectory, "*.png", SearchOption.TopDirectoryOnly))
             {
                 string imageName = Path.GetFileNameWithoutExtension(imageFile);
-                if (imageName.StartsWith("sh_") || imageName.Contains("_32_"))
-                    continue;
-
+                // Keep the small-scale (`sh_`) sprites: the client renders avatars
+                // at scale `sh` when the room geometry is zoomed out (scale 32). If
+                // these are stripped here the zoomed-out avatar has no textures and
+                // is invisible.
                 try
                 {
                     if (!images.ContainsKey(imageName))
