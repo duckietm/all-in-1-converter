@@ -27,10 +27,16 @@ namespace Habbo_Downloader.IO
 
             if (Directory.Exists(path))
             {
-                if (IsSplitDirectory(path)) return await LoadSplitAsync(path);
+                if (IsSplitDirectory(path))
+                    return await LoadSplitAsync(path);
+
                 var flatProbe = Path.Combine(path, FlatFileName);
-                if (File.Exists(flatProbe)) return await JsonReadHelper.LoadJObjectAsync(flatProbe);
+                if (File.Exists(flatProbe))
+                    return await JsonReadHelper.LoadJObjectAsync(flatProbe);
+
+                throw new FileNotFoundException($"FurnitureData not found in directory: expected {FlatFileName} or manifest.json5 in {path}");
             }
+
             throw new FileNotFoundException($"FurnitureData not found at: {path}");
         }
 

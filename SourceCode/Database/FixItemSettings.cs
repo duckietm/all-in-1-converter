@@ -28,6 +28,10 @@ namespace ConsoleApplication.FixSettings
         public bool canstandon { get; set; }
         public bool cansiton { get; set; }
         public bool canlayon { get; set; }
+
+        // Not from JSON - set to true for items loaded from wallitemtypes so their
+        // tile dimensions get normalized to neutral server defaults.
+        public bool isWall { get; set; }
     }
 
     public static class FixItemSettings
@@ -78,7 +82,11 @@ namespace ConsoleApplication.FixSettings
             if (data?.roomitemtypes?.furnitype != null)
                 allFixItems.AddRange(data.roomitemtypes.furnitype);
             if (data?.wallitemtypes?.furnitype != null)
+            {
+                foreach (var wallItem in data.wallitemtypes.furnitype)
+                    wallItem.isWall = true;
                 allFixItems.AddRange(data.wallitemtypes.furnitype);
+            }
 
             if (allFixItems.Count == 0)
             {
@@ -171,6 +179,9 @@ namespace ConsoleApplication.FixSettings
                     StringBuilder caseAllowWalk = new StringBuilder("CASE id ");
                     StringBuilder caseAllowSit = new StringBuilder("CASE id ");
                     StringBuilder caseAllowLay = new StringBuilder("CASE id ");
+                    StringBuilder caseWidth = new StringBuilder("CASE id ");
+                    StringBuilder caseLength = new StringBuilder("CASE id ");
+                    StringBuilder caseStackHeight = new StringBuilder("CASE id ");
                     List<int> ids = new List<int>();
 
                     foreach (var (itemBaseId, fixItem) in batch)
@@ -183,15 +194,30 @@ namespace ConsoleApplication.FixSettings
                         caseAllowWalk.AppendFormat("WHEN {0} THEN '{1}' ", itemBaseId, allowWalk);
                         caseAllowSit.AppendFormat("WHEN {0} THEN '{1}' ", itemBaseId, allowSit);
                         caseAllowLay.AppendFormat("WHEN {0} THEN '{1}' ", itemBaseId, allowLay);
+
+                        // Wall items ('i') don't use tile dimensions; normalize to neutral
+                        // server defaults. Non-wall items fall through to ELSE (unchanged).
+                        if (fixItem.isWall)
+                        {
+                            caseWidth.AppendFormat("WHEN {0} THEN '1' ", itemBaseId);
+                            caseLength.AppendFormat("WHEN {0} THEN '1' ", itemBaseId);
+                            caseStackHeight.AppendFormat("WHEN {0} THEN '0.00' ", itemBaseId);
+                        }
                     }
                     caseAllowWalk.Append("ELSE allow_walk END");
                     caseAllowSit.Append("ELSE allow_sit END");
                     caseAllowLay.Append("ELSE allow_lay END");
+                    caseWidth.Append("ELSE width END");
+                    caseLength.Append("ELSE length END");
+                    caseStackHeight.Append("ELSE stack_height END");
 
                     string updateQuery = "UPDATE items_base SET " +
                         "allow_walk = " + caseAllowWalk.ToString() + ", " +
                         "allow_sit = " + caseAllowSit.ToString() + ", " +
-                        "allow_lay = " + caseAllowLay.ToString() +
+                        "allow_lay = " + caseAllowLay.ToString() + ", " +
+                        "width = " + caseWidth.ToString() + ", " +
+                        "length = " + caseLength.ToString() + ", " +
+                        "stack_height = " + caseStackHeight.ToString() +
                         " WHERE id IN (" + string.Join(",", ids) + ")";
 
                     try
