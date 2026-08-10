@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -10,6 +11,7 @@ using Avalonia.Styling;
 using Habbo_Downloader.App.Menus;
 using Habbo_Downloader.App.Operations;
 using Habbo_Downloader.App.Professional.ViewModels;
+using Habbo_Downloader.App.Workspaces;
 
 namespace Habbo_Downloader.App.Professional.Views;
 
@@ -28,7 +30,24 @@ public sealed class ProfessionalWindow : Window
     private static readonly IBrush CallToActionHover = Brush(ProfessionalPalette.CallToActionHover);
     private static readonly IBrush CallToActionBorder = Brush(ProfessionalPalette.CallToActionBorder);
     private static readonly IBrush Muted = Brush(ProfessionalPalette.ContentMutedText);
+    private static readonly HashSet<string> WorkspaceOperationIds =
+    [
+        "habbo.furnidata",
+        "nitro.furniture",
+        "nitro.clothes",
+        "tools.decompile-nitro",
+        "tools.compile-nitro",
+        "tools.swf-furniture",
+        "tools.swf-clothes",
+        "tools.swf-pets",
+        "tools.swf-effects",
+        "database.offer-id",
+        "database.item-settings",
+        "database.sprite-id"
+    ];
     private readonly ProfessionalShellViewModel _viewModel = new();
+    private readonly AssetWorkspaceViewModel _workspaceViewModel = new(
+        new WorkspaceSettingsStore(Path.Combine(Environment.CurrentDirectory, "config.ini")));
     private readonly StackPanel _content = new() { Spacing = 16 };
     private readonly TextBlock _title = new() { FontSize = 28, FontWeight = FontWeight.SemiBold };
     private readonly TextBlock _subtitle = new() { FontSize = 14, Foreground = Muted };
@@ -44,7 +63,12 @@ public sealed class ProfessionalWindow : Window
     };
     private readonly TextBox _input = new() { PlaceholderText = "Type a response and press Enter" };
     private readonly Button _send = new() { Content = "Send", Padding = new Thickness(18, 8) };
+    private readonly TextBox _workspacePath = new() { PlaceholderText = @"E:\Users\you\Nitro-Files\nitro-assets" };
+    private readonly TextBlock _workspaceStatus = new() { FontSize = 15, FontWeight = FontWeight.SemiBold, Foreground = Accent };
+    private readonly WrapPanel _workspaceFolders = new() { Orientation = Orientation.Horizontal };
+    private readonly Button _openWorkspace = new() { Content = "Open workspace folder", Padding = new Thickness(18, 8) };
     private readonly Border _activityPanel;
+    private readonly Control _workspacePanel;
     private readonly List<Button> _navigationButtons = [];
     private readonly Dictionary<OperationCategory, Button> _categoryNavigation = [];
     private Button? _activeNavigation;
@@ -59,8 +83,10 @@ public sealed class ProfessionalWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         RequestedThemeVariant = ThemeVariant.Default;
         DataContext = _viewModel;
+        _openWorkspace.Click += (_, _) => OpenWorkspaceFolder();
 
         _activityPanel = BuildActivityPanel();
+        _workspacePanel = BuildWorkspacePanel();
         Content = BuildLayout();
         _viewModel.PropertyChanged += ViewModelChanged;
         Closing += (_, eventArgs) =>
@@ -136,6 +162,7 @@ public sealed class ProfessionalWindow : Window
 
         var nav = new StackPanel { Spacing = 7 };
         nav.Children.Add(NavButton("⌂  Dashboard", ShowDashboard, isDefault: true));
+        nav.Children.Add(NavButton("▣  Asset Workspace", ShowAssetWorkspace));
         nav.Children.Add(NavButton("↓  Habbo Original", () => ShowCategory(OperationCategory.HabboOriginal), OperationCategory.HabboOriginal));
         nav.Children.Add(NavButton("◆  Nitro Custom", () => ShowCategory(OperationCategory.NitroCustom), OperationCategory.NitroCustom));
         nav.Children.Add(NavButton("⚒  Hotel Tools", () => ShowCategory(OperationCategory.HotelTools), OperationCategory.HotelTools));
@@ -251,6 +278,112 @@ public sealed class ProfessionalWindow : Window
         _content.Children.Add(BuildQuickActions());
         _content.Children.Add(BuildGettingStarted());
         RefreshHeader();
+    }
+
+    private async void ShowAssetWorkspace()
+    {
+        _viewModel.ShowAssetWorkspace();
+        _workspacePath.Text = _workspaceViewModel.RootPath;
+        _content.Children.Clear();
+        _content.Children.Add(_workspacePanel);
+        RefreshHeader();
+        await _workspaceViewModel.LoadAsync();
+        RefreshWorkspacePage();
+    }
+
+    private Control BuildWorkspacePanel()
+    {
+        var section = new StackPanel { Spacing = 16 };
+        section.Children.Add(SectionTitle("Nitro assets folder", "Choose the nitro-assets root. Known folders are detected automatically."));
+
+        var pathRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 8 };
+        pathRow.Children.Add(_workspacePath);
+        var browse = new Button { Content = "Browse…", Padding = new Thickness(18, 8) };
+        browse.Click += async (_, _) =>
+        {
+            IReadOnlyList<IStorageFolder> folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Select your nitro-assets folder",
+                AllowMultiple = false
+            });
+            string? selected = folders.FirstOrDefault()?.TryGetLocalPath();
+            if (string.IsNullOrWhiteSpace(selected)) return;
+            _workspacePath.Text = selected;
+            _workspaceViewModel.RootPath = selected;
+        };
+        Grid.SetColumn(browse, 1);
+        pathRow.Children.Add(browse);
+        var save = new Button { Content = "Save and verify", Padding = new Thickness(18, 8) };
+        ApplyPrimaryButtonColors(save);
+        save.Click += async (_, _) =>
+        {
+            _workspaceViewModel.RootPath = _workspacePath.Text ?? string.Empty;
+            await _workspaceViewModel.SaveAndRefreshAsync();
+            RefreshWorkspacePage();
+        };
+        Grid.SetColumn(save, 2);
+        pathRow.Children.Add(save);
+        section.Children.Add(Card(pathRow));
+
+        _workspaceStatus.Text = _workspaceViewModel.StatusText;
+        section.Children.Add(_workspaceStatus);
+        RefreshWorkspaceFolderCards();
+        section.Children.Add(_workspaceFolders);
+
+        var safety = new StackPanel { Spacing = 7 };
+        safety.Children.Add(new TextBlock { Text = "Safe file interaction", FontSize = 17, FontWeight = FontWeight.SemiBold });
+        safety.Children.Add(new TextBlock
+        {
+            Text = "Compatible operations use these folders directly. Existing files are backed up under backups/<date-time> before replacement; paths outside this workspace are rejected.",
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = Muted
+        });
+        _openWorkspace.HorizontalAlignment = HorizontalAlignment.Left;
+        _openWorkspace.IsEnabled = _workspaceViewModel.Paths is not null;
+        safety.Children.Add(_openWorkspace);
+        section.Children.Add(Card(safety));
+        return section;
+    }
+
+    private void RefreshWorkspacePage()
+    {
+        _workspaceStatus.Text = _workspaceViewModel.StatusText;
+        _openWorkspace.IsEnabled = _workspaceViewModel.Paths is not null;
+        RefreshWorkspaceFolderCards();
+        _status.Text = _workspaceViewModel.StatusText;
+    }
+
+    private void RefreshWorkspaceFolderCards()
+    {
+        _workspaceFolders.Children.Clear();
+        IReadOnlyList<AssetWorkspaceFolder> folders = _workspaceViewModel.Folders;
+        if (folders.Count == 0)
+        {
+            _workspaceFolders.Children.Add(Card(new TextBlock { Text = "No workspace verified yet.", Foreground = Muted }));
+            return;
+        }
+
+        foreach (AssetWorkspaceFolder folder in folders)
+        {
+            var content = new StackPanel { Spacing = 5 };
+            content.Children.Add(new TextBlock { Text = folder.Name, FontSize = 16, FontWeight = FontWeight.SemiBold });
+            content.Children.Add(new TextBlock
+            {
+                Text = folder.Exists ? $"Ready · {folder.FileCount:N0} files" : "Folder not found",
+                Foreground = folder.Exists ? new SolidColorBrush(Color.Parse("#15803D")) : new SolidColorBrush(Color.Parse("#A66000"))
+            });
+            content.Children.Add(new TextBlock { Text = folder.Path, Foreground = Muted, FontSize = 11, TextWrapping = TextWrapping.Wrap, MaxWidth = 280 });
+            Border card = Card(content, new Thickness(0, 0, 12, 12));
+            card.Width = 320;
+            _workspaceFolders.Children.Add(card);
+        }
+    }
+
+    private void OpenWorkspaceFolder()
+    {
+        string? path = _workspaceViewModel.Paths?.Root;
+        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return;
+        Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
     }
 
     private void ShowCategory(OperationCategory category)
@@ -398,8 +531,50 @@ public sealed class ProfessionalWindow : Window
     {
         OperationDefinition? operation = _viewModel.SelectedOperation;
         if (operation is null || !_viewModel.CanRun) return;
+        if (AssetWorkspaceRuntime.Router.IsConfigured && WorkspaceOperationIds.Contains(operation.Id) &&
+            !await ConfirmWorkspaceAccessAsync(operation)) return;
         if (operation.IsDestructive && !await ConfirmDestructiveAsync(operation.Title)) return;
         await _viewModel.RunSelectedAsync();
+    }
+
+    private async Task<bool> ConfirmWorkspaceAccessAsync(OperationDefinition operation)
+    {
+        AssetWorkspacePaths? paths = AssetWorkspaceRuntime.Router.Paths;
+        if (paths is null) return true;
+        var dialog = new Window
+        {
+            Title = "Review workspace access",
+            Width = 620,
+            Height = 300,
+            CanResize = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        var result = false;
+        var panel = new StackPanel { Margin = new Thickness(24), Spacing = 12 };
+        panel.Children.Add(new TextBlock { Text = operation.Title, FontSize = 20, FontWeight = FontWeight.SemiBold });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"This operation will interact with the configured Nitro workspace:\n{paths.Root}",
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Existing files written by compatible operations are backed up automatically before replacement.",
+            Foreground = Muted,
+            TextWrapping = TextWrapping.Wrap
+        });
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };
+        var cancel = new Button { Content = "Cancel", Padding = new Thickness(18, 8) };
+        cancel.Click += (_, _) => dialog.Close();
+        var confirm = new Button { Content = "Continue with workspace", Padding = new Thickness(18, 8) };
+        ApplyPrimaryButtonColors(confirm);
+        confirm.Click += (_, _) => { result = true; dialog.Close(); };
+        buttons.Children.Add(cancel);
+        buttons.Children.Add(confirm);
+        panel.Children.Add(buttons);
+        dialog.Content = panel;
+        await dialog.ShowDialog(this);
+        return result;
     }
 
     private async Task<bool> ConfirmDestructiveAsync(string title)
@@ -462,7 +637,9 @@ public sealed class ProfessionalWindow : Window
         if (grid.Children.OfType<TextBlock>().FirstOrDefault(x => x.Name == "ActivityHeading") is { } heading)
             heading.Text = operation?.Title ?? "Select an operation";
         if (grid.Children.OfType<TextBlock>().FirstOrDefault(x => x.Name == "ActivityDescription") is { } description)
-            description.Text = operation?.Description ?? "Choose a card above to inspect and run it.";
+            description.Text = operation is null
+                ? "Choose a card above to inspect and run it."
+                : operation.Description + WorkspaceTargetSummary(operation);
         if (grid.Children.OfType<Grid>().SelectMany(x => x.Children).OfType<Button>().FirstOrDefault(x => x.Name == "RunButton") is { } run)
             run.IsEnabled = _viewModel.CanRun;
         _input.IsVisible = operation?.RequiresInput == true;
@@ -475,6 +652,13 @@ public sealed class ProfessionalWindow : Window
         panel.Children.Add(new TextBlock { Text = title, FontSize = 19, FontWeight = FontWeight.SemiBold });
         panel.Children.Add(new TextBlock { Text = subtitle, Foreground = Muted, FontSize = 13 });
         return panel;
+    }
+
+    private static string WorkspaceTargetSummary(OperationDefinition operation)
+    {
+        AssetWorkspacePaths? paths = AssetWorkspaceRuntime.Router.Paths;
+        if (paths is null || !WorkspaceOperationIds.Contains(operation.Id)) return string.Empty;
+        return $"\n\nWorkspace enabled: {paths.Root}";
     }
 
     private static Border Card(Control content, Thickness? margin = null) => new()

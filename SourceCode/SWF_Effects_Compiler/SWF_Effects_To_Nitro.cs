@@ -5,6 +5,7 @@ using Habbo_Downloader.SWF_Effects_Compiler.Mapper.Assets;
 using Habbo_Downloader.SWF_Effects_Compiler.Spritesheet;
 using Habbo_Downloader.SWF_Effects_Compiler.Mapper.Animation;
 using Habbo_Downloader.SWFCompiler.Mapper;
+using Habbo_Downloader.App.Workspaces;
 using System.Collections.Concurrent;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -14,7 +15,9 @@ namespace Habbo_Downloader.Compiler
     public static class SWF_Effects_To_Nitro
     {
         private static readonly string ImportDirectory = Path.Combine("SWFCompiler", "import", "effects");
-        private static readonly string OutputDirectory = Path.Combine("SWFCompiler", "effects");
+        private static string OutputDirectory => AssetWorkspaceRuntime.Router.AssetDirectory(
+            WorkspaceAssetKind.Effects,
+            Path.Combine("SWFCompiler", "effects"));
 
         public static async Task ConvertSwfFilesAsync()
         {

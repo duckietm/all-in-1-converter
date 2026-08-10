@@ -24,9 +24,25 @@
 
                 await DownloadFileAsync(furnidataTXT, "./Habbo_Default/files/txt/furnidata.txt", "furnidata.txt");
                 await DownloadFileAsync(furnidataXML, "./Habbo_Default/files/txt/furnidata_xml.xml", "furnidata_xml.xml");
-                FurnidataConverter.ConvertXmlToJson("./Habbo_Default/files/txt/furnidata_xml.xml", "./Habbo_Default/files/json/FurnitureData.json");
+                Habbo_Downloader.App.Workspaces.AssetWorkspaceRouter workspace =
+                    Habbo_Downloader.App.Workspaces.AssetWorkspaceRuntime.Router;
+                string legacyOutput = "./Habbo_Default/files/json/FurnitureData.json";
+                string targetOutput = workspace.GameDataFile("FurnitureData.json", legacyOutput);
+                string converterOutput = workspace.IsConfigured
+                    ? Path.Combine(Path.GetTempPath(), $"FurnitureData-{Guid.NewGuid():N}.json")
+                    : targetOutput;
+                try
+                {
+                    FurnidataConverter.ConvertXmlToJson("./Habbo_Default/files/txt/furnidata_xml.xml", converterOutput);
+                    if (workspace.IsConfigured)
+                        await Habbo_Downloader.App.Workspaces.WorkspaceOutput.WriteAllBytesAsync(targetOutput, await File.ReadAllBytesAsync(converterOutput));
+                }
+                finally
+                {
+                    if (workspace.IsConfigured && File.Exists(converterOutput)) File.Delete(converterOutput);
+                }
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"📦 Converted furnidata_xml to FurnitureData.json");
+                Console.WriteLine($"📦 Converted furnidata_xml to {targetOutput}");
                 Console.ForegroundColor = ConsoleColor.Gray;
 
                 Console.WriteLine("🎉 Furnidata completed successfully!");

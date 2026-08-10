@@ -64,6 +64,14 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
         SelectedOperation = null;
     }
 
+    public void ShowAssetWorkspace()
+    {
+        PageTitle = "Asset Workspace";
+        PageSubtitle = "Connect the converter directly to your Nitro asset folders";
+        VisibleOperations.Clear();
+        SelectedOperation = null;
+    }
+
     public void ShowCategory(OperationCategory category)
     {
         (PageTitle, PageSubtitle) = category switch

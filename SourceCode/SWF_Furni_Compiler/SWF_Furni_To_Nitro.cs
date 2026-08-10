@@ -4,6 +4,7 @@ using Habbo_Downloader.SWFCompiler.Mapper.Logic;
 using Habbo_Downloader.SWFCompiler.Mapper.Visualizations;
 using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
 using Habbo_Downloader.Tools;
+using Habbo_Downloader.App.Workspaces;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -21,7 +22,9 @@ namespace Habbo_Downloader.Compiler
     public static class SWF_Furni_To_Nitro
     {
         private static string ImportDirectory;
-        private static readonly string OutputDirectory = Path.Combine("SWFCompiler", "furniture");
+        private static string OutputDirectory => AssetWorkspaceRuntime.Router.AssetDirectory(
+            WorkspaceAssetKind.Furniture,
+            Path.Combine("SWFCompiler", "furniture"));
 
         public static async Task ConvertSwfFilesAsync()
         {

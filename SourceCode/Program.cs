@@ -7,6 +7,7 @@ using Habbo_Downloader.App.Gui;
 using Habbo_Downloader.App.Menus;
 using Habbo_Downloader.App.Professional.Views;
 using Habbo_Downloader.App.Runners;
+using Habbo_Downloader.App.Workspaces;
 using HabboMenuItem = Habbo_Downloader.App.Menus.MenuItem;
 
 namespace ConsoleApplication
@@ -27,6 +28,7 @@ namespace ConsoleApplication
             // Unpack FFDec etc. from the embedded zip on first launch.
             // No-op when the files are already on disk.
             EmbeddedToolsExtractor.EnsureExtracted();
+            AssetWorkspaceRuntime.Load(Path.Combine(Environment.CurrentDirectory, "config.ini"));
 
             var args = Args.Parse(argv);
 

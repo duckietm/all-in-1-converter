@@ -30,12 +30,16 @@ namespace ConsoleApplication
 
             try
             {
+                Habbo_Downloader.App.Workspaces.AssetWorkspaceRouter workspace =
+                    Habbo_Downloader.App.Workspaces.AssetWorkspaceRuntime.Router;
                 string currentDirectory = Environment.CurrentDirectory;
-                string downloadDirectory = Path.Combine(currentDirectory, "./custom_downloads/clothes");
+                string downloadDirectory = workspace.AssetDirectory(
+                    Habbo_Downloader.App.Workspaces.WorkspaceAssetKind.Clothing,
+                    Path.Combine(currentDirectory, "./custom_downloads/clothes"));
                 Directory.CreateDirectory(downloadDirectory);
 
-                string figureMapFilePath = Path.Combine(downloadDirectory, "FigureMap.json");
-                string figureDataFilePath = Path.Combine(downloadDirectory, "FigureData.json");
+                string figureMapFilePath = workspace.GameDataFile("FigureMap.json", Path.Combine(downloadDirectory, "FigureMap.json"));
+                string figureDataFilePath = workspace.GameDataFile("FigureData.json", Path.Combine(downloadDirectory, "FigureData.json"));
 
                 string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
                 string figureMapUrlWithTimestamp = $"{nitroFigureMap}?timestamp={timestamp}";
@@ -137,10 +141,8 @@ namespace ConsoleApplication
                 var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
-                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    await response.Content.CopyToAsync(fileStream);
-                }
+                byte[] content = await response.Content.ReadAsByteArrayAsync();
+                await Habbo_Downloader.App.Workspaces.WorkspaceOutput.WriteAllBytesAsync(filePath, content);
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"Downloaded: {fileName}");
