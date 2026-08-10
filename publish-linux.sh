@@ -34,15 +34,16 @@ cat > "$OUT/all-in-1-converter.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=All-in-1 Converter
-Comment=Habbo asset workstation (Mainframe / Matrix GUI)
-Exec=$OUT/Habbo\ Downloader --gui
-Terminal=false
+Comment=Habbo asset workstation (Professional / GUI / TUI / CLI)
+Exec=sh -c 'cd "\$(dirname "\$1")" && exec "./Habbo Downloader"' sh %k
+Terminal=true
 Categories=Development;Utility;
 EOF
 
 echo
 echo "Published Linux build at: $OUT"
-echo "Run from terminal:    $OUT/Habbo\\ Downloader        (prompts TUI / CLI)"
+echo "Run from terminal:    $OUT/Habbo\\ Downloader        (four-interface selector)"
+echo "Run from terminal:    $OUT/Habbo\\ Downloader --professional  (Professional MVVM UI)"
 echo "Run from terminal:    $OUT/Habbo\\ Downloader --tui  (mainframe TUI)"
 echo "Run from terminal:    $OUT/Habbo\\ Downloader --cli  (plain console, mainframe look)"
-echo "Run from file manager (double-click .desktop):  launches GUI directly"
+echo "Run from file manager (double-click .desktop):  opens the interface selector"

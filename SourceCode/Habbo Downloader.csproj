@@ -37,6 +37,13 @@
       Overwrite="true" />
   </Target>
 
+  <!-- Native graphics packages ship Windows debug symbols even for Release
+       single-file publishes. They are not required at runtime and otherwise
+       add more than 100 MB beside the application. -->
+  <Target Name="RemoveNativeDebugSymbolsFromPublish" AfterTargets="Publish">
+    <Delete Files="$(PublishDir)libHarfBuzzSharp.pdb;$(PublishDir)libSkiaSharp.pdb" />
+  </Target>
+
   <ItemGroup>
     <EmbeddedResource Include="$(IntermediateOutputPath)EmbeddedTools.zip"
                       LogicalName="Habbo_Downloader.EmbeddedTools.zip"

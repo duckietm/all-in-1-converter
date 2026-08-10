@@ -2,7 +2,7 @@ using System;
 
 namespace Habbo_Downloader.App
 {
-    public enum RunMode { Cli, Tui, Gui, Quit }
+    public enum RunMode { Cli, Tui, Gui, Professional, Quit }
 
     public sealed class Args
     {
@@ -20,6 +20,8 @@ namespace Habbo_Downloader.App
                 switch (argv[i].ToLowerInvariant())
                 {
                     case "--gui":  a.Mode = RunMode.Gui; a.ModeExplicitlySet = true; break;
+                    case "--professional":
+                    case "--pro":  a.Mode = RunMode.Professional; a.ModeExplicitlySet = true; break;
                     case "--tui":  a.Mode = RunMode.Tui; a.ModeExplicitlySet = true; break;
                     case "--cli":  a.Mode = RunMode.Cli; a.ModeExplicitlySet = true; break;
                     case "--help":
@@ -43,12 +45,13 @@ namespace Habbo_Downloader.App
 
         public static string HelpText =>
             "Habbo Downloader (All-in-1) - usage:\n" +
-            "  habbo-downloader [--tui|--cli|--gui] [--command <name>]\n" +
+            "  habbo-downloader [--professional|--gui|--tui|--cli] [--command <name>]\n" +
             "\n" +
             "Modes:\n" +
             "  --tui   Mouse-driven mainframe TUI (DEFAULT; Windows + Linux)\n" +
             "  --cli   Plain console menu (legacy; for scripts / non-tty)\n" +
             "  --gui   Desktop window (Windows + Linux, Avalonia)\n" +
+            "  --professional  Professional MVVM dashboard (Windows + Linux)\n" +
             "\n" +
             "Options:\n" +
             "  --command <name>   In CLI mode, jump straight to a top-level menu:\n" +

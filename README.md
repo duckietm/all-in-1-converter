@@ -6,7 +6,7 @@ merge furnidata / clothesdata / productdata, convert SWF → Nitro, generate
 the SQL inserts for `items_base` + `catalog_items`, and fix the database in
 place.
 
-It ships with three interchangeable UI shells (same workflows behind each)
+It ships with four interchangeable UI shells (same workflows behind each)
 plus a self-contained binary for Windows and Linux.
 
 ## At a glance
@@ -16,19 +16,23 @@ plus a self-contained binary for Windows and Linux.
 | Runtime | .NET 11 Preview 6, cross-platform (Windows x64, Linux x64) |
 | Spritesheet engine | SixLabors.ImageSharp 3.x (replaces System.Drawing) |
 | Terminal UI | Terminal.Gui 1.19 (mouse + keyboard) |
-| Desktop UI | Avalonia 12 (Mainframe + Matrix themes) |
+| Desktop UI | Avalonia 12 (Professional MVVM dashboard + legacy Mainframe / Matrix) |
 | Database | MySql.Data 9.7 (MariaDB / MySQL) |
 | SWF decompiler | JPEXS Free Flash Decompiler (`Tools/ffdec/`) |
 | Data formats | Strict single-file JSON |
 
-## Three ways to drive it
+## Four ways to drive it
 
 The same menus and tools sit behind each shell, so anything you learn in
 one carries over.
 
+- **Professional** — the recommended native Avalonia MVVM dashboard.
+  Provides module navigation, operation cards, live status and logs, native
+  prompt input, database safety confirmations, and the operating-system theme.
+
 - **TUI** — mouse-driven mainframe terminal (Terminal.Gui).
   IBM 3270 / CICS look, mouse + keyboard, F-keys, captured output in a
-  scrollable log pane. **Recommended.**
+  scrollable log pane.
 
 - **CLI** — same mainframe theme rendered with plain `Console.WriteLine`.
   Keyboard only. Useful over SSH, piped, or in restricted terminals.
@@ -39,15 +43,15 @@ one carries over.
   - **Matrix** — pure phosphor green on black, with a digital-rain
     background of digits cascading behind the menus.
 
-When the binary is **double-clicked from a file manager** it opens straight
-into the GUI. When it's launched from a **terminal** it asks whether you
-want TUI or CLI (GUI is not offered from a terminal session because the
-operator usually wants to stay in the terminal). Inside any shell, the
-`s` menu entry hot-swaps between modes without restarting the process.
+When the Windows binary is **double-clicked from a file manager**, a native
+selector offers all four interfaces. The Linux `.desktop` entry opens its
+terminal selector so TUI and CLI remain usable. A terminal launch offers the
+same four choices. The existing shells retain the `s` menu entry for switching
+mode without restarting the process.
 
 ```text
-Habbo Downloader            # mode selector if launched from a terminal,
-                            # GUI directly if double-clicked
+Habbo Downloader            # four-interface selector
+Habbo Downloader --professional  # Professional MVVM dashboard
 Habbo Downloader --tui      # mouse mainframe TUI
 Habbo Downloader --cli      # keyboard-only mainframe CLI
 Habbo Downloader --gui      # desktop window (prompts theme)
@@ -113,7 +117,7 @@ custom_downloads/       multi-source custom downloader output
 ```bash
 cd SourceCode
 dotnet build "Habbo Downloader.csproj"          # debug build
-dotnet run -- --tui                             # run with TUI mode
+dotnet run -- --professional                    # run the Professional UI
 ```
 
 Prerequisites: **.NET SDK 11 Preview 6** + **Java** (for FFDec, used by every SWF → Nitro
@@ -151,9 +155,11 @@ are included as references.
 
 ## Credits
 
-- **medievalshell** — .NET 11 modernization, cross-platform refactor,
-  ImageSharp migration, strict JSON IO, three UI shells (CLI / TUI /
-  GUI), Mainframe + Matrix themes, GitHub Actions pipeline.
+- **Life** — .NET 11 upgrade, strict JSON-only migration, removal of the
+  JSON5 split layout, and the Professional Avalonia MVVM dashboard.
+- **medievalshell** — .NET 10 modernization, cross-platform refactor,
+  ImageSharp migration, the earlier JSON5 split-mode layer, three UI shells
+  (CLI / TUI / GUI), Mainframe + Matrix themes, and GitHub Actions pipeline.
 - **duckietm** — original all-in-1 downloader, SWF → Nitro pipeline, SQL
   generator, database tools, upstream maintainer.
 - **Nitro Team** — pets converter base (`discord.gg/yCXcMqrT`).

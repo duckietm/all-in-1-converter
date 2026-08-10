@@ -51,8 +51,9 @@ namespace Habbo_Downloader.App
                 "your last download pass."),
 
             new("credits", "Credits & contributors", Credits.ShowAsync, HowToUse:
-                "Prints the authors and contributors of the tool: medievalshell\n" +
-                "(.NET 11 modernization, CLI/TUI/GUI shells, strict JSON IO),\n" +
+                "Prints the authors and contributors of the tool: Life\n" +
+                "(.NET 11, strict JSON-only migration, Professional UI),\n" +
+                "medievalshell (.NET 10 modernization and CLI/TUI/GUI shells),\n" +
                 "duckietm (original upstream tool), plus Nitro Team Discord,\n" +
                 "AtlasOmega and Leet who contributed assets / effects."),
 

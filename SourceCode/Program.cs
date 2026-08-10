@@ -5,6 +5,7 @@ using Avalonia.Threading;
 using Habbo_Downloader.App;
 using Habbo_Downloader.App.Gui;
 using Habbo_Downloader.App.Menus;
+using Habbo_Downloader.App.Professional.Views;
 using Habbo_Downloader.App.Runners;
 using HabboMenuItem = Habbo_Downloader.App.Menus.MenuItem;
 
@@ -55,15 +56,17 @@ namespace ConsoleApplication
 
             // Decide the initial UI mode: Explorer launch -> GUI direct,
             // terminal -> ModeSelector with TUI/CLI only.
+            bool showDesktopSelector = false;
             if (!args.ModeExplicitlySet && string.IsNullOrEmpty(args.Command))
             {
                 if (!LaunchContext.IsFromTerminal)
                 {
-                    args.Mode = RunMode.Gui;
+                    args.Mode = RunMode.Professional;
+                    showDesktopSelector = true;
                 }
                 else
                 {
-                    args.Mode = ModeSelector.Prompt(args.Mode == RunMode.Gui ? RunMode.Tui : args.Mode);
+                    args.Mode = ModeSelector.Prompt(RunMode.Professional);
                     if (args.Mode == RunMode.Quit)
                     {
                         Console.WriteLine("Bye.");
@@ -79,9 +82,9 @@ namespace ConsoleApplication
                 MenuHost.SwitchRequested = false;
                 MenuHost.Mode = args.Mode;
 
-                if (args.Mode == RunMode.Gui)
+                if (args.Mode is RunMode.Gui or RunMode.Professional)
                 {
-                    RunGui();
+                    RunDesktop(args.Mode, showDesktopSelector);
                 }
                 else
                 {
@@ -90,14 +93,17 @@ namespace ConsoleApplication
 
                 if (!MenuHost.SwitchRequested) break;
                 args.Mode = MenuHost.NextMode;
+                showDesktopSelector = false;
             }
             return Environment.ExitCode;
         }
 
-        private static void RunGui()
+        private static void RunDesktop(RunMode initialMode, bool showSelector)
         {
-            GuiMenuPresenter.ActiveTheme = GuiRunner.PromptThemeFromConsole();
-
+            GuiTheme guiTheme = GuiMenuPresenter.ConsumeQueuedTheme()
+                ?? (initialMode == RunMode.Gui && !showSelector
+                    ? GuiRunner.PromptThemeFromConsole()
+                    : GuiTheme.Mainframe());
             AppBuilder.Configure<AvaloniaApp>()
                 .UsePlatformDetect()
                 .WithInterFont()
@@ -108,7 +114,30 @@ namespace ConsoleApplication
                     {
                         try
                         {
-                            await MenuHost.ShowAsync("Main Menu: Select a Topic", MainMenuFactory.Build(), isTopLevel: true);
+                            RunMode selectedMode = initialMode;
+                            if (showSelector)
+                            {
+                                var selector = new InterfaceSelectorWindow();
+                                selector.Show();
+                                selectedMode = await selector.ResultTask;
+                            }
+
+                            MenuHost.Mode = selectedMode;
+                            if (selectedMode == RunMode.Professional)
+                            {
+                                var window = new ProfessionalWindow();
+                                window.Show();
+                                await window.ClosedTask;
+                            }
+                            else if (selectedMode == RunMode.Gui)
+                            {
+                                GuiMenuPresenter.ActiveTheme = GuiMenuPresenter.ConsumeQueuedTheme() ?? guiTheme;
+                                await MenuHost.ShowAsync("Main Menu: Select a Topic", MainMenuFactory.Build(), isTopLevel: true);
+                            }
+                            else if (selectedMode is RunMode.Cli or RunMode.Tui)
+                            {
+                                MenuHost.RequestSwitch(selectedMode);
+                            }
                         }
                         catch (Exception ex)
                         {

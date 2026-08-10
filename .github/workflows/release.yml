@@ -68,9 +68,9 @@ jobs:
           [Desktop Entry]
           Type=Application
           Name=All-in-1 Converter
-          Comment=Habbo asset workstation (Mainframe / Matrix GUI)
-          Exec=./Habbo\ Downloader --gui
-          Terminal=false
+          Comment=Habbo asset workstation (Professional / GUI / TUI / CLI)
+          Exec=sh -c 'cd "$(dirname "$1")" && exec "./Habbo Downloader"' sh %k
+          Terminal=true
           Categories=Development;Utility;
           EOF
       - name: Tar.gz

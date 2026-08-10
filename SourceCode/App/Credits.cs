@@ -19,10 +19,14 @@ namespace Habbo_Downloader.App
             Console.WriteLine();
             Console.WriteLine("  AUTHORS");
             Console.WriteLine("  -------");
-            Console.WriteLine("    medievalshell  -  .NET 11 modernization, cross-platform refactor,");
-            Console.WriteLine("                      ImageSharp migration, dual TUI/CLI/GUI mainframe");
-            Console.WriteLine("                      shells and strict single-file JSON IO layer,");
-            Console.WriteLine("                      Avalonia desktop GUI (Mainframe + Matrix themes).");
+            Console.WriteLine("    Life           -  .NET 11 upgrade, strict JSON-only migration,");
+            Console.WriteLine("                      JSON5 split-layout removal and Professional");
+            Console.WriteLine("                      Avalonia MVVM dashboard.");
+            Console.WriteLine();
+            Console.WriteLine("    medievalshell  -  .NET 10 modernization, cross-platform refactor,");
+            Console.WriteLine("                      ImageSharp migration, original TUI/CLI/GUI shells,");
+            Console.WriteLine("                      JSON5 split-mode layer and Avalonia desktop GUI");
+            Console.WriteLine("                      (Mainframe + Matrix themes).");
             Console.WriteLine();
             Console.WriteLine("    duckietm       -  Original all-in-1 downloader / SWF -> Nitro / SQL");
             Console.WriteLine("                      generator / database tools. Upstream maintainer.");

@@ -24,7 +24,8 @@ namespace Habbo_Downloader.App
                 IsSubMenu: false,
                 HowToUse:
                     "Closes the current UI and reopens the workstation in the mode you pick.\n" +
-                    "Available targets: TUI (mouse-driven mainframe terminal),\n" +
+                    "Available targets: Professional (native MVVM dashboard),\n" +
+                    "                  TUI (mouse-driven mainframe terminal),\n" +
                     "                  CLI (classic console, keyboard only),\n" +
                     "                  GUI (Avalonia desktop window, Mainframe or Matrix theme).\n" +
                     "Useful for instance when running over SSH (-> TUI) or for screenshots (-> GUI).");
@@ -39,9 +40,10 @@ namespace Habbo_Downloader.App
             Console.WriteLine();
             Console.WriteLine($"  Current mode: {current}");
             Console.WriteLine();
-            Console.WriteLine("    [1] TUI  - Mouse-driven mainframe terminal UI (Terminal.Gui)");
-            Console.WriteLine("    [2] CLI  - Classic console menu, keyboard only");
-            Console.WriteLine("    [3] GUI  - Desktop window (Avalonia, Mainframe or Matrix theme)");
+            Console.WriteLine("    [1] PROFESSIONAL - Native MVVM dashboard (recommended)");
+            Console.WriteLine("    [2] GUI  - Desktop window (Avalonia, Mainframe or Matrix theme)");
+            Console.WriteLine("    [3] TUI  - Mouse-driven mainframe terminal UI (Terminal.Gui)");
+            Console.WriteLine("    [4] CLI  - Classic console menu, keyboard only");
             Console.WriteLine("    [x] CANCEL - stay in the current UI");
             Console.WriteLine();
             Console.Write("Choice: ");
@@ -49,9 +51,10 @@ namespace Habbo_Downloader.App
 
             RunMode? target = raw switch
             {
-                "1" or "tui" => RunMode.Tui,
-                "2" or "cli" => RunMode.Cli,
-                "3" or "gui" => RunMode.Gui,
+                "1" or "professional" or "pro" => RunMode.Professional,
+                "2" or "gui" => RunMode.Gui,
+                "3" or "tui" => RunMode.Tui,
+                "4" or "cli" => RunMode.Cli,
                 _            => null
             };
 
