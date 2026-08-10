@@ -17,11 +17,17 @@ public sealed class ProfessionalWindow : Window
 {
     private readonly TaskCompletionSource _closed = new();
     public Task ClosedTask => _closed.Task;
-    private static readonly IBrush Navy = new SolidColorBrush(Color.Parse("#101B34"));
-    private static readonly IBrush NavyHover = new SolidColorBrush(Color.Parse("#1B2A4A"));
-    private static readonly IBrush Accent = new SolidColorBrush(Color.Parse("#536DFE"));
-    private static readonly IBrush Muted = new SolidColorBrush(Color.Parse("#718096"));
-    private static readonly IBrush Success = new SolidColorBrush(Color.Parse("#19A974"));
+    private static readonly IBrush Navy = Brush(ProfessionalPalette.SidebarBackground);
+    private static readonly IBrush SidebarText = Brush(ProfessionalPalette.SidebarText);
+    private static readonly IBrush SidebarMuted = Brush(ProfessionalPalette.SidebarMutedText);
+    private static readonly IBrush NavigationHover = Brush(ProfessionalPalette.NavigationHover);
+    private static readonly IBrush NavigationSelected = Brush(ProfessionalPalette.NavigationSelected);
+    private static readonly IBrush SelectionIndicator = Brush(ProfessionalPalette.SelectionIndicator);
+    private static readonly IBrush Accent = Brush(ProfessionalPalette.Accent);
+    private static readonly IBrush CallToAction = Brush(ProfessionalPalette.CallToAction);
+    private static readonly IBrush CallToActionHover = Brush(ProfessionalPalette.CallToActionHover);
+    private static readonly IBrush CallToActionBorder = Brush(ProfessionalPalette.CallToActionBorder);
+    private static readonly IBrush Muted = Brush(ProfessionalPalette.ContentMutedText);
     private readonly ProfessionalShellViewModel _viewModel = new();
     private readonly StackPanel _content = new() { Spacing = 16 };
     private readonly TextBlock _title = new() { FontSize = 28, FontWeight = FontWeight.SemiBold };
@@ -39,6 +45,9 @@ public sealed class ProfessionalWindow : Window
     private readonly TextBox _input = new() { PlaceholderText = "Type a response and press Enter" };
     private readonly Button _send = new() { Content = "Send", Padding = new Thickness(18, 8) };
     private readonly Border _activityPanel;
+    private readonly List<Button> _navigationButtons = [];
+    private readonly Dictionary<OperationCategory, Button> _categoryNavigation = [];
+    private Button? _activeNavigation;
 
     public ProfessionalWindow()
     {
@@ -88,7 +97,7 @@ public sealed class ProfessionalWindow : Window
         header.Children.Add(heading);
         var badge = new Border
         {
-            Background = new SolidColorBrush(Color.Parse("#E8ECFF")),
+            Background = Brush(ProfessionalPalette.AccentSoft),
             CornerRadius = new CornerRadius(14),
             Padding = new Thickness(12, 6),
             Child = new TextBlock { Text = ".NET 11 • JSON only", Foreground = Accent, FontWeight = FontWeight.SemiBold }
@@ -121,17 +130,17 @@ public sealed class ProfessionalWindow : Window
             RowDefinitions = new RowDefinitions("Auto,*,Auto")
         };
         var brand = new StackPanel { Spacing = 3, Margin = new Thickness(8, 0, 0, 28) };
-        brand.Children.Add(new TextBlock { Text = "ALL-IN-1", Foreground = Brushes.White, FontSize = 22, FontWeight = FontWeight.Bold });
-        brand.Children.Add(new TextBlock { Text = "ASSET WORKSTATION", Foreground = new SolidColorBrush(Color.Parse("#9EACCB")), FontSize = 11 });
+        brand.Children.Add(new TextBlock { Text = "ALL-IN-1", Foreground = SidebarText, FontSize = 22, FontWeight = FontWeight.Bold });
+        brand.Children.Add(new TextBlock { Text = "ASSET WORKSTATION", Foreground = SidebarMuted, FontSize = 11 });
         sidebar.Children.Add(brand);
 
         var nav = new StackPanel { Spacing = 7 };
-        nav.Children.Add(NavButton("⌂  Dashboard", ShowDashboard));
-        nav.Children.Add(NavButton("↓  Habbo Original", () => ShowCategory(OperationCategory.HabboOriginal)));
-        nav.Children.Add(NavButton("◆  Nitro Custom", () => ShowCategory(OperationCategory.NitroCustom)));
-        nav.Children.Add(NavButton("⚒  Hotel Tools", () => ShowCategory(OperationCategory.HotelTools)));
-        nav.Children.Add(NavButton("▤  Database", () => ShowCategory(OperationCategory.Database)));
-        nav.Children.Add(NavButton("ⓘ  About", () => ShowCategory(OperationCategory.General)));
+        nav.Children.Add(NavButton("⌂  Dashboard", ShowDashboard, isDefault: true));
+        nav.Children.Add(NavButton("↓  Habbo Original", () => ShowCategory(OperationCategory.HabboOriginal), OperationCategory.HabboOriginal));
+        nav.Children.Add(NavButton("◆  Nitro Custom", () => ShowCategory(OperationCategory.NitroCustom), OperationCategory.NitroCustom));
+        nav.Children.Add(NavButton("⚒  Hotel Tools", () => ShowCategory(OperationCategory.HotelTools), OperationCategory.HotelTools));
+        nav.Children.Add(NavButton("▤  Database", () => ShowCategory(OperationCategory.Database), OperationCategory.Database));
+        nav.Children.Add(NavButton("ⓘ  About", () => ShowCategory(OperationCategory.General), OperationCategory.General));
         Grid.SetRow(nav, 1);
         sidebar.Children.Add(nav);
 
@@ -141,14 +150,21 @@ public sealed class ProfessionalWindow : Window
             Content = "Switch interface",
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Center,
-            Padding = new Thickness(10, 8)
+            Padding = new Thickness(10, 8),
+            Background = CallToAction,
+            Foreground = Brush(ProfessionalPalette.CallToActionText),
+            BorderBrush = CallToActionBorder,
+            BorderThickness = new Thickness(1),
+            FontWeight = FontWeight.SemiBold
         };
+        switchInterface.PointerEntered += (_, _) => switchInterface.Background = CallToActionHover;
+        switchInterface.PointerExited += (_, _) => switchInterface.Background = CallToAction;
         switchInterface.Click += async (_, _) => await SwitchInterfaceAsync();
         footer.Children.Add(switchInterface);
         footer.Children.Add(new TextBlock
         {
             Text = "PROFESSIONAL UI\nAdaptive • MVVM",
-            Foreground = new SolidColorBrush(Color.Parse("#9EACCB")),
+            Foreground = SidebarMuted,
             FontSize = 11,
             LineHeight = 18
         });
@@ -162,7 +178,11 @@ public sealed class ProfessionalWindow : Window
         };
     }
 
-    private Button NavButton(string label, Action action)
+    private Button NavButton(
+        string label,
+        Action action,
+        OperationCategory? category = null,
+        bool isDefault = false)
     {
         var button = new Button
         {
@@ -171,15 +191,42 @@ public sealed class ProfessionalWindow : Window
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Padding = new Thickness(14, 11),
             Background = Brushes.Transparent,
-            Foreground = Brushes.White,
-            BorderThickness = new Thickness(0),
+            Foreground = SidebarText,
+            BorderBrush = Brushes.Transparent,
+            BorderThickness = new Thickness(3, 0, 0, 0),
+            CornerRadius = new CornerRadius(8),
             FontSize = 14
+        };
+        button.PointerEntered += (_, _) =>
+        {
+            if (button != _activeNavigation) button.Background = NavigationHover;
+        };
+        button.PointerExited += (_, _) =>
+        {
+            if (button != _activeNavigation) button.Background = Brushes.Transparent;
         };
         button.Click += (_, _) =>
         {
-            if (!_viewModel.IsRunning) action();
+            if (_viewModel.IsRunning) return;
+            ActivateNavigation(button);
+            action();
         };
+        _navigationButtons.Add(button);
+        if (category is not null) _categoryNavigation[category.Value] = button;
+        if (isDefault) ActivateNavigation(button);
         return button;
+    }
+
+    private void ActivateNavigation(Button selected)
+    {
+        _activeNavigation = selected;
+        foreach (Button button in _navigationButtons)
+        {
+            bool isSelected = button == selected;
+            button.Background = isSelected ? NavigationSelected : Brushes.Transparent;
+            button.BorderBrush = isSelected ? SelectionIndicator : Brushes.Transparent;
+            button.FontWeight = isSelected ? FontWeight.SemiBold : FontWeight.Normal;
+        }
     }
 
     private async Task SwitchInterfaceAsync()
@@ -208,6 +255,8 @@ public sealed class ProfessionalWindow : Window
 
     private void ShowCategory(OperationCategory category)
     {
+        if (_categoryNavigation.TryGetValue(category, out Button? navigation))
+            ActivateNavigation(navigation);
         _viewModel.ShowCategory(category);
         _content.Children.Clear();
         _content.Children.Add(BuildOperationGrid());
@@ -330,12 +379,14 @@ public sealed class ProfessionalWindow : Window
         {
             Name = "RunButton",
             Content = "Run operation",
-            Background = Accent,
-            Foreground = Brushes.White,
+            Background = CallToAction,
+            Foreground = Brush(ProfessionalPalette.CallToActionText),
+            BorderBrush = CallToActionBorder,
             Padding = new Thickness(22, 9),
             Margin = new Thickness(10, 0, 0, 0)
         };
         run.Click += async (_, _) => await RunSelectedAsync();
+        ApplyPrimaryButtonColors(run);
         Grid.SetColumn(run, 2);
         actions.Children.Add(run);
         Grid.SetRow(actions, 3);
@@ -368,7 +419,8 @@ public sealed class ProfessionalWindow : Window
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };
         var cancel = new Button { Content = "Cancel", Padding = new Thickness(18, 8) };
         cancel.Click += (_, _) => dialog.Close();
-        var confirm = new Button { Content = "Confirm and run", Background = Accent, Foreground = Brushes.White, Padding = new Thickness(18, 8) };
+        var confirm = new Button { Content = "Confirm and run", Padding = new Thickness(18, 8) };
+        ApplyPrimaryButtonColors(confirm);
         confirm.Click += (_, _) => { result = true; dialog.Close(); };
         buttons.Children.Add(cancel);
         buttons.Children.Add(confirm);
@@ -431,8 +483,19 @@ public sealed class ProfessionalWindow : Window
         Padding = new Thickness(18),
         Margin = margin ?? new Thickness(0),
         CornerRadius = new CornerRadius(12),
-        BorderBrush = new SolidColorBrush(Color.Parse("#D8DEE9")),
+        BorderBrush = Brush(ProfessionalPalette.CardBorder),
         BorderThickness = new Thickness(1),
         Background = new SolidColorBrush(Color.Parse("#0DFFFFFF"))
     };
+
+    private static IBrush Brush(Color color) => new SolidColorBrush(color);
+
+    private static void ApplyPrimaryButtonColors(Button button)
+    {
+        button.Background = CallToAction;
+        button.Foreground = Brush(ProfessionalPalette.CallToActionText);
+        button.BorderBrush = CallToActionBorder;
+        button.PointerEntered += (_, _) => button.Background = CallToActionHover;
+        button.PointerExited += (_, _) => button.Background = CallToAction;
+    }
 }

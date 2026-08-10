@@ -61,7 +61,7 @@ public sealed class InterfaceSelectorWindow : Window
         if (recommended)
             titleRow.Children.Add(new Border
             {
-                Background = new SolidColorBrush(Color.Parse("#536DFE")),
+                Background = new SolidColorBrush(ProfessionalPalette.CallToAction),
                 CornerRadius = new CornerRadius(10),
                 Padding = new Thickness(8, 3),
                 Child = new TextBlock { Text = "RECOMMENDED", Foreground = Brushes.White, FontSize = 10 }
@@ -90,7 +90,7 @@ public sealed class InterfaceSelectorWindow : Window
             Child = panel,
             Padding = new Thickness(22),
             Margin = new Thickness(7),
-            BorderBrush = recommended ? new SolidColorBrush(Color.Parse("#536DFE")) : new SolidColorBrush(Color.Parse("#CBD2DF")),
+            BorderBrush = recommended ? new SolidColorBrush(ProfessionalPalette.Accent) : new SolidColorBrush(ProfessionalPalette.CardBorder),
             BorderThickness = new Thickness(recommended ? 2 : 1),
             CornerRadius = new CornerRadius(14),
             Background = new SolidColorBrush(Color.Parse("#0DFFFFFF"))
