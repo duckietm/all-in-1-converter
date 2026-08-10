@@ -24,16 +24,14 @@ namespace Habbo_Downloader.App
                 "Open the Nitro Custom Downloads sub-menu.\n" +
                 "Pulls custom furniture / clothes packs from another retro by reading\n" +
                 "its renderer-config.json endpoints (set them in config.ini under the\n" +
-                "[Nitro Retro Hotels] block). Supports BOTH legacy flat single-file\n" +
-                "FurnitureData.json / FigureData.json / FigureMap.json AND the new\n" +
-                "JSON5 split layout (URL ending with \"/\"). The latter pulls every\n" +
-                "tier (core / custom / seasonal) and merges them locally."),
+                "[Nitro Retro Hotels] block). FurnitureData.json, FigureData.json\n" +
+                "and FigureMap.json must be strict single JSON files."),
 
             new("3", "Hotel Tools", HotelToolsMenu.DisplayMenu, IsSubMenu: true, HowToUse:
                 "Open the Hotel Tools sub-menu.\n" +
                 "Hosts every transformation step of the asset pipeline: merge\n" +
-                "furnidata / productdata / clothesdata (dual flat or JSON5 split,\n" +
-                "doubles as a flat<->split converter), generate items_base +\n" +
+                "furnidata / productdata / clothesdata using strict JSON files,\n" +
+                "generate items_base +\n" +
                 "catalog_items SQL from .nitro / .swf, decompile / compile .nitro\n" +
                 "bundles, and convert SWF -> Nitro for furniture / clothes / pets\n" +
                 "/ effects. Cross-platform thanks to ImageSharp + FFDec via Java."),
@@ -54,7 +52,7 @@ namespace Habbo_Downloader.App
 
             new("credits", "Credits & contributors", Credits.ShowAsync, HowToUse:
                 "Prints the authors and contributors of the tool: medievalshell\n" +
-                "(.NET 11 modernization, CLI/TUI/GUI shells, JSON5 split-mode),\n" +
+                "(.NET 11 modernization, CLI/TUI/GUI shells, strict JSON IO),\n" +
                 "duckietm (original upstream tool), plus Nitro Team Discord,\n" +
                 "AtlasOmega and Leet who contributed assets / effects."),
 

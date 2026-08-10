@@ -11,22 +11,20 @@ namespace ConsoleApplication
             new("1",  "Merge Furnidata", CompareFurnidata.Compare, HowToUse:
                 "Combines Original_Furnidata + Import_Furnidata into Merged_Furnidata.\n" +
                 "Skips duplicates by classname OR by id (additive only, no override).\n" +
-                "Input auto-detects flat FurnitureData.json or split-mode (directory\n" +
-                "with manifest.json5 + core/custom/seasonal tiers).\n" +
-                "Output prompt: (F)lat single file or (S)plit manifest.json5 + chunks of 300."),
+                "Reads and writes one strict FurnitureData.json file."),
 
             new("2",  "Merge Productdata", CompareProductData.Compare, HowToUse:
                 "Combines Original_ProductData + Import_ProductData into Merged_ProductData.\n" +
                 "For each conflict on `code` you can answer (Y) replace, (A) yes-to-all,\n" +
-                "(N) skip, (Z) no-to-all. Input flat .json or split-mode dir. Output (F/S)."),
+                "(N) skip, (Z) no-to-all. Reads and writes strict JSON files."),
 
             new("3",  "Merge Clothes", CompareClothesData.Compare, HowToUse:
                 "Merges FigureData (palettes + setTypes) AND FigureMap (libraries)\n" +
                 "from Original_ClothesData + Import_ClothesData.\n" +
-                "Both datasets are written into Merged_ClothesData/. Each can be flat or split."),
+                "Writes FigureData.json and FigureMap.json into Merged_ClothesData/."),
 
             new("4",  "Generate SQL", () => { SQLGenerator.GenerateSQL(); return Task.CompletedTask; }, HowToUse:
-                "Reads FurnitureData.json (or split manifest) from Generate/Furnidata/\n" +
+                "Reads FurnitureData.json from Generate/Furnidata/\n" +
                 "and every .nitro / .swf inside Generate/Furniture/ (recursive).\n" +
                 "Asks: starting ID for items_base + catalog_items, plus Catalog_Page ID.\n" +
                 "Produces SQL files in Generate/Output_SQL/ with timestamp, one INSERT per item.\n" +

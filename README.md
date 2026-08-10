@@ -19,7 +19,7 @@ plus a self-contained binary for Windows and Linux.
 | Desktop UI | Avalonia 12 (Mainframe + Matrix themes) |
 | Database | MySql.Data 9.7 (MariaDB / MySQL) |
 | SWF decompiler | JPEXS Free Flash Decompiler (`Tools/ffdec/`) |
-| Data formats | Flat JSON **or** JSON5 split-mode (`manifest.json5` + `core/custom/seasonal/` tiers, matches Nitro V3 `split-gamedata.mjs`) |
+| Data formats | Strict single-file JSON |
 
 ## Three ways to drive it
 
@@ -67,31 +67,23 @@ to keep notes**.
    texts, variables. `all` runs the full bootstrap.
 2. **Nitro Custom Downloads** — multi-source import of custom furniture /
    clothes packs.
-3. **Hotel Tools** — Merge Furnidata / Productdata / Clothesdata (with
-   dual flat ↔ JSON5 split-mode IO), Generate SQL for `items_base` +
+3. **Hotel Tools** — Merge Furnidata / Productdata / Clothesdata using
+   strict single JSON files, Generate SQL for `items_base` +
    `catalog_items`, Decompile / Compile `.nitro` bundles, SWF → Nitro for
    Furniture / Clothes / Pets / Effects.
 4. **Database Tools** — show DB version, optimize tables, fix offer_id,
    fix sit/lay/walk in `items_base`, fix sprite_id / item_id from JSON.
 
-## JSON + JSON5 split-mode IO
+## Strict JSON IO
 
-Every Merge tool and the SQL Generator auto-detect the input format:
-
-- a `*.json` file → read as **flat** (the legacy single-blob layout)
-- a directory with `manifest.json5` + `core/` / `custom/` / `seasonal/`
-  tiers → merged in load order, later tier wins by id / classname / code
-
-On output you're prompted **F** (flat single file) or **S** (split: `manifest.json5` + `core/floor-NNN.json5` + `core/wall-NNN.json5`, chunks of 300; same layout produced by Nitro V3's `scripts/split-gamedata.mjs`).
-
-If you only want a one-shot conversion (flat → split or split → flat), run
-the Merge entry with an empty `Import_*/` directory and pick the desired
-output format — no merge, just a re-encode.
+Every Merge tool and the SQL Generator accepts one strict `.json` file per
+dataset. Directory manifests, split tiers, comments, trailing commas and
+alternative JSON extensions are rejected.
 
 ## SQL generator workflow
 
 1. Drop `.nitro` (or `.swf`) files into `Generate/Furniture/` (recursive).
-2. Drop `FurnitureData.json` (or a split directory) into `Generate/Furnidata/`.
+2. Drop `FurnitureData.json` into `Generate/Furnidata/`.
 3. Run Hotel Tools → Generate SQL.
 4. The tool reads width / length / height / interaction count straight
    from each `.nitro` and asks for:
@@ -160,7 +152,7 @@ are included as references.
 ## Credits
 
 - **medievalshell** — .NET 11 modernization, cross-platform refactor,
-  ImageSharp migration, JSON5 split-mode IO, three UI shells (CLI / TUI /
+  ImageSharp migration, strict JSON IO, three UI shells (CLI / TUI /
   GUI), Mainframe + Matrix themes, GitHub Actions pipeline.
 - **duckietm** — original all-in-1 downloader, SWF → Nitro pipeline, SQL
   generator, database tools, upstream maintainer.
