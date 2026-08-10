@@ -19,10 +19,14 @@ namespace Habbo_Downloader.App
             Console.WriteLine();
             Console.WriteLine("  AUTHORS");
             Console.WriteLine("  -------");
+            Console.WriteLine("    Life           -  .NET 11 upgrade, strict JSON-only migration,");
+            Console.WriteLine("                      JSON5 split-layout removal and Professional");
+            Console.WriteLine("                      Avalonia MVVM dashboard.");
+            Console.WriteLine();
             Console.WriteLine("    medievalshell  -  .NET 10 modernization, cross-platform refactor,");
-            Console.WriteLine("                      ImageSharp migration, dual TUI/CLI/GUI mainframe");
-            Console.WriteLine("                      shells, JSON + JSON5 split-mode IO layer,");
-            Console.WriteLine("                      Avalonia desktop GUI (Mainframe + Matrix themes).");
+            Console.WriteLine("                      ImageSharp migration, original TUI/CLI/GUI shells,");
+            Console.WriteLine("                      JSON5 split-mode layer and Avalonia desktop GUI");
+            Console.WriteLine("                      (Mainframe + Matrix themes).");
             Console.WriteLine();
             Console.WriteLine("    duckietm       -  Original all-in-1 downloader / SWF -> Nitro / SQL");
             Console.WriteLine("                      generator / database tools. Upstream maintainer.");
@@ -35,7 +39,7 @@ namespace Habbo_Downloader.App
             Console.WriteLine();
             Console.WriteLine("  STACK");
             Console.WriteLine("  -----");
-            Console.WriteLine("    .NET 10 LTS     |  Newtonsoft.Json 13.0.4  |  MySql.Data 9.7");
+            Console.WriteLine("    .NET 11 Preview |  Newtonsoft.Json 13.0.4  |  MySql.Data 9.7");
             Console.WriteLine("    SixLabors.ImageSharp 3.1.12  (cross-platform sprite sheet generation)");
             Console.WriteLine("    Terminal.Gui 1.19            (mouse-driven TUI with 3270 theme)");
             Console.WriteLine("    Avalonia 11.3                (desktop GUI; Mainframe + Matrix themes)");

@@ -1,5 +1,6 @@
 ﻿using ConsoleApplication;
 using System;
+using Habbo_Downloader.App.Workspaces;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -21,7 +22,9 @@ namespace Habbo_Downloader.Compiler
             foreach (string assetType in assetTypes)
             {
                 string compileFolder = Path.Combine(baseCompilePath, assetType);
-                string outputFolder = Path.Combine(baseOutputPath, assetType);
+                string outputFolder = AssetWorkspaceRuntime.Router.AssetDirectory(
+                    ToWorkspaceKind(assetType),
+                    Path.Combine(baseOutputPath, assetType));
 
                 Console.WriteLine($"Processing {assetType} assets...");
 
@@ -63,7 +66,7 @@ namespace Habbo_Downloader.Compiler
                         byte[] compiledData = await nitroBundler.ToBufferAsync();
 
                         string outputPath = Path.Combine(outputFolder, $"{Path.GetFileName(itemFolder)}.nitro");
-                        await File.WriteAllBytesAsync(outputPath, compiledData);
+                        await WorkspaceOutput.WriteAllBytesAsync(outputPath, compiledData);
 
                         Console.WriteLine($"Compiled: {Path.GetFileName(itemFolder)} ({assetType})");
                     }
@@ -76,5 +79,14 @@ namespace Habbo_Downloader.Compiler
 
             Console.WriteLine("Nitro Assets Compilation completed.");
         }
+
+        private static WorkspaceAssetKind ToWorkspaceKind(string assetType) => assetType switch
+        {
+            "furni" => WorkspaceAssetKind.Furniture,
+            "clothing" => WorkspaceAssetKind.Clothing,
+            "effects" => WorkspaceAssetKind.Effects,
+            "pets" => WorkspaceAssetKind.Pets,
+            _ => throw new ArgumentOutOfRangeException(nameof(assetType), assetType, "Unknown Nitro asset type.")
+        };
     }
 }

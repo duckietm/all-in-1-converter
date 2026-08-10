@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.100-preview.6.26359.118'
       - name: Publish win-x64 (verify)
         working-directory: SourceCode
         run: |
@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.100-preview.6.26359.118'
       - name: Publish linux-x64 (verify)
         working-directory: SourceCode
         run: |

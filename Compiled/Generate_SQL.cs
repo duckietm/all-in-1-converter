@@ -30,15 +30,14 @@ namespace ConsoleApplication
             Console.Write("Enter the Catalog_Page ID for catalog_items: ");
             int pageId = int.Parse(Console.ReadLine());
 
-            // Auto-detect flat FurnitureData.json or split manifest.json5+tier under Generate/Furnidata/
             JObject furnidata;
             try
             {
-                furnidata = FurnidataIO.LoadAsync(furnidataDir).GetAwaiter().GetResult();
+                furnidata = FurnidataIO.LoadAsync(Path.Combine(furnidataDir, FurnidataIO.FlatFileName)).GetAwaiter().GetResult();
             }
             catch (FileNotFoundException)
             {
-                Console.WriteLine("FurnitureData.json (or split manifest.json5) is missing in Generate/Furnidata/.");
+                Console.WriteLine("FurnitureData.json is missing in Generate/Furnidata/.");
                 return;
             }
 
@@ -114,8 +113,13 @@ namespace ConsoleApplication
                     }
                     else if (settings.FileType.Equals("Nitro", StringComparison.OrdinalIgnoreCase))
                     {
+                        // Wall items ('i') don't use tile dimensions; the objectData x/y/z are
+                        // client rendering geometry, so store neutral server defaults.
+                        string widthVal = type == "i" ? "1" : settings.Width.ToString(CultureInfo.InvariantCulture);
+                        string lengthVal = type == "i" ? "1" : settings.Length.ToString(CultureInfo.InvariantCulture);
+                        string stackHeightVal = type == "i" ? "0.00" : settings.Height.ToString(CultureInfo.InvariantCulture);
                         itemsBaseSQL.Add($@"INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`) VALUES
-({id}, {spriteId}, '{variantClassname}', '{variantClassname}', {settings.Width.ToString(CultureInfo.InvariantCulture)}, {settings.Length.ToString(CultureInfo.InvariantCulture)}, {settings.Height.ToString(CultureInfo.InvariantCulture)}, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', 'default', {settings.InteractionModesCount}, '0', '0', '0', 0, 0, '0');");
+({id}, {spriteId}, '{variantClassname}', '{variantClassname}', {widthVal}, {lengthVal}, {stackHeightVal}, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', 'default', {settings.InteractionModesCount}, '0', '0', '0', 0, 0, '0');");
                         catalogItemsSQL.Add($@"INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`) VALUES
 ({id}, '{id}', {pageId}, {offerId}, 0, 99, '{variantClassname}', 5, 0, 0, 1, 0, 0, '', '1', '0');");
                     }
@@ -240,6 +244,10 @@ namespace ConsoleApplication
                     int offerId = itemData["offerid"]?.ToObject<int>() ?? -1;
                     int id = startId++;
 
+                    // Wall items ('i') don't use tile dimensions; the objectData x/y/z are
+                    // client rendering geometry, so store neutral server defaults.
+                    if (type == "i") { width = 1; length = 1; stackHeight = 0.00; }
+
                     itemsBaseSQL.Add($@"INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`) VALUES
 ({id}, {spriteId}, '{classname}', '{classname}', {width.ToString(CultureInfo.InvariantCulture)}, {length.ToString(CultureInfo.InvariantCulture)}, {stackHeight.ToString(CultureInfo.InvariantCulture)}, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', 'default', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");
                     catalogItemsSQL.Add($@"INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`) VALUES
@@ -310,6 +318,10 @@ namespace ConsoleApplication
 
                 // Determine if item is stackable: height != 1.0 and not sittable or layable
                 bool isStackable = height != 1.0 && !canSitOn && !canLayOn;
+
+                // Wall items ('i') don't use tile dimensions; the objectData x/y/z are
+                // client rendering geometry, so store neutral server defaults.
+                if (type == "i") { width = 1; length = 1; height = 0.00; }
 
                 itemsBaseSQL.Add($@"INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`) VALUES
 ({id}, {spriteId}, '{classname}', '{classname}', {width.ToString(CultureInfo.InvariantCulture)}, {length.ToString(CultureInfo.InvariantCulture)}, {height.ToString(CultureInfo.InvariantCulture)}, '{(isStackable ? "1" : "0")}', '{(canSitOn ? "1" : "0")}', '{(canLayOn ? "1" : "0")}', '{(canStandOn ? "1" : "0")}', '1', '1', '0', '1', '1', '{type}', 'default', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");

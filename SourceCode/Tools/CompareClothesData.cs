@@ -16,17 +16,14 @@ namespace ConsoleApplication
             Directory.CreateDirectory(importDir);
             Directory.CreateDirectory(mergedDir);
 
-            // Original side: each of FigureData/FigureMap can be either flat file
-            // (Original_ClothesData/FigureData.json) or split directory
-            // (Original_ClothesData/FigureData/manifest.json5 + tier/).
             JObject originalFigureData;
             JObject originalFigureMap;
             try
             {
-                var figureDataPath = ResolveOriginalPath(originalDir, FigureDataIO.FlatFileName, "FigureData");
-                var figureMapPath  = ResolveOriginalPath(originalDir, FigureMapIO.FlatFileName,  "FigureMap");
+                var figureDataPath = Path.Combine(originalDir, FigureDataIO.FlatFileName);
+                var figureMapPath = Path.Combine(originalDir, FigureMapIO.FlatFileName);
                 originalFigureData = await FigureDataIO.LoadAsync(figureDataPath);
-                originalFigureMap  = await FigureMapIO.LoadAsync(figureMapPath);
+                originalFigureMap = await FigureMapIO.LoadAsync(figureMapPath);
             }
             catch (FileNotFoundException ex)
             {
@@ -39,12 +36,12 @@ namespace ConsoleApplication
                 int totalImported = 0;
 
                 var figureDataEntries = CollectFigureDataEntries(importDir);
-                var figureMapEntries  = CollectFigureMapEntries(importDir);
+                var figureMapEntries = CollectFigureMapEntries(importDir);
 
                 if (figureDataEntries.Count == 0 && figureMapEntries.Count == 0)
                 {
                     Console.WriteLine("No FigureData* or FigureMap* import entries found in Import_ClothesData/.");
-                    Console.WriteLine("Continuing anyway so you can convert the originals between flat and split formats.");
+                    Console.WriteLine("The original JSON files will be written unchanged.");
                 }
 
                 foreach (var entry in figureDataEntries)
@@ -64,30 +61,11 @@ namespace ConsoleApplication
                     Console.WriteLine($"  + {n} merged into FigureMap");
                 }
 
-                Console.WriteLine();
-                Console.WriteLine("Pick the output format for FigureData + FigureMap:");
-                Console.WriteLine("  F = flat single FigureData.json + FigureMap.json (legacy)");
-                Console.WriteLine("  S = split manifest.json5 + tier directories for both datasets");
-                Console.Write("Output format [F/S, default F]: ");
-                var fmtChoice = Console.ReadLine()?.Trim().ToUpperInvariant();
-                if (fmtChoice == "S")
-                {
-                    var fdOut = Path.Combine(mergedDir, "FigureData_split");
-                    var fmOut = Path.Combine(mergedDir, "FigureMap_split");
-                    if (Directory.Exists(fdOut)) Directory.Delete(fdOut, true);
-                    if (Directory.Exists(fmOut)) Directory.Delete(fmOut, true);
-                    await FigureDataIO.SaveAsync(originalFigureData, fdOut, GamedataFormat.Split);
-                    await FigureMapIO.SaveAsync(originalFigureMap,  fmOut, GamedataFormat.Split);
-                    Console.WriteLine($"Clothes merged (split) -> {fdOut}, {fmOut}");
-                }
-                else
-                {
-                    var fdPath = Path.Combine(mergedDir, FigureDataIO.FlatFileName);
-                    var fmPath = Path.Combine(mergedDir, FigureMapIO.FlatFileName);
-                    await FigureDataIO.SaveAsync(originalFigureData, fdPath, GamedataFormat.Flat);
-                    await FigureMapIO.SaveAsync(originalFigureMap,  fmPath, GamedataFormat.Flat);
-                    Console.WriteLine($"Clothes merged (flat) -> {mergedDir}");
-                }
+                var fdPath = Path.Combine(mergedDir, FigureDataIO.FlatFileName);
+                var fmPath = Path.Combine(mergedDir, FigureMapIO.FlatFileName);
+                await FigureDataIO.SaveAsync(originalFigureData, fdPath);
+                await FigureMapIO.SaveAsync(originalFigureMap, fmPath);
+                Console.WriteLine($"Clothes merged -> {mergedDir}");
 
                 Console.WriteLine($"Total items imported: {totalImported}");
             }
@@ -97,36 +75,14 @@ namespace ConsoleApplication
             }
         }
 
-        private static string ResolveOriginalPath(string originalDir, string flatFileName, string splitFolderName)
-        {
-            var flat = Path.Combine(originalDir, flatFileName);
-            if (File.Exists(flat)) return flat;
-            var splitDir = Path.Combine(originalDir, splitFolderName);
-            if (Directory.Exists(splitDir)) return splitDir;
-            // Fall back to default path (will throw FileNotFoundException downstream).
-            return flat;
-        }
-
         private static List<string> CollectFigureDataEntries(string importDir)
         {
-            var entries = new List<string>();
-            foreach (var sub in Directory.GetDirectories(importDir))
-                if (Path.GetFileName(sub).StartsWith("FigureData", StringComparison.OrdinalIgnoreCase) && FigureDataIO.IsSplitDirectory(sub))
-                    entries.Add(sub);
-            entries.AddRange(Directory.GetFiles(importDir, "FigureData*.json"));
-            entries.AddRange(Directory.GetFiles(importDir, "FigureData*.json5"));
-            return entries;
+            return Directory.GetFiles(importDir, "FigureData*.json").ToList();
         }
 
         private static List<string> CollectFigureMapEntries(string importDir)
         {
-            var entries = new List<string>();
-            foreach (var sub in Directory.GetDirectories(importDir))
-                if (Path.GetFileName(sub).StartsWith("FigureMap", StringComparison.OrdinalIgnoreCase) && FigureMapIO.IsSplitDirectory(sub))
-                    entries.Add(sub);
-            entries.AddRange(Directory.GetFiles(importDir, "FigureMap*.json"));
-            entries.AddRange(Directory.GetFiles(importDir, "FigureMap*.json5"));
-            return entries;
+            return Directory.GetFiles(importDir, "FigureMap*.json").ToList();
         }
 
         private static int MergeFigureData(JObject originalJson, JObject importJson)

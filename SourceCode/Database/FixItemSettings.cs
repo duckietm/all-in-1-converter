@@ -40,12 +40,14 @@ namespace ConsoleApplication.FixSettings
 
         public static async Task RunAsync()
         {
-            const string jsonFilePath = "./Database/Variables/FurnitureData.json";
+            string jsonFilePath = Habbo_Downloader.App.Workspaces.AssetWorkspaceRuntime.Router.GameDataFile(
+                "FurnitureData.json",
+                "./Database/Variables/FurnitureData.json");
             if (!File.Exists(jsonFilePath))
             {
                 lock (consoleLock)
                 {
-                    Console.WriteLine($"⚠️ Please place FurnitureData.json in the /Database/Variables/ directory");
+                    Console.WriteLine($"⚠️ FurnitureData.json not found: {jsonFilePath}");
                 }
                 return;
             }

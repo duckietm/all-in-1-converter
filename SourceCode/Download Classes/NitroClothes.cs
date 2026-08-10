@@ -30,40 +30,23 @@ namespace ConsoleApplication
 
             try
             {
+                Habbo_Downloader.App.Workspaces.AssetWorkspaceRouter workspace =
+                    Habbo_Downloader.App.Workspaces.AssetWorkspaceRuntime.Router;
                 string currentDirectory = Environment.CurrentDirectory;
-                string downloadDirectory = Path.Combine(currentDirectory, "./custom_downloads/clothes");
+                string downloadDirectory = workspace.AssetDirectory(
+                    Habbo_Downloader.App.Workspaces.WorkspaceAssetKind.Clothing,
+                    Path.Combine(currentDirectory, "./custom_downloads/clothes"));
                 Directory.CreateDirectory(downloadDirectory);
 
-                string figureMapFilePath = Path.Combine(downloadDirectory, "FigureMap.json");
-                string figureDataFilePath = Path.Combine(downloadDirectory, "FigureData.json");
+                string figureMapFilePath = workspace.GameDataFile("FigureMap.json", Path.Combine(downloadDirectory, "FigureMap.json"));
+                string figureDataFilePath = workspace.GameDataFile("FigureData.json", Path.Combine(downloadDirectory, "FigureData.json"));
 
-                // FigureMap: split layout if URL ends with "/", else flat single file.
-                if (NitroSplitDownloader.LooksLikeSplitUrl(nitroFigureMap))
-                {
-                    Console.WriteLine($"Downloading FigureMap (JSON5 split layout) from {nitroFigureMap} ...");
-                    var merged = await NitroSplitDownloader.FetchSplitAsync(httpClient, nitroFigureMap, Path.Combine(downloadDirectory, "FigureMap_split"), "figuremap");
-                    await File.WriteAllTextAsync(figureMapFilePath, merged.ToString(Newtonsoft.Json.Formatting.None));
-                }
-                else
-                {
-                    string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-                    string figureMapUrlWithTimestamp = $"{nitroFigureMap}?timestamp={timestamp}";
-                    await DownloadFileAsync(figureMapUrlWithTimestamp, figureMapFilePath, "FigureMap.json");
-                }
+                string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+                string figureMapUrlWithTimestamp = $"{nitroFigureMap}?timestamp={timestamp}";
+                await DownloadFileAsync(figureMapUrlWithTimestamp, figureMapFilePath, "FigureMap.json");
 
-                // FigureData: same dual-mode detection.
-                if (NitroSplitDownloader.LooksLikeSplitUrl(nitroFigureData))
-                {
-                    Console.WriteLine($"Downloading FigureData (JSON5 split layout) from {nitroFigureData} ...");
-                    var merged = await NitroSplitDownloader.FetchSplitAsync(httpClient, nitroFigureData, Path.Combine(downloadDirectory, "FigureData_split"), "figuredata");
-                    await File.WriteAllTextAsync(figureDataFilePath, merged.ToString(Newtonsoft.Json.Formatting.None));
-                }
-                else
-                {
-                    string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-                    string figureDataUrlWithTimestamp = $"{nitroFigureData}?timestamp={timestamp}";
-                    await DownloadFileAsync(figureDataUrlWithTimestamp, figureDataFilePath, "FigureData.json");
-                }
+                string figureDataUrlWithTimestamp = $"{nitroFigureData}?timestamp={timestamp}";
+                await DownloadFileAsync(figureDataUrlWithTimestamp, figureDataFilePath, "FigureData.json");
 
                 try
                 {
@@ -158,10 +141,8 @@ namespace ConsoleApplication
                 var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
-                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    await response.Content.CopyToAsync(fileStream);
-                }
+                byte[] content = await response.Content.ReadAsByteArrayAsync();
+                await Habbo_Downloader.App.Workspaces.WorkspaceOutput.WriteAllBytesAsync(filePath, content);
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"Downloaded: {fileName}");

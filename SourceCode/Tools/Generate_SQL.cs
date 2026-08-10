@@ -30,15 +30,14 @@ namespace ConsoleApplication
             Console.Write("Enter the Catalog_Page ID for catalog_items: ");
             int pageId = int.Parse(Console.ReadLine());
 
-            // Auto-detect flat FurnitureData.json or split manifest.json5+tier under Generate/Furnidata/
             JObject furnidata;
             try
             {
-                furnidata = FurnidataIO.LoadAsync(furnidataDir).GetAwaiter().GetResult();
+                furnidata = FurnidataIO.LoadAsync(Path.Combine(furnidataDir, FurnidataIO.FlatFileName)).GetAwaiter().GetResult();
             }
             catch (FileNotFoundException)
             {
-                Console.WriteLine("FurnitureData.json (or split manifest.json5) is missing in Generate/Furnidata/.");
+                Console.WriteLine("FurnitureData.json is missing in Generate/Furnidata/.");
                 return;
             }
 

@@ -13,6 +13,16 @@ namespace Habbo_Downloader.App.Gui
     internal static class GuiMenuPresenter
     {
         public static GuiTheme ActiveTheme { get; set; } = GuiTheme.Mainframe();
+        private static GuiTheme? PendingTheme { get; set; }
+
+        internal static void QueueTheme(GuiTheme theme) => PendingTheme = theme;
+
+        internal static GuiTheme? ConsumeQueuedTheme()
+        {
+            GuiTheme? theme = PendingTheme;
+            PendingTheme = null;
+            return theme;
+        }
 
         public static async Task ShowAsync(string title, MenuItem[] items, bool isTopLevel = false)
         {

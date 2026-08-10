@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Habbo_Downloader.App.Workspaces;
 
 namespace ConsoleApplication
 {
@@ -25,6 +26,11 @@ namespace ConsoleApplication
             string furnidataUrl = config["AppSettings:nitro_furnidataJSON"];
             string furnitureUrl = config["AppSettings:nitro_furnitureurl"];
             string furnitureIconUrl = config["AppSettings:nitro_furniture_icon_url"];
+            AssetWorkspaceRouter workspace = AssetWorkspaceRuntime.Router;
+            string furnitureDirectory = workspace.AssetDirectory(
+                WorkspaceAssetKind.Furniture,
+                "./custom_downloads/nitro_furniture");
+            string iconDirectory = "./custom_downloads/nitro_furniture/icons";
 
             Directory.CreateDirectory("./temp");
 
@@ -35,20 +41,9 @@ namespace ConsoleApplication
 
             try
             {
-                if (NitroSplitDownloader.LooksLikeSplitUrl(furnidataUrl))
-                {
-                    Console.WriteLine($"Downloading furnidata (JSON5 split layout) from {furnidataUrl} ...");
-                    var splitMirrorDir = "./temp/furnidata_split";
-                    var merged = await NitroSplitDownloader.FetchSplitAsync(httpClient, furnidataUrl, splitMirrorDir, "furnidata");
-                    await File.WriteAllTextAsync(furnidataJsonPath, merged.ToString(Newtonsoft.Json.Formatting.None));
-                    Console.WriteLine("Furnidata merged from split layout.");
-                }
-                else
-                {
-                    Console.WriteLine("Downloading furnidata (flat single-file)...");
-                    await DownloadFileAsync(furnidataUrl, furnidataJsonPath, "furnidata.json");
-                    Console.WriteLine("Furnidata downloaded successfully.");
-                }
+                Console.WriteLine("Downloading furnidata JSON file...");
+                await DownloadFileAsync(furnidataUrl, furnidataJsonPath, "furnidata.json");
+                Console.WriteLine("Furnidata downloaded successfully.");
             }
             catch (Exception ex)
             {
@@ -64,18 +59,24 @@ namespace ConsoleApplication
             try
             {
                 string furnidataContent = File.ReadAllText(furnidataJsonPath);
+                if (workspace.IsConfigured)
+                {
+                    string targetFurnidata = workspace.GameDataFile("FurnitureData.json", furnidataJsonPath);
+                    await WorkspaceOutput.WriteAllBytesAsync(targetFurnidata, System.Text.Encoding.UTF8.GetBytes(furnidataContent));
+                    Console.WriteLine($"Workspace gamedata updated: {targetFurnidata}");
+                }
                 var furnidata = JsonSerializer.Deserialize<Furnidata>(furnidataContent);
 
                 if (furnidata?.RoomItemTypes?.FurniType != null)
                 {
-                    var result = await ProcessFurniTypeAsync(furnidata.RoomItemTypes.FurniType, furnitureUrl, furnitureIconUrl);
+                    var result = await ProcessFurniTypeAsync(furnidata.RoomItemTypes.FurniType, furnitureUrl, furnitureIconUrl, furnitureDirectory, iconDirectory);
                     nitroDownloadCount += result.NitroCount;
                     iconDownloadCount += result.IconCount;
                 }
 
                 if (furnidata?.WallItemTypes?.FurniType != null)
                 {
-                    var result = await ProcessFurniTypeAsync(furnidata.WallItemTypes.FurniType, furnitureUrl, furnitureIconUrl);
+                    var result = await ProcessFurniTypeAsync(furnidata.WallItemTypes.FurniType, furnitureUrl, furnitureIconUrl, furnitureDirectory, iconDirectory);
                     nitroDownloadCount += result.NitroCount;
                     iconDownloadCount += result.IconCount;
                 }
@@ -101,7 +102,12 @@ namespace ConsoleApplication
             Console.ReadLine(); // ReadLine is captured by TUI / GUI output windows; ReadKey is not.
         }
 
-        private static async Task<(int NitroCount, int IconCount)> ProcessFurniTypeAsync(FurniType[] furniTypes, string furnitureUrl, string furnitureIconUrl)
+        private static async Task<(int NitroCount, int IconCount)> ProcessFurniTypeAsync(
+            FurniType[] furniTypes,
+            string furnitureUrl,
+            string furnitureIconUrl,
+            string furnitureDirectory,
+            string iconDirectory)
         {
             int nitroDownloadCount = 0;
             int iconDownloadCount = 0;
@@ -117,8 +123,8 @@ namespace ConsoleApplication
                 {
                     string classname = furni.Classname;
                     string baseClassname = classname.Split('*')[0];
-                    string nitroFilePath = $"./custom_downloads/nitro_furniture/{baseClassname}.nitro";
-                    string iconFilePath = $"./custom_downloads/nitro_furniture/icons/{classname.Replace('*', '_')}_icon.png";
+                    string nitroFilePath = Path.Combine(furnitureDirectory, $"{baseClassname}.nitro");
+                    string iconFilePath = Path.Combine(iconDirectory, $"{classname.Replace('*', '_')}_icon.png");
 
                     string nitroUrl = $"{furnitureUrl}/{baseClassname}.nitro";
                     string iconUrl = $"{furnitureIconUrl}/{classname.Replace('*', '_')}_icon.png";
@@ -204,12 +210,8 @@ namespace ConsoleApplication
                 var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
-                Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-
-                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    await response.Content.CopyToAsync(fileStream);
-                }
+                byte[] content = await response.Content.ReadAsByteArrayAsync();
+                await WorkspaceOutput.WriteAllBytesAsync(filePath, content);
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"Downloaded: {fileName}");

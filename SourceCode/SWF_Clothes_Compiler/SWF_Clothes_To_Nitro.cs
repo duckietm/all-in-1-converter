@@ -1,6 +1,7 @@
 ﻿using Habbo_Downloader.SWFCompiler.Mapper.Assests;
 using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
 using Habbo_Downloader.Tools;
+using Habbo_Downloader.App.Workspaces;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Concurrent;
@@ -12,7 +13,9 @@ namespace Habbo_Downloader.Compiler
     public static class SWF_clothes_To_Nitro
     {
         private static string ImportDirectory;
-        private static readonly string OutputDirectory = Path.Combine("SWFCompiler", "clothes");
+        private static string OutputDirectory => AssetWorkspaceRuntime.Router.AssetDirectory(
+            WorkspaceAssetKind.Clothing,
+            Path.Combine("SWFCompiler", "clothes"));
 
         public static async Task ConvertSwfFilesAsync()
         {

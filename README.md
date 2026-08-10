@@ -6,29 +6,33 @@ merge furnidata / clothesdata / productdata, convert SWF → Nitro, generate
 the SQL inserts for `items_base` + `catalog_items`, and fix the database in
 place.
 
-It ships with three interchangeable UI shells (same workflows behind each)
+It ships with four interchangeable UI shells (same workflows behind each)
 plus a self-contained binary for Windows and Linux.
 
 ## At a glance
 
 | | |
 |---|---|
-| Runtime | .NET 10 LTS, cross-platform (Windows x64, Linux x64) |
+| Runtime | .NET 11 Preview 6, cross-platform (Windows x64, Linux x64) |
 | Spritesheet engine | SixLabors.ImageSharp 3.x (replaces System.Drawing) |
 | Terminal UI | Terminal.Gui 1.19 (mouse + keyboard) |
-| Desktop UI | Avalonia 12 (Mainframe + Matrix themes) |
+| Desktop UI | Avalonia 12 (Professional MVVM dashboard + legacy Mainframe / Matrix) |
 | Database | MySql.Data 9.7 (MariaDB / MySQL) |
 | SWF decompiler | JPEXS Free Flash Decompiler (`Tools/ffdec/`) |
-| Data formats | Flat JSON **or** JSON5 split-mode (`manifest.json5` + `core/custom/seasonal/` tiers, matches Nitro V3 `split-gamedata.mjs`) |
+| Data formats | Strict single-file JSON |
 
-## Three ways to drive it
+## Four ways to drive it
 
 The same menus and tools sit behind each shell, so anything you learn in
 one carries over.
 
+- **Professional** — the recommended native Avalonia MVVM dashboard.
+  Provides module navigation, operation cards, live status and logs, native
+  prompt input, database safety confirmations, and the operating-system theme.
+
 - **TUI** — mouse-driven mainframe terminal (Terminal.Gui).
   IBM 3270 / CICS look, mouse + keyboard, F-keys, captured output in a
-  scrollable log pane. **Recommended.**
+  scrollable log pane.
 
 - **CLI** — same mainframe theme rendered with plain `Console.WriteLine`.
   Keyboard only. Useful over SSH, piped, or in restricted terminals.
@@ -39,15 +43,15 @@ one carries over.
   - **Matrix** — pure phosphor green on black, with a digital-rain
     background of digits cascading behind the menus.
 
-When the binary is **double-clicked from a file manager** it opens straight
-into the GUI. When it's launched from a **terminal** it asks whether you
-want TUI or CLI (GUI is not offered from a terminal session because the
-operator usually wants to stay in the terminal). Inside any shell, the
-`s` menu entry hot-swaps between modes without restarting the process.
+When the Windows binary is **double-clicked from a file manager**, a native
+selector offers all four interfaces. The Linux `.desktop` entry opens its
+terminal selector so TUI and CLI remain usable. A terminal launch offers the
+same four choices. The existing shells retain the `s` menu entry for switching
+mode without restarting the process.
 
 ```text
-Habbo Downloader            # mode selector if launched from a terminal,
-                            # GUI directly if double-clicked
+Habbo Downloader            # four-interface selector
+Habbo Downloader --professional  # Professional MVVM dashboard
 Habbo Downloader --tui      # mouse mainframe TUI
 Habbo Downloader --cli      # keyboard-only mainframe CLI
 Habbo Downloader --gui      # desktop window (prompts theme)
@@ -67,31 +71,23 @@ to keep notes**.
    texts, variables. `all` runs the full bootstrap.
 2. **Nitro Custom Downloads** — multi-source import of custom furniture /
    clothes packs.
-3. **Hotel Tools** — Merge Furnidata / Productdata / Clothesdata (with
-   dual flat ↔ JSON5 split-mode IO), Generate SQL for `items_base` +
+3. **Hotel Tools** — Merge Furnidata / Productdata / Clothesdata using
+   strict single JSON files, Generate SQL for `items_base` +
    `catalog_items`, Decompile / Compile `.nitro` bundles, SWF → Nitro for
    Furniture / Clothes / Pets / Effects.
 4. **Database Tools** — show DB version, optimize tables, fix offer_id,
    fix sit/lay/walk in `items_base`, fix sprite_id / item_id from JSON.
 
-## JSON + JSON5 split-mode IO
+## Strict JSON IO
 
-Every Merge tool and the SQL Generator auto-detect the input format:
-
-- a `*.json` file → read as **flat** (the legacy single-blob layout)
-- a directory with `manifest.json5` + `core/` / `custom/` / `seasonal/`
-  tiers → merged in load order, later tier wins by id / classname / code
-
-On output you're prompted **F** (flat single file) or **S** (split: `manifest.json5` + `core/floor-NNN.json5` + `core/wall-NNN.json5`, chunks of 300; same layout produced by Nitro V3's `scripts/split-gamedata.mjs`).
-
-If you only want a one-shot conversion (flat → split or split → flat), run
-the Merge entry with an empty `Import_*/` directory and pick the desired
-output format — no merge, just a re-encode.
+Every Merge tool and the SQL Generator accepts one strict `.json` file per
+dataset. Directory manifests, split tiers, comments, trailing commas and
+alternative JSON extensions are rejected.
 
 ## SQL generator workflow
 
 1. Drop `.nitro` (or `.swf`) files into `Generate/Furniture/` (recursive).
-2. Drop `FurnitureData.json` (or a split directory) into `Generate/Furnidata/`.
+2. Drop `FurnitureData.json` into `Generate/Furnidata/`.
 3. Run Hotel Tools → Generate SQL.
 4. The tool reads width / length / height / interaction count straight
    from each `.nitro` and asks for:
@@ -121,10 +117,10 @@ custom_downloads/       multi-source custom downloader output
 ```bash
 cd SourceCode
 dotnet build "Habbo Downloader.csproj"          # debug build
-dotnet run -- --tui                             # run with TUI mode
+dotnet run -- --professional                    # run the Professional UI
 ```
 
-Prerequisites: **.NET SDK 10.x** + **Java** (for FFDec, used by every SWF → Nitro
+Prerequisites: **.NET SDK 11 Preview 6** + **Java** (for FFDec, used by every SWF → Nitro
 path) + **Node.js** (for some helpers).
 
 ## Self-contained single-file releases
@@ -159,9 +155,11 @@ are included as references.
 
 ## Credits
 
+- **Life** — .NET 11 upgrade, strict JSON-only migration, removal of the
+  JSON5 split layout, and the Professional Avalonia MVVM dashboard.
 - **medievalshell** — .NET 10 modernization, cross-platform refactor,
-  ImageSharp migration, JSON5 split-mode IO, three UI shells (CLI / TUI /
-  GUI), Mainframe + Matrix themes, GitHub Actions pipeline.
+  ImageSharp migration, the earlier JSON5 split-mode layer, three UI shells
+  (CLI / TUI / GUI), Mainframe + Matrix themes, and GitHub Actions pipeline.
 - **duckietm** — original all-in-1 downloader, SWF → Nitro pipeline, SQL
   generator, database tools, upstream maintainer.
 - **Nitro Team** — pets converter base (`discord.gg/yCXcMqrT`).
