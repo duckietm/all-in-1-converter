@@ -6,11 +6,14 @@ setlocal
 set CONFIG=Release
 set RID=win-x64
 set OUT=%~dp0publish\%RID%
+set DOTNET_EXE=dotnet
+
+if exist "%~dp0.dotnet\dotnet.exe" set DOTNET_EXE=%~dp0.dotnet\dotnet.exe
 
 if exist "%OUT%" rmdir /s /q "%OUT%"
 
 pushd "%~dp0SourceCode"
-dotnet publish "Habbo Downloader.csproj" ^
+"%DOTNET_EXE%" publish "Habbo Downloader.csproj" ^
     -c %CONFIG% ^
     -r %RID% ^
     --self-contained true ^
@@ -19,7 +22,10 @@ dotnet publish "Habbo Downloader.csproj" ^
     -p:DebugType=none ^
     -p:DebugSymbols=false ^
     -o "%OUT%"
+set PUBLISH_EXIT=%ERRORLEVEL%
 popd
+
+if not "%PUBLISH_EXIT%"=="0" exit /b %PUBLISH_EXIT%
 
 echo.
 echo Published Windows build at: %OUT%

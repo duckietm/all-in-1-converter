@@ -13,7 +13,7 @@ plus a self-contained binary for Windows and Linux.
 
 | | |
 |---|---|
-| Runtime | .NET 10 LTS, cross-platform (Windows x64, Linux x64) |
+| Runtime | .NET 11 Preview 6, cross-platform (Windows x64, Linux x64) |
 | Spritesheet engine | SixLabors.ImageSharp 3.x (replaces System.Drawing) |
 | Terminal UI | Terminal.Gui 1.19 (mouse + keyboard) |
 | Desktop UI | Avalonia 12 (Mainframe + Matrix themes) |
@@ -124,7 +124,7 @@ dotnet build "Habbo Downloader.csproj"          # debug build
 dotnet run -- --tui                             # run with TUI mode
 ```
 
-Prerequisites: **.NET SDK 10.x** + **Java** (for FFDec, used by every SWF → Nitro
+Prerequisites: **.NET SDK 11 Preview 6** + **Java** (for FFDec, used by every SWF → Nitro
 path) + **Node.js** (for some helpers).
 
 ## Self-contained single-file releases
@@ -159,7 +159,7 @@ are included as references.
 
 ## Credits
 
-- **medievalshell** — .NET 10 modernization, cross-platform refactor,
+- **medievalshell** — .NET 11 modernization, cross-platform refactor,
   ImageSharp migration, JSON5 split-mode IO, three UI shells (CLI / TUI /
   GUI), Mainframe + Matrix themes, GitHub Actions pipeline.
 - **duckietm** — original all-in-1 downloader, SWF → Nitro pipeline, SQL

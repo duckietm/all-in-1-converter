@@ -19,7 +19,7 @@ namespace Habbo_Downloader.App
             Console.WriteLine();
             Console.WriteLine("  AUTHORS");
             Console.WriteLine("  -------");
-            Console.WriteLine("    medievalshell  -  .NET 10 modernization, cross-platform refactor,");
+            Console.WriteLine("    medievalshell  -  .NET 11 modernization, cross-platform refactor,");
             Console.WriteLine("                      ImageSharp migration, dual TUI/CLI/GUI mainframe");
             Console.WriteLine("                      shells, JSON + JSON5 split-mode IO layer,");
             Console.WriteLine("                      Avalonia desktop GUI (Mainframe + Matrix themes).");
@@ -35,7 +35,7 @@ namespace Habbo_Downloader.App
             Console.WriteLine();
             Console.WriteLine("  STACK");
             Console.WriteLine("  -----");
-            Console.WriteLine("    .NET 10 LTS     |  Newtonsoft.Json 13.0.4  |  MySql.Data 9.7");
+            Console.WriteLine("    .NET 11 Preview |  Newtonsoft.Json 13.0.4  |  MySql.Data 9.7");
             Console.WriteLine("    SixLabors.ImageSharp 3.1.12  (cross-platform sprite sheet generation)");
             Console.WriteLine("    Terminal.Gui 1.19            (mouse-driven TUI with 3270 theme)");
             Console.WriteLine("    Avalonia 11.3                (desktop GUI; Mainframe + Matrix themes)");

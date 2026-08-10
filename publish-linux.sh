@@ -7,11 +7,16 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG=Release
 RID=linux-x64
 OUT="$SCRIPT_DIR/publish/$RID"
+DOTNET_EXE="$SCRIPT_DIR/.dotnet/dotnet"
+
+if [[ ! -x "$DOTNET_EXE" ]]; then
+    DOTNET_EXE=dotnet
+fi
 
 rm -rf "$OUT"
 
 cd "$SCRIPT_DIR/SourceCode"
-dotnet publish "Habbo Downloader.csproj" \
+"$DOTNET_EXE" publish "Habbo Downloader.csproj" \
     -c "$CONFIG" \
     -r "$RID" \
     --self-contained true \
