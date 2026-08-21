@@ -144,8 +144,8 @@ namespace Habbo_Downloader.Compiler
                     canonicalMapping,        // canonical mapping argument
                     disableCleanKey: false,  // set as desired
                     numRows: 10,
-                    maxWidth: 12550,
-                    maxHeight: 12850
+                    maxWidth: 12548,
+                    maxHeight: 12800
                 );
 
                 if (spriteSheetPath == null || spriteSheetData == null)

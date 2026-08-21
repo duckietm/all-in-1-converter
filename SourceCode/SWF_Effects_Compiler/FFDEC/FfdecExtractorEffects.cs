@@ -9,8 +9,10 @@ namespace Habbo_Downloader.Tools
         {
             ClearOutputDirectory(outputDirectory);
 
-            string commandExport = $"-onerror ignore -export image,binarydata,symbolClass \"{outputDirectory}\" \"{swfFilePath}\"";
-            await RunFfdecCommandAsync(commandExport);
+            await NativeSwfExtractor.ExtractWithFallbackAsync(
+                swfFilePath,
+                outputDirectory,
+                dir => RunFfdecCommandAsync($"-onerror ignore -export image,binarydata,symbolClass \"{dir}\" \"{swfFilePath}\""));
 
             string csvPath = Path.Combine(outputDirectory, "symbolClass", "symbols.csv");
             var assetMappings = await RebuildImagesFromCsvAsync(outputDirectory, csvPath);
