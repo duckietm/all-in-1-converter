@@ -14,6 +14,32 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 {
     public static class SpritesheetClothesMapper
     {
+        private const int FramePadding = 2;
+        private const int EdgeExtrude = 1;
+
+        private static void ExtrudeEdges(Image<Rgba32> sheet, Image<Rgba32> sprite, int drawX, int drawY)
+        {
+            int w = sprite.Width;
+            int h = sprite.Height;
+
+            for (int x = 0; x < w; x++)
+            {
+                sheet[drawX + x, drawY - EdgeExtrude] = sprite[x, 0];
+                sheet[drawX + x, drawY + h] = sprite[x, h - 1];
+            }
+
+            for (int y = 0; y < h; y++)
+            {
+                sheet[drawX - EdgeExtrude, drawY + y] = sprite[0, y];
+                sheet[drawX + w, drawY + y] = sprite[w - 1, y];
+            }
+
+            sheet[drawX - EdgeExtrude, drawY - EdgeExtrude] = sprite[0, 0];
+            sheet[drawX + w, drawY - EdgeExtrude] = sprite[w - 1, 0];
+            sheet[drawX - EdgeExtrude, drawY + h] = sprite[0, h - 1];
+            sheet[drawX + w, drawY + h] = sprite[w - 1, h - 1];
+        }
+
         public static (string ImagePath, SpriteSheetData SpriteData) GenerateSpriteSheet(
             Dictionary<string, Image<Rgba32>> images,
             string outputDirectory,
@@ -41,14 +67,14 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 
             foreach (var group in imageGroups)
             {
-                int rowWidth = group.Sum(x => x.Image.Width);
+                int rowWidth = FramePadding + group.Sum(x => x.Image.Width + FramePadding);
                 int rowHeight = group.Max(x => x.Image.Height);
                 maxRowWidth = Math.Max(maxRowWidth, rowWidth);
                 maxRowHeight = Math.Max(maxRowHeight, rowHeight);
             }
 
             int totalWidth = maxRowWidth;
-            int totalHeight = imageGroups.Count * maxRowHeight;
+            int totalHeight = FramePadding + imageGroups.Count * (maxRowHeight + FramePadding);
 
             if (totalWidth > maxWidth || totalHeight > maxHeight)
             {
@@ -71,12 +97,12 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                 Frames = new Dictionary<string, FrameData>()
             };
 
-            int currentY = 0;
+            int currentY = FramePadding;
             int imageIndex = 0;
 
             foreach (var group in imageGroups)
             {
-                int currentX = 0;
+                int currentX = FramePadding;
                 int rowHeight = 0;
 
                 foreach (var imageItem in group)
@@ -92,6 +118,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                     int drawX = currentX;
                     int drawY = currentY;
                     spriteSheet.Mutate(ctx => ctx.DrawImage(image, new Point(drawX, drawY), 1f));
+                    ExtrudeEdges(spriteSheet, image, drawX, drawY);
 
                     var frameData = new FrameData
                     {
@@ -125,11 +152,11 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 
                     spriteSheetData.Frames[originalName] = frameData;
 
-                    currentX += image.Width;
+                    currentX += image.Width + FramePadding;
                     rowHeight = Math.Max(rowHeight, image.Height);
                     imageIndex++;
                 }
-                currentY += rowHeight;
+                currentY += rowHeight + FramePadding;
             }
 
             string imagePath = Path.Combine(outputDirectory, $"{name}.png");

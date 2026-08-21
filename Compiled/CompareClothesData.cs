@@ -23,7 +23,7 @@ namespace ConsoleApplication
                 var figureDataPath = Path.Combine(originalDir, FigureDataIO.FlatFileName);
                 var figureMapPath = Path.Combine(originalDir, FigureMapIO.FlatFileName);
                 originalFigureData = await FigureDataIO.LoadAsync(figureDataPath);
-                originalFigureMap  = await FigureMapIO.LoadAsync(figureMapPath);
+                originalFigureMap = await FigureMapIO.LoadAsync(figureMapPath);
             }
             catch (FileNotFoundException ex)
             {
@@ -36,7 +36,7 @@ namespace ConsoleApplication
                 int totalImported = 0;
 
                 var figureDataEntries = CollectFigureDataEntries(importDir);
-                var figureMapEntries  = CollectFigureMapEntries(importDir);
+                var figureMapEntries = CollectFigureMapEntries(importDir);
 
                 if (figureDataEntries.Count == 0 && figureMapEntries.Count == 0)
                 {

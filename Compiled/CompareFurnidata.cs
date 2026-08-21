@@ -38,7 +38,7 @@ namespace ConsoleApplication
             {
                 originalJson = await FurnidataIO.LoadAsync(originalPath);
                 int floor = (originalJson["roomitemtypes"]?["furnitype"] as JArray)?.Count ?? 0;
-                int wall  = (originalJson["wallitemtypes"]?["furnitype"] as JArray)?.Count ?? 0;
+                int wall = (originalJson["wallitemtypes"]?["furnitype"] as JArray)?.Count ?? 0;
                 Console.WriteLine($"Loaded FurnitureData.json - floor={floor}, wall={wall}");
             }
             catch (FileNotFoundException ex)
