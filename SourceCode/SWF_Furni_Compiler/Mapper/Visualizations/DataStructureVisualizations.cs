@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Globalization;
+using System.Text.Json.Serialization;
 using System.Xml.Linq;
 
 namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
@@ -133,9 +134,13 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         [JsonPropertyName("alpha")]
         public int? Alpha { get; set; } // Always included, even if 0
 
+        // z can be fractional in older furni XML (depth offsets in sub-tile
+        // units), so it must not be parsed as int - a failed int parse used
+        // to silently drop the attribute, which breaks depth sorting (e.g.
+        // rollers drawing over the items riding them).
         [JsonPropertyName("z")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public int? Z { get; set; }
+        public double? Z { get; set; }
 
         [JsonPropertyName("x")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -157,7 +162,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
         {
             Ink = xml.Attribute("ink")?.Value;
             Alpha = int.TryParse(xml.Attribute("alpha")?.Value, out int alpha) ? alpha : null;
-            Z = int.TryParse(xml.Attribute("z")?.Value, out int z) ? z : (int?)null;
+            Z = double.TryParse(xml.Attribute("z")?.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double z) ? z : (double?)null;
             X = int.TryParse(xml.Attribute("x")?.Value, out int x) ? x : (int?)null;
             Y = int.TryParse(xml.Attribute("y")?.Value, out int y) ? y : (int?)null;
             Tag = xml.Attribute("tag")?.Value;
