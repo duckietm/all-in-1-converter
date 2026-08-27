@@ -144,7 +144,7 @@ namespace Habbo_Downloader.Compiler
                     canonicalMapping,        // canonical mapping argument
                     disableCleanKey: false,  // set as desired
                     numRows: 10,
-                    maxWidth: 12548,
+                    maxWidth: 11266,
                     maxHeight: 12800
                 );
 
