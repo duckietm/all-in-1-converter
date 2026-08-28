@@ -8,10 +8,61 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    # skips tag pushes / branch deletes, where head_commit is null
+    if: github.event.head_commit != null
     steps:
       - name: Send Discord Notification
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          curl -H "Content-Type: application/json" \
-          -X POST \
-          -d '{"content": "🚀 **New update on main branch!**\n**Commit:** '"${{ github.event.head_commit.message }}"'\n**Author:** '"${{ github.actor }}"'\n**Link:** '"${{ github.event.head_commit.url }}"'"}' \
-          ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PAYLOAD=$(jq -c '
+            .head_commit as $c
+            | (.repository.full_name) as $repo
+            | (.ref | sub("refs/heads/"; "")) as $branch
+            | ($c.message | split("\n")[0]) as $title
+            | ($c.message | split("\n")[1:] | join("\n")) as $body
+            | (($c.added | length) + ($c.modified | length) + ($c.removed | length)) as $files
+            | {
+                username: "Nitro_v3",
+                avatar_url: "https://images.habbo.com/c_images/album1584/ADM.gif",
+                embeds: [
+                  {
+                    author: {
+                      name: ($c.author.username // $c.author.name),
+                      url: ("https://github.com/" + ($c.author.username // "")),
+                      icon_url: (.sender.avatar_url)
+                    },
+                    title: ("🏨  " + ($title | .[0:230])),
+                    url: $c.url,
+                    description: (
+                      (if ($body | gsub("\\s"; "") | length) > 0
+                        then ($body | .[0:1500]) + "\n\n"
+                        else ""
+                      end)
+                      + "**Room:** `" + $repo + "`  •  **Branch:** `" + $branch + "`\n"
+                      + "**Commit:** [`" + ($c.id[0:7]) + "`](" + $c.url + ")"
+                    ),
+                    color: 16751616,
+                    thumbnail: {
+                      url: "https://www.habbo.com/habbo-imaging/avatarimage?figure=hr-165-45.hd-180-2.ch-255-66.lg-280-110.sh-305-62&direction=2&head_direction=3&size=l&action=wav"
+                    },
+                    fields: [
+                      { name: "📦 Files touched", value: ("`" + ($files | tostring) + "`"), inline: true },
+                      { name: "➕ Added",         value: ("`" + ($c.added | length | tostring) + "`"), inline: true },
+                      { name: "✏️ Modified",      value: ("`" + ($c.modified | length | tostring) + "`"), inline: true }
+                    ],
+                    footer: {
+                      text: ($repo + " • pushed to " + $branch),
+                      icon_url: "https://github.githubassets.com/favicons/favicon.png"
+                    },
+                    timestamp: $c.timestamp
+                  }
+                ]
+              }
+          ' "$GITHUB_EVENT_PATH")
+
+          curl -sS -f \
+               -H "Content-Type: application/json" \
+               -X POST \
+               -d "$PAYLOAD" \
+               "$WEBHOOK_URL"
