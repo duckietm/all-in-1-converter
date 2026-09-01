@@ -33,12 +33,18 @@ namespace Habbo_Downloader.SWF_Pets_Compiler.Mapper.palette
                 int? colorTag = palette.Attribute("colortag") != null ? int.Parse(palette.Attribute("colortag").Value) : (int?)null;
 
                 string paletteFilePath = allBinFiles.FirstOrDefault(f => f.EndsWith($"_{source}.bin"));
+
+                List<List<int>> colors;
                 if (paletteFilePath == null)
                 {
-                    continue;
+                    Console.WriteLine($"⚠️ Palette {id} ({source}): colour data '_{source}.bin' not found — using a default one-colour palette so the pet renders instead of turning black.");
+                    colors = CreateDefaultRamp();
+                    if (string.IsNullOrEmpty(color1)) color1 = DEFAULT_COLOR_HEX;
                 }
-
-                var colors = ReadPaletteFile(paletteFilePath);
+                else
+                {
+                    colors = ReadPaletteFile(paletteFilePath);
+                }
 
                 palettes[id] = new PaletteData
                 {
@@ -56,7 +62,30 @@ namespace Habbo_Downloader.SWF_Pets_Compiler.Mapper.palette
                 Console.WriteLine($"✅ Loaded palette {id}: {source} | Color1: {color1}, Color2: {color2}, RGB count: {colors.Count}");
             }
 
+            if (palettes.Count == 0)
+            {
+                Console.WriteLine("⚠️ No palettes found in SWF — injecting a default one-colour palette (id 0) so the pet renders instead of turning black.");
+                palettes[0] = new PaletteData
+                {
+                    Id = 0,
+                    Source = "default",
+                    Master = true,
+                    Tags = new List<string>(),
+                    Color1 = DEFAULT_COLOR_HEX,
+                    RGB = CreateDefaultRamp()
+                };
+            }
+
             return palettes;
+        }
+
+        private const string DEFAULT_COLOR_HEX = "999999";
+
+        private static List<List<int>> CreateDefaultRamp()
+        {
+            var ramp = new List<List<int>>(256);
+            for (int i = 0; i < 256; i++) ramp.Add(new List<int> { 0x99, 0x99, 0x99 });
+            return ramp;
         }
 
         private static List<List<int>> ReadPaletteFile(string filePath)

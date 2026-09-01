@@ -9,11 +9,32 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Habbo_Downloader.Tools
 {
+    /// <summary>
+    /// Native SWF extractor replacing the per-file `java -jar ffdec-cli.jar`
+    /// invocation. Habbo asset SWFs only need three tag types (SymbolClass,
+    /// DefineBinaryData and the bitmap tags), so a direct parse is orders of
+    /// magnitude faster than booting a JVM per file.
+    ///
+    /// It reproduces FFDEC's raw export layout exactly so the existing
+    /// Rebuild* pipelines keep working unchanged:
+    ///   {out}/symbolClass/symbols.csv        lines: {id};"{name}" in tag order
+    ///   {out}/binaryData/{id}_{name}.bin
+    ///   {out}/images/{id}.png                when the id has multiple symbol names
+    ///   {out}/images/{id}_{name}.png         when the id has exactly one
+    ///
+    /// Extract returns false whenever the file uses anything this parser does
+    /// not support (LZMA container, exotic bitmap tags, broken JPEG data) so
+    /// callers fall back to FFDEC — behaviour can never get worse than before.
+    /// </summary>
     public static class NativeSwfExtractor
     {
         private const string DisableEnvVar = "CONFURTER_DISABLE_NATIVE_SWF";
         private const string VerifyEnvVar = "CONFURTER_VERIFY_NATIVE_SWF";
 
+        /// <summary>
+        /// Runs the native extractor with an FFDEC fallback. The ffdecRunner
+        /// receives the directory FFDEC should export into.
+        /// </summary>
         public static async Task ExtractWithFallbackAsync(
             string swfFilePath,
             string outputDirectory,
@@ -60,6 +81,7 @@ namespace Habbo_Downloader.Tools
             SkipHeaderRect(body, ref pos);
             pos += 4; // frame rate (u16) + frame count (u16)
 
+            // Pass 1: collect the raw tags we care about.
             var symbols = new List<(int Id, string Name)>();
             var binaryTags = new List<(int CharId, byte[] Data)>();
             var bitmapTags = new List<(int Code, byte[] Payload)>();
