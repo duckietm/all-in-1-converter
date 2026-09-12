@@ -14,16 +14,17 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
 
             var visualizations = new List<Visualization>();
 
-            foreach (var graphicsElement in root.Elements("graphics"))
-            {
-                foreach (var visualizationElement in graphicsElement.Elements("visualization"))
-                {
-                    var visualization = new Visualization(visualizationElement);
+            var visualizationElements = root.Elements("graphics")
+                .SelectMany(graphicsElement => graphicsElement.Elements("visualization"))
+                .Concat(root.Elements("visualization"));
 
-                    if (!ExcludedSizes.Contains(visualization.Size))
-                    {
-                        visualizations.Add(visualization);
-                    }
+            foreach (var visualizationElement in visualizationElements)
+            {
+                var visualization = new Visualization(visualizationElement);
+
+                if (!ExcludedSizes.Contains(visualization.Size))
+                {
+                    visualizations.Add(visualization);
                 }
             }
 
