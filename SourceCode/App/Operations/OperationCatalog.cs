@@ -51,6 +51,7 @@ public static class OperationCatalog
         Op("tools.webp-clothes", OperationCategory.HotelToolsWebp, "SWF clothes to Nitro (WebP)", "Convert legacy clothing SWF assets to Nitro with WebP Lossless.", async () => { Tools.ConverterSettings.SpritesheetFormat = "webp"; await SWF_clothes_To_Nitro.ConvertSwfFilesAsync(); }, true),
         Op("tools.webp-pets", OperationCategory.HotelToolsWebp, "SWF pets to Nitro (WebP)", "Convert legacy pet SWF assets to Nitro with WebP Lossless.", async () => { Tools.ConverterSettings.SpritesheetFormat = "webp"; await SWF_Pets_To_Nitro.ConvertSwfFilesAsync(); }),
         Op("tools.webp-effects", OperationCategory.HotelToolsWebp, "SWF effects to Nitro (WebP)", "Convert legacy effect SWF assets to Nitro with WebP Lossless.", async () => { Tools.ConverterSettings.SpritesheetFormat = "webp"; await SWF_Effects_To_Nitro.ConvertSwfFilesAsync(); }),
+        Op("tools.webp-generic", OperationCategory.HotelToolsWebp, "Generic Nitro to WebP", "Convert generic Nitro assets (room, badges, cursors, placeholders) to WebP Lossless.", NitroPngToWebpConverter.ConvertGenericAsync),
         Op("tools.convert-nitro-webp", OperationCategory.HotelToolsWebp, "Convert Nitro (PNG to WebP)", "Convert existing Nitro bundles containing PNG into WebP Lossless.", NitroPngToWebpConverter.ConvertAsync, true),
         Op("tools.benchmark-webp", OperationCategory.HotelToolsWebp, "WebP Lossless Benchmark", "Run PNG vs WebP lossless benchmark and pixel-by-pixel accuracy test.", async () => await Tools.BenchmarkRunner.RunAsync(30)),
 

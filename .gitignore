@@ -27,6 +27,7 @@ config.ini
 /Sample_WebP_Extracted/
 *.swf
 *.nitro
+*.zip
 
 # Legacy
 /DownloadHabbo/SourceCode/obj

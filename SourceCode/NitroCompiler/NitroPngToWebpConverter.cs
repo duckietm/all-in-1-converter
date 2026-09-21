@@ -34,8 +34,9 @@ namespace Habbo_Downloader.Compiler
                 Console.WriteLine(" [3] SWFCompiler/clothes/ (converted clothes)");
                 Console.WriteLine(" [4] SWFCompiler/effects/ (converted effects)");
                 Console.WriteLine(" [5] SWFCompiler/pets/ (converted pets)");
-                Console.WriteLine(" [6] NitroCompiler/compiled/ (compiled bundles)");
-                Console.WriteLine(" [7] Custom folder path");
+                Console.WriteLine(" [6] Generic: room, badges, cursor, placeholders");
+                Console.WriteLine(" [7] NitroCompiler/compiled/ (compiled bundles)");
+                Console.WriteLine(" [8] Custom folder path");
                 Console.Write("Select source [Default is 1]: ");
 
                 string choice = Console.ReadLine()?.Trim() ?? "1";
@@ -45,10 +46,46 @@ namespace Habbo_Downloader.Compiler
                     "3" => Path.Combine("SWFCompiler", "clothes"),
                     "4" => Path.Combine("SWFCompiler", "effects"),
                     "5" => Path.Combine("SWFCompiler", "pets"),
-                    "6" => Path.Combine("NitroCompiler", "compiled"),
-                    "7" => AskCustomDirectory(),
+                    "6" => ResolveGenericDirectory(),
+                    "7" => Path.Combine("NitroCompiler", "compiled"),
+                    "8" => AskCustomDirectory(),
                     _ => BaseInputDir
                 };
+
+                await ConvertDirectoryAsync(sourceDir, Path.Combine(BaseOutputDir, choice == "6" ? "generic" : ""));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error during Nitro WebP conversion: {ex.Message}");
+            }
+        }
+
+        public static async Task ConvertGenericAsync()
+        {
+            string genericDir = ResolveGenericDirectory();
+            string outputDir = Path.Combine(BaseOutputDir, "generic");
+            await ConvertDirectoryAsync(genericDir, outputDir);
+        }
+
+        private static string ResolveGenericDirectory()
+        {
+            string localGeneric = Path.Combine("NitroCompiler", "generic");
+            if (Directory.Exists(localGeneric)) return localGeneric;
+
+            string rootGeneric = "generic";
+            if (Directory.Exists(rootGeneric)) return rootGeneric;
+
+            string desktopGeneric = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "generic");
+            if (Directory.Exists(desktopGeneric)) return desktopGeneric;
+
+            return localGeneric;
+        }
+
+        public static async Task ConvertDirectoryAsync(string sourceDir, string targetOutputDir)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(targetOutputDir)) targetOutputDir = BaseOutputDir;
 
                 if (!Directory.Exists(sourceDir))
                 {
@@ -82,7 +119,7 @@ namespace Habbo_Downloader.Compiler
                     string relativeDir = Path.GetDirectoryName(relativePath) ?? "";
                     string fileName = Path.GetFileName(nitroFile);
 
-                    string outputDir = Path.Combine(BaseOutputDir, relativeDir);
+                    string outputDir = Path.Combine(targetOutputDir, relativeDir);
                     Directory.CreateDirectory(outputDir);
                     string outputPath = Path.Combine(outputDir, fileName);
 
@@ -124,13 +161,13 @@ namespace Habbo_Downloader.Compiler
                     totalOriginalBytes: totalOriginalBytes,
                     totalOutputBytes: totalNewBytes,
                     elapsed: stopwatch.Elapsed,
-                    outputDirectory: BaseOutputDir,
+                    outputDirectory: targetOutputDir,
                     formatName: "WebP Lossless (100% Quality, Method 6, Alpha Preserved)"
                 );
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error during Nitro WebP conversion: {ex.Message}");
+                Console.WriteLine($"❌ Error during Nitro conversion: {ex.Message}");
             }
         }
 

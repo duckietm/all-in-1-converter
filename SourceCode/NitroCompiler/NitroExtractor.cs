@@ -12,8 +12,9 @@ namespace ConsoleApplication
             await ExtractFiles("clothing");
             await ExtractFiles("effects");
             await ExtractFiles("pets");
+            await ExtractFiles("generic");
 
-            Console.WriteLine("Nitro Furniture Extraction completed.");
+            Console.WriteLine("Nitro Furniture & Assets Extraction completed.");
         }
 
         private static async Task ExtractFiles(string folder)

@@ -35,7 +35,13 @@ namespace ConsoleApplication
                 "Reads from NitroCompiler/convert_webp/ (or custom folders).\n" +
                 "Output: NitroCompiler/converted_webp/."),
 
-            new("6", "WebP Lossless Benchmark & Pixel Test", OperationCatalog.Get("tools.benchmark-webp").Action, HowToUse:
+            new("6", "Convert Generic Nitro (room, badges, cursor to WebP)", OperationCatalog.Get("tools.webp-generic").Action, HowToUse:
+                "Converts generic client UI bundles (room.nitro, group_badge.nitro, cursors, placeholders)\n" +
+                "to WebP Lossless, cutting size by ~68% while keeping 100% pixel fidelity.\n" +
+                "Reads from NitroCompiler/generic/ or Desktop/generic/.\n" +
+                "Output: NitroCompiler/converted_webp/generic/."),
+
+            new("7", "WebP Lossless Benchmark & Pixel Test", OperationCatalog.Get("tools.benchmark-webp").Action, HowToUse:
                 "Runs complete verification and benchmark suite testing PNG vs WebP size\n" +
                 "and verifying 100% bit-for-bit RGBA pixel match across sample assets.")
         });
