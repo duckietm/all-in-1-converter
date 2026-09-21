@@ -28,6 +28,8 @@ config.ini
 *.swf
 *.nitro
 *.zip
+!Assets_WebP_Zips/
+!Assets_WebP_Zips/*.zip
 
 # Legacy
 /DownloadHabbo/SourceCode/obj
