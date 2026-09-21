@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -97,9 +97,6 @@ namespace ConsoleApplication
                     Directory.Delete("./temp");
                 }
             }
-
-            Console.WriteLine("Press Enter to exit...");
-            Console.ReadLine(); // ReadLine is captured by TUI / GUI output windows; ReadKey is not.
         }
 
         private static async Task<(int NitroCount, int IconCount)> ProcessFurniTypeAsync(

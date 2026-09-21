@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 
@@ -9,6 +9,7 @@ public class NitroBundle
 
     private object? _jsonFile;
     private string? _baseTexture;
+    private string _textureExtension = ".png";
 
     public NitroBundle(byte[] arrayBuffer)
     {
@@ -64,7 +65,13 @@ public class NitroBundle
                     }
                     else if (fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
                     {
+                        _textureExtension = ".png";
                         _baseTexture = ArrayBufferToBase64(decompressed); //Convert PNG to Base64
+                    }
+                    else if (fileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _textureExtension = ".webp";
+                        _baseTexture = ArrayBufferToBase64(decompressed); //Convert WebP to Base64
                     }
 
                     // Save the extracted file in the correct directory
@@ -179,4 +186,5 @@ public class NitroBundle
 
     public object? JsonFile => _jsonFile;
     public string? BaseTexture => _baseTexture;
+    public string TextureExtension => _textureExtension;
 }

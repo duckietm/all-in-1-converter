@@ -37,10 +37,16 @@ public sealed class ProfessionalWindow : Window
         "nitro.clothes",
         "tools.decompile-nitro",
         "tools.compile-nitro",
+        "tools.convert-nitro-webp",
+        "tools.decompile-swf",
         "tools.swf-furniture",
         "tools.swf-clothes",
         "tools.swf-pets",
         "tools.swf-effects",
+        "tools.webp-furniture",
+        "tools.webp-clothes",
+        "tools.webp-pets",
+        "tools.webp-effects",
         "database.offer-id",
         "database.item-settings",
         "database.sprite-id"
@@ -68,6 +74,15 @@ public sealed class ProfessionalWindow : Window
     private readonly WrapPanel _workspaceFolders = new() { Orientation = Orientation.Horizontal };
     private readonly Button _openWorkspace = new() { Content = "Open workspace folder", Padding = new Thickness(18, 8) };
     private readonly Border _activityPanel;
+    private readonly TextBlock _activityHeading = new() { FontSize = 18, FontWeight = FontWeight.SemiBold };
+    private readonly TextBlock _activityDescription = new() { Foreground = Muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 12) };
+    private readonly Button _runButton = new()
+    {
+        Name = "RunButton",
+        Content = "Run operation",
+        Padding = new Thickness(22, 9),
+        Margin = new Thickness(10, 0, 0, 0)
+    };
     private readonly Control _workspacePanel;
     private readonly List<Button> _navigationButtons = [];
     private readonly Dictionary<OperationCategory, Button> _categoryNavigation = [];
@@ -166,6 +181,7 @@ public sealed class ProfessionalWindow : Window
         nav.Children.Add(NavButton("↓  Habbo Original", () => ShowCategory(OperationCategory.HabboOriginal), OperationCategory.HabboOriginal));
         nav.Children.Add(NavButton("◆  Nitro Custom", () => ShowCategory(OperationCategory.NitroCustom), OperationCategory.NitroCustom));
         nav.Children.Add(NavButton("⚒  Hotel Tools", () => ShowCategory(OperationCategory.HotelTools), OperationCategory.HotelTools));
+        nav.Children.Add(NavButton("⚡  Hotel Tools (WebP)", () => ShowCategory(OperationCategory.HotelToolsWebp), OperationCategory.HotelToolsWebp));
         nav.Children.Add(NavButton("▤  Database", () => ShowCategory(OperationCategory.Database), OperationCategory.Database));
         nav.Children.Add(NavButton("ⓘ  About", () => ShowCategory(OperationCategory.General), OperationCategory.General));
         Grid.SetRow(nav, 1);
@@ -489,11 +505,9 @@ public sealed class ProfessionalWindow : Window
     private Border BuildActivityPanel()
     {
         var grid = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"), MinHeight = 310 };
-        var heading = new TextBlock { Name = "ActivityHeading", FontSize = 18, FontWeight = FontWeight.SemiBold };
-        grid.Children.Add(heading);
-        var description = new TextBlock { Name = "ActivityDescription", Foreground = Muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 12) };
-        Grid.SetRow(description, 1);
-        grid.Children.Add(description);
+        grid.Children.Add(_activityHeading);
+        Grid.SetRow(_activityDescription, 1);
+        grid.Children.Add(_activityDescription);
         Grid.SetRow(_log, 2);
         grid.Children.Add(_log);
 
@@ -508,20 +522,11 @@ public sealed class ProfessionalWindow : Window
         Grid.SetColumn(_send, 1);
         _send.Click += (_, _) => SubmitInput();
         actions.Children.Add(_send);
-        var run = new Button
-        {
-            Name = "RunButton",
-            Content = "Run operation",
-            Background = CallToAction,
-            Foreground = Brush(ProfessionalPalette.CallToActionText),
-            BorderBrush = CallToActionBorder,
-            Padding = new Thickness(22, 9),
-            Margin = new Thickness(10, 0, 0, 0)
-        };
-        run.Click += async (_, _) => await RunSelectedAsync();
-        ApplyPrimaryButtonColors(run);
-        Grid.SetColumn(run, 2);
-        actions.Children.Add(run);
+
+        _runButton.Click += async (_, _) => await RunSelectedAsync();
+        ApplyPrimaryButtonColors(_runButton);
+        Grid.SetColumn(_runButton, 2);
+        actions.Children.Add(_runButton);
         Grid.SetRow(actions, 3);
         grid.Children.Add(actions);
         return Card(grid);
@@ -614,11 +619,13 @@ public sealed class ProfessionalWindow : Window
 
     private void ViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ProfessionalShellViewModel.LogText))
+        if (e.PropertyName == nameof(ProfessionalShellViewModel.LogText))
         {
             _log.Text = _viewModel.LogText;
             _log.CaretIndex = _log.Text?.Length ?? 0;
+            return;
         }
+
         RefreshHeader();
         RefreshActivity();
     }
@@ -632,16 +639,12 @@ public sealed class ProfessionalWindow : Window
 
     private void RefreshActivity()
     {
-        if (_activityPanel.Child is not Grid grid) return;
         OperationDefinition? operation = _viewModel.SelectedOperation;
-        if (grid.Children.OfType<TextBlock>().FirstOrDefault(x => x.Name == "ActivityHeading") is { } heading)
-            heading.Text = operation?.Title ?? "Select an operation";
-        if (grid.Children.OfType<TextBlock>().FirstOrDefault(x => x.Name == "ActivityDescription") is { } description)
-            description.Text = operation is null
-                ? "Choose a card above to inspect and run it."
-                : operation.Description + WorkspaceTargetSummary(operation);
-        if (grid.Children.OfType<Grid>().SelectMany(x => x.Children).OfType<Button>().FirstOrDefault(x => x.Name == "RunButton") is { } run)
-            run.IsEnabled = _viewModel.CanRun;
+        _activityHeading.Text = operation?.Title ?? "Select an operation";
+        _activityDescription.Text = operation is null
+            ? "Choose a card above to inspect and run it."
+            : operation.Description + WorkspaceTargetSummary(operation);
+        _runButton.IsEnabled = _viewModel.CanRun;
         _input.IsVisible = operation?.RequiresInput == true;
         _send.IsVisible = operation?.RequiresInput == true;
     }

@@ -2,6 +2,7 @@ using ConsoleApplication;
 using ConsoleApplication.FixSettings;
 using Habbo_Downloader.App.Runners;
 using Habbo_Downloader.Compiler;
+using Habbo_Downloader.Tools;
 
 namespace Habbo_Downloader.App.Operations;
 
@@ -40,10 +41,18 @@ public static class OperationCatalog
         Op("tools.generate-sql", OperationCategory.HotelTools, "Generate SQL", "Generate items_base and catalog_items SQL from furniture assets.", GenerateSqlAsync, true),
         Op("tools.decompile-nitro", OperationCategory.HotelTools, "Decompile Nitro files", "Extract Nitro manifests and spritesheets.", NitroExtractor.Extract),
         Op("tools.compile-nitro", OperationCategory.HotelTools, "Compile Nitro files", "Compile manifests and spritesheets into Nitro bundles.", NitroFurniCompile.Compile),
-        Op("tools.swf-furniture", OperationCategory.HotelTools, "SWF furniture to Nitro", "Convert legacy furniture SWF assets to Nitro.", SWF_Furni_To_Nitro.ConvertSwfFilesAsync, true),
-        Op("tools.swf-clothes", OperationCategory.HotelTools, "SWF clothes to Nitro", "Convert legacy clothing SWF assets to Nitro.", SWF_clothes_To_Nitro.ConvertSwfFilesAsync, true),
-        Op("tools.swf-pets", OperationCategory.HotelTools, "SWF pets to Nitro", "Convert legacy pet SWF assets to Nitro.", SWF_Pets_To_Nitro.ConvertSwfFilesAsync),
-        Op("tools.swf-effects", OperationCategory.HotelTools, "SWF effects to Nitro", "Convert legacy effect SWF assets to Nitro.", SWF_Effects_To_Nitro.ConvertSwfFilesAsync),
+        Op("tools.decompile-swf", OperationCategory.HotelTools, "Decompile SWF files", "Extract raw images, binaryData, symbols, ActionScript code and sounds from SWF files.", SwfDecompiler.DecompileAsync, true),
+        Op("tools.swf-furniture", OperationCategory.HotelTools, "SWF furniture to Nitro (PNG)", "Convert legacy furniture SWF assets to Nitro with standard PNG.", async () => { Tools.ConverterSettings.SpritesheetFormat = "png"; await SWF_Furni_To_Nitro.ConvertSwfFilesAsync(); }, true),
+        Op("tools.swf-clothes", OperationCategory.HotelTools, "SWF clothes to Nitro (PNG)", "Convert legacy clothing SWF assets to Nitro with standard PNG.", async () => { Tools.ConverterSettings.SpritesheetFormat = "png"; await SWF_clothes_To_Nitro.ConvertSwfFilesAsync(); }, true),
+        Op("tools.swf-pets", OperationCategory.HotelTools, "SWF pets to Nitro (PNG)", "Convert legacy pet SWF assets to Nitro with standard PNG.", async () => { Tools.ConverterSettings.SpritesheetFormat = "png"; await SWF_Pets_To_Nitro.ConvertSwfFilesAsync(); }),
+        Op("tools.swf-effects", OperationCategory.HotelTools, "SWF effects to Nitro (PNG)", "Convert legacy effect SWF assets to Nitro with standard PNG.", async () => { Tools.ConverterSettings.SpritesheetFormat = "png"; await SWF_Effects_To_Nitro.ConvertSwfFilesAsync(); }),
+
+        Op("tools.webp-furniture", OperationCategory.HotelToolsWebp, "SWF furniture to Nitro (WebP)", "Convert legacy furniture SWF assets to Nitro with WebP Lossless.", async () => { Tools.ConverterSettings.SpritesheetFormat = "webp"; await SWF_Furni_To_Nitro.ConvertSwfFilesAsync(); }, true),
+        Op("tools.webp-clothes", OperationCategory.HotelToolsWebp, "SWF clothes to Nitro (WebP)", "Convert legacy clothing SWF assets to Nitro with WebP Lossless.", async () => { Tools.ConverterSettings.SpritesheetFormat = "webp"; await SWF_clothes_To_Nitro.ConvertSwfFilesAsync(); }, true),
+        Op("tools.webp-pets", OperationCategory.HotelToolsWebp, "SWF pets to Nitro (WebP)", "Convert legacy pet SWF assets to Nitro with WebP Lossless.", async () => { Tools.ConverterSettings.SpritesheetFormat = "webp"; await SWF_Pets_To_Nitro.ConvertSwfFilesAsync(); }),
+        Op("tools.webp-effects", OperationCategory.HotelToolsWebp, "SWF effects to Nitro (WebP)", "Convert legacy effect SWF assets to Nitro with WebP Lossless.", async () => { Tools.ConverterSettings.SpritesheetFormat = "webp"; await SWF_Effects_To_Nitro.ConvertSwfFilesAsync(); }),
+        Op("tools.convert-nitro-webp", OperationCategory.HotelToolsWebp, "Convert Nitro (PNG to WebP)", "Convert existing Nitro bundles containing PNG into WebP Lossless.", NitroPngToWebpConverter.ConvertAsync, true),
+        Op("tools.benchmark-webp", OperationCategory.HotelToolsWebp, "WebP Lossless Benchmark", "Run PNG vs WebP lossless benchmark and pixel-by-pixel accuracy test.", async () => await Tools.BenchmarkRunner.RunAsync(30)),
 
         Op("database.info", OperationCategory.Database, "Database information", "Show server version, databases and sizes.", DatabaseGeneralInfo.ShowDatabaseVersionAsync),
         Op("database.optimize", OperationCategory.Database, "Optimize database", "Optimize every table in the configured database.", DatabaseOptimizer.OptimizeDatabaseTablesAsync, false, true),

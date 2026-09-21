@@ -59,6 +59,12 @@ namespace ConsoleApplication
                 "Convert effect .swf files to .nitro. Reads SWFCompiler/import/effects/.\n" +
                 "Custom XML can be dropped in SWFCompiler/import/effects/CustomXML/.\n" +
                 "Output: SWFCompiler/effects/."),
+
+            new("11", "Decompile SWF Files", OperationCatalog.Get("tools.decompile-swf").Action, HowToUse:
+                "Decompile SWF assets permanently to raw images, XMLs (binaryData),\n" +
+                "symbols (symbolClass), ActionScript (.as scripts), and audio.\n" +
+                "Reads from SWFCompiler/decompile/ (or import folders).\n" +
+                "Output: SWFCompiler/decompiled/<name>/.")
         });
     }
 }

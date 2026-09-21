@@ -15,5 +15,18 @@
 .DS_Store
 Thumbs.db
 
+# Local Tools & Scripts
+/Tools/
+dotnet-install.ps1
+config.ini
+
+# Asset storage, imported SWFs and generated outputs
+/Habbo_Default/
+/SWFCompiler/
+/NitroCompiler/
+/Sample_WebP_Extracted/
+*.swf
+*.nitro
+
 # Legacy
 /DownloadHabbo/SourceCode/obj
