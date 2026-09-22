@@ -1,4 +1,4 @@
-﻿using ConsoleApplication;
+using ConsoleApplication;
 using System;
 using Habbo_Downloader.App.Workspaces;
 using System.IO;
@@ -18,6 +18,11 @@ namespace Habbo_Downloader.Compiler
 
             // Asset categories to handle
             string[] assetTypes = { "furni", "clothing", "effects", "pets" };
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            int totalCompiled = 0;
+            int totalFailed = 0;
+            long totalOutputBytes = 0;
 
             foreach (string assetType in assetTypes)
             {
@@ -68,16 +73,32 @@ namespace Habbo_Downloader.Compiler
                         string outputPath = Path.Combine(outputFolder, $"{Path.GetFileName(itemFolder)}.nitro");
                         await WorkspaceOutput.WriteAllBytesAsync(outputPath, compiledData);
 
+                        totalCompiled++;
+                        totalOutputBytes += compiledData.Length;
                         Console.WriteLine($"Compiled: {Path.GetFileName(itemFolder)} ({assetType})");
                     }
                     catch (Exception ex)
                     {
+                        totalFailed++;
                         Console.WriteLine($"Error compiling {Path.GetFileName(itemFolder)} ({assetType}): {ex.Message}");
                     }
                 }
             }
 
-            Console.WriteLine("Nitro Assets Compilation completed.");
+            stopwatch.Stop();
+
+            Habbo_Downloader.Tools.ConversionSummaryPrinter.PrintSummary(
+                processTitle: "Nitro Bundles Compilation",
+                totalFiles: totalCompiled + totalFailed,
+                convertedFiles: totalCompiled,
+                skippedFiles: 0,
+                failedFiles: totalFailed,
+                totalOriginalBytes: 0,
+                totalOutputBytes: totalOutputBytes,
+                elapsed: stopwatch.Elapsed,
+                outputDirectory: baseOutputPath,
+                formatName: "Nitro Bundle (.nitro)"
+            );
         }
 
         private static WorkspaceAssetKind ToWorkspaceKind(string assetType) => assetType switch

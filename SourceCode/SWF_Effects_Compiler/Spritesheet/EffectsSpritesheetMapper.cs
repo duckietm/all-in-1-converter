@@ -1,4 +1,4 @@
-﻿using Habbo_Downloader.SWFCompiler.Mapper;
+using Habbo_Downloader.SWFCompiler.Mapper;
 using Habbo_Downloader.SWFCompiler.Mapper.Assests;
 using System;
 using System.Collections.Generic;
@@ -86,11 +86,12 @@ namespace Habbo_Downloader.SWF_Effects_Compiler.Spritesheet
 
             using var spriteSheet = new Image<Rgba32>(totalWidth, totalHeight);
 
+            string ext = Tools.ConverterSettings.ImageExtension;
             var spriteSheetData = new SpriteSheetData
             {
                 Meta = new MetaData
                 {
-                    Image = $"{name}.png",
+                    Image = $"{name}{ext}",
                     Size = new SizeData { Width = totalWidth, Height = totalHeight },
                     Scale = 1.0f,
                     Format = "RGBA8888"
@@ -160,8 +161,15 @@ namespace Habbo_Downloader.SWF_Effects_Compiler.Spritesheet
                 currentY += rowHeight + FramePadding;
             }
 
-            string imagePath = Path.Combine(outputDirectory, $"{name}.png");
-            spriteSheet.SaveAsPng(imagePath);
+            string imagePath = Path.Combine(outputDirectory, $"{name}{ext}");
+            if (Tools.ConverterSettings.UseWebp)
+            {
+                spriteSheet.SaveAsWebp(imagePath, Tools.ConverterSettings.OptimalWebpEncoder);
+            }
+            else
+            {
+                spriteSheet.SaveAsPng(imagePath);
+            }
 
             return (imagePath, spriteSheetData);
         }

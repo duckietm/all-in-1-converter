@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 namespace ConsoleApplication
 {
@@ -18,7 +18,9 @@ namespace ConsoleApplication
 
             string name = Path.GetFileNameWithoutExtension(nitroFilePath);
             string jsonPath = Path.Combine(outputDir, $"{name}.json");
-            string texturePath = Path.Combine(outputDir, $"{name}.png");
+            string textureExt = bundle.TextureExtension;
+            if (!textureExt.StartsWith('.')) textureExt = "." + textureExt;
+            string texturePath = Path.Combine(outputDir, $"{name}{textureExt}");
 
             if (bundle.JsonFile != null)
             {

@@ -29,14 +29,20 @@ namespace Habbo_Downloader.App
 
             new("3", "Hotel Tools", HotelToolsMenu.DisplayMenu, IsSubMenu: true, HowToUse:
                 "Open the Hotel Tools sub-menu.\n" +
-                "Hosts every transformation step of the asset pipeline: merge\n" +
+                "Hosts every transformation step of the classic asset pipeline: merge\n" +
                 "furnidata / productdata / clothesdata using strict JSON files,\n" +
                 "generate items_base +\n" +
                 "catalog_items SQL from .nitro / .swf, decompile / compile .nitro\n" +
                 "bundles, and convert SWF -> Nitro for furniture / clothes / pets\n" +
-                "/ effects. Cross-platform thanks to ImageSharp + FFDec via Java."),
+                "/ effects with standard PNG spritesheets."),
 
-            new("4", "Database Tools", DatabaseMenu.DisplayMenu, IsSubMenu: true, HowToUse:
+            new("4", "Hotel Tools (WebP)", HotelToolsWebpMenu.DisplayMenu, IsSubMenu: true, HowToUse:
+                "Open the Hotel Tools (WebP) sub-menu.\n" +
+                "Hosts modern WebP Lossless compilation and conversion tools:\n" +
+                "convert SWF to Nitro with WebP Lossless (100% alpha transparency, 25-40% smaller),\n" +
+                "convert existing .nitro files from PNG to WebP, and run quality benchmarks."),
+
+            new("5", "Database Tools", DatabaseMenu.DisplayMenu, IsSubMenu: true, HowToUse:
                 "Open the Database Tools sub-menu.\n" +
                 "Hits the configured MariaDB / MySQL (credentials in config.ini\n" +
                 "[Database Settings]) to inspect or repair the hotel DB: show\n" +

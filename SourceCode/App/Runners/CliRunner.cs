@@ -14,6 +14,28 @@ namespace Habbo_Downloader.App.Runners
     {
         public async Task RunAsync(Args args)
         {
+            if (args.Benchmark)
+            {
+                await Habbo_Downloader.Tools.BenchmarkRunner.RunAsync(args.BenchmarkSamples);
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(args.Operation))
+            {
+                try
+                {
+                    var op = Habbo_Downloader.App.Operations.OperationCatalog.Get(args.Operation);
+                    Console.WriteLine($"▶ Executing operation: {op.Title} ({op.Id})...");
+                    await op.Action();
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"❌ Error executing operation '{args.Operation}': {ex.Message}");
+                    Environment.ExitCode = 1;
+                }
+                return;
+            }
+
             if (!string.IsNullOrEmpty(args.Command))
             {
                 await DispatchDirect(args.Command);
@@ -27,12 +49,14 @@ namespace Habbo_Downloader.App.Runners
         {
             switch (command.ToLowerInvariant())
             {
-                case "habbo":    await HabboOriginalMenu.DisplayMenu(); break;
-                case "nitro":    await NitroCustomMenu.DisplayMenu(); break;
-                case "tools":    await HotelToolsMenu.DisplayMenu(); break;
-                case "database": await DatabaseMenu.DisplayMenu(); break;
+                case "habbo":      await HabboOriginalMenu.DisplayMenu(); break;
+                case "nitro":      await NitroCustomMenu.DisplayMenu(); break;
+                case "tools":      await HotelToolsMenu.DisplayMenu(); break;
+                case "webp":
+                case "tools-webp": await HotelToolsWebpMenu.DisplayMenu(); break;
+                case "database":   await DatabaseMenu.DisplayMenu(); break;
                 default:
-                    Console.Error.WriteLine($"Unknown command: {command}. Valid: habbo, nitro, tools, database.");
+                    Console.Error.WriteLine($"Unknown command: {command}. Valid: habbo, nitro, tools, webp, database.");
                     Environment.ExitCode = 2;
                     break;
             }

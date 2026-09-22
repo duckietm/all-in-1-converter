@@ -38,25 +38,74 @@ namespace Habbo_Downloader.Compiler
 
                 if (swfFiles.Length == 0)
                 {
-                    Console.WriteLine("No SWF files found in the import directory.");
+                    Console.WriteLine("ℹ️ No SWF files found in the import (SWFCompiler\\import\\pets) directory.");
                     return;
                 }
 
-                Console.WriteLine($"✅ Found {swfFiles.Length} SWF files.");
+                Console.WriteLine($"✅ Found {swfFiles.Length} pet SWF files to convert.");
 
-                var nitroFilesGenerated = new ConcurrentBag<int>();
-                int maxParallelism = (int)(Environment.ProcessorCount * 0.8);
-                if (maxParallelism < 1) maxParallelism = 1;
+                int totalFiles = swfFiles.Length;
+                int processedCount = 0;
+                int convertedCount = 0;
+                int skippedCount = 0;
+                int failedCount = 0;
+                long totalOriginalBytes = 0;
+                long totalOutputBytes = 0;
+                int maxParallelism = Math.Max(2, (int)(Environment.ProcessorCount * 0.8));
+
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
                 await Parallel.ForEachAsync(swfFiles, new ParallelOptions { MaxDegreeOfParallelism = maxParallelism }, async (swfFile, _) =>
                 {
-                    if (await ProcessSwfFileAsync(swfFile))
+                    string fName = Path.GetFileNameWithoutExtension(swfFile);
+                    string targetNitroPath = Path.Combine(OutputDirectory, $"{fName}.nitro");
+                    long swfLength = 0;
+                    try { swfLength = new FileInfo(swfFile).Length; } catch { }
+                    Interlocked.Add(ref totalOriginalBytes, swfLength);
+
+                    if (File.Exists(targetNitroPath))
                     {
-                        nitroFilesGenerated.Add(1);
+                        Interlocked.Increment(ref skippedCount);
+                        try { Interlocked.Add(ref totalOutputBytes, new FileInfo(targetNitroPath).Length); } catch { }
+                    }
+                    else
+                    {
+                        bool converted = await ProcessSwfFileAsync(swfFile);
+                        if (converted && File.Exists(targetNitroPath))
+                        {
+                            Interlocked.Increment(ref convertedCount);
+                            try { Interlocked.Add(ref totalOutputBytes, new FileInfo(targetNitroPath).Length); } catch { }
+                        }
+                        else
+                        {
+                            Interlocked.Increment(ref failedCount);
+                        }
+                    }
+
+                    int current = Interlocked.Increment(ref processedCount);
+                    if (current % 10 == 0 || current == totalFiles || current <= 5)
+                    {
+                        double pct = (double)current / totalFiles * 100.0;
+                        double itemsPerSec = current / Math.Max(0.001, stopwatch.Elapsed.TotalSeconds);
+                        Console.WriteLine($"⚡ [{current,4}/{totalFiles}] ({pct,5:F1}%) | {itemsPerSec,5:F1} items/sec | Converted: {convertedCount} | Skipped: {skippedCount}");
                     }
                 });
 
-                Console.WriteLine($"✅ All SWF files have been processed. {nitroFilesGenerated.Count} nitro files were generated.");
+                stopwatch.Stop();
+
+                string formatLabel = ConverterSettings.UseWebp ? "WebP Lossless" : "Standard PNG";
+                ConversionSummaryPrinter.PrintSummary(
+                    processTitle: $"SWF Pets -> Nitro ({formatLabel})",
+                    totalFiles: totalFiles,
+                    convertedFiles: convertedCount,
+                    skippedFiles: skippedCount,
+                    failedFiles: failedCount,
+                    totalOriginalBytes: totalOriginalBytes,
+                    totalOutputBytes: totalOutputBytes,
+                    elapsed: stopwatch.Elapsed,
+                    outputDirectory: OutputDirectory,
+                    formatName: formatLabel
+                );
             }
             catch (Exception ex)
             {
@@ -64,8 +113,7 @@ namespace Habbo_Downloader.Compiler
             }
         }
 
-
-        private static async Task<bool> ProcessSwfFileAsync(string swfFile)
+        public static async Task<bool> ProcessSwfFileAsync(string swfFile)
         {
             string fileName = Path.GetFileNameWithoutExtension(swfFile);
             string nitroFilePath = Path.Combine(OutputDirectory, $"{fileName}.nitro");
@@ -76,74 +124,65 @@ namespace Habbo_Downloader.Compiler
             Directory.CreateDirectory(fileOutputDirectory);
 
             string binaryOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}_binaryData");
-
-            Console.WriteLine($"🔍 Start Decompiling SWF: {fileName}...");
-            await FfdecExtractor.ExtractSWFAsync(swfFile, binaryOutputPath);
-
-            if (!Directory.Exists(Path.Combine(binaryOutputPath, "binaryData")))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ Error: Extraction failed for {fileName}. No binaryData folder found.");
-                Console.ResetColor();
-                return false;
-            }
-
-            string csvPath = Path.Combine(binaryOutputPath, "symbolClass", "symbols.csv");
-            var canonicalMapping = AssetNameMapper.BuildCanonicalMapping(csvPath);
-            var imageSources = DebugXmlParser.ParseDebugXml(csvPath);
-
-            var indexTask = GetIndexPetsDataAsync(binaryOutputPath);
-            var assetsTask = GetAssetPetsDataAsync(binaryOutputPath, imageSources, csvPath, fileOutputDirectory, Path.GetFileName(swfFile));
-            var logicTask = GetLogicDataAsync(binaryOutputPath);
-            var visualizationTask = GetVisualizationsDataAsync(binaryOutputPath);
-
-            await Task.WhenAll(indexTask, assetsTask, logicTask, visualizationTask);
-            var indexData = indexTask.Result;
-            var assetData = assetsTask.Result;
-            var logicData = logicTask.Result;
-            var visualizations = visualizationTask.Result;
-            var palettes = PaletteExtractor.ExtractPalettes(binaryOutputPath);
-
-            if (indexData == null)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ Failed to parse index file for {fileName}. Skipping...");
-                Console.ResetColor();
-                return false;
-            }
-
-            string imagesDirectory = Path.Combine(binaryOutputPath, "images");
-            string tmpDirectory = Path.Combine(binaryOutputPath, "tmp");
-
-            await ImageRestorer.RestoreImagesFromTmpAsync(tmpDirectory, imagesDirectory, AssetsPetsMapper.LatestImageMapping);
-
-            // Some pets ship an INCOMPLETE size-32 variant (fewer animations, or
-            // most of the size-32 frames missing) that cannot render and breaks
-            // catalog loading (e.g. monkey, turtle). Keep size-32 only when it is
-            // as complete as size-64; otherwise drop the size-32 visualization,
-            // its assets and its images so the pet renders at size-64 like before.
-            bool keepSize32 = ShouldKeepSize32(visualizations, assetData);
-            if (!keepSize32)
-            {
-                if (visualizations != null) visualizations = visualizations.Where(v => v.Size != 32).ToList();
-
-                foreach (var key in assetData.Keys.Where(k => k.Contains("_32_")).ToList())
-                {
-                    assetData.Remove(key);
-                }
-
-                Console.WriteLine($"ℹ️ {fileName}: size-32 art incomplete - keeping size-64 only.");
-            }
-
-            var images = LoadImages(imagesDirectory, keepSize32);
-            if (images.Count == 0)
-            {
-                Console.WriteLine($"⚠️ No valid images found for {fileName}. Skipping sprite sheet generation.");
-                return false;
-            }
+            Dictionary<string, Image<Rgba32>>? images = null;
 
             try
             {
+                await FfdecExtractor.ExtractSWFAsync(swfFile, binaryOutputPath);
+
+                if (!Directory.Exists(Path.Combine(binaryOutputPath, "binaryData")))
+                {
+                    return false;
+                }
+
+                string csvPath = Path.Combine(binaryOutputPath, "symbolClass", "symbols.csv");
+                var canonicalMapping = AssetNameMapper.BuildCanonicalMapping(csvPath);
+                var imageSources = DebugXmlParser.ParseDebugXml(csvPath);
+
+                var indexTask = GetIndexPetsDataAsync(binaryOutputPath);
+                var assetsTask = GetAssetPetsDataAsync(binaryOutputPath, imageSources, csvPath, fileOutputDirectory, Path.GetFileName(swfFile));
+                var logicTask = GetLogicDataAsync(binaryOutputPath);
+                var visualizationTask = GetVisualizationsDataAsync(binaryOutputPath);
+
+                await Task.WhenAll(indexTask, assetsTask, logicTask, visualizationTask);
+                var indexData = indexTask.Result;
+                var assetData = assetsTask.Result;
+                var logicData = logicTask.Result;
+                var visualizations = visualizationTask.Result;
+                var palettes = PaletteExtractor.ExtractPalettes(binaryOutputPath);
+
+                if (indexData == null)
+                {
+                    return false;
+                }
+
+                string imagesDirectory = Path.Combine(binaryOutputPath, "images");
+                string tmpDirectory = Path.Combine(binaryOutputPath, "tmp");
+
+                await ImageRestorer.RestoreImagesFromTmpAsync(tmpDirectory, imagesDirectory, AssetsPetsMapper.LatestImageMapping);
+
+                // Some pets ship an INCOMPLETE size-32 variant (fewer animations, or
+                // most of the size-32 frames missing) that cannot render and breaks
+                // catalog loading (e.g. monkey, turtle). Keep size-32 only when it is
+                // as complete as size-64; otherwise drop the size-32 visualization,
+                // its assets and its images so the pet renders at size-64 like before.
+                bool keepSize32 = ShouldKeepSize32(visualizations, assetData);
+                if (!keepSize32)
+                {
+                    if (visualizations != null) visualizations = visualizations.Where(v => v.Size != 32).ToList();
+
+                    foreach (var key in assetData.Keys.Where(k => k.Contains("_32_")).ToList())
+                    {
+                        assetData.Remove(key);
+                    }
+                }
+
+                images = LoadImages(imagesDirectory, keepSize32);
+                if (images.Count == 0)
+                {
+                    return false;
+                }
+
                 var (spriteSheetPath, spriteSheetData) = SpriteSheetMapper.GenerateSpriteSheet(
                     images,
                     fileOutputDirectory,
@@ -157,7 +196,6 @@ namespace Habbo_Downloader.Compiler
 
                 if (spriteSheetPath == null || spriteSheetData == null)
                 {
-                    Console.WriteLine($"⚠️ No images found to generate spritesheet for {fileName}. Skipping...");
                     return false;
                 }
 
@@ -207,10 +245,6 @@ namespace Habbo_Downloader.Compiler
                 await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
 
                 await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);
-
-                // Optionally delete the output directory after bundling.
-                DeleteDirectory(fileOutputDirectory);
-
                 return true;
             }
             catch (Exception ex)
@@ -218,7 +252,19 @@ namespace Habbo_Downloader.Compiler
                 Console.WriteLine($"❌ Error generating sprite sheet for {fileName}: {ex.Message}");
                 return false;
             }
+            finally
+            {
+                if (images != null)
+                {
+                    foreach (var img in images.Values)
+                    {
+                        try { img.Dispose(); } catch { }
+                    }
+                }
+                DeleteDirectory(fileOutputDirectory);
+            }
         }
+
         // Pets ship an INCOMPLETE size-32 variant for some animals; ShouldKeepSize32
         // decides whether this pet's size-32 art is usable. Only include the _32_
         // frames when it is (sh_ never applies to pets).

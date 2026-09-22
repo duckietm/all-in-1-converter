@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 namespace ConsoleApplication
 {
@@ -12,8 +12,9 @@ namespace ConsoleApplication
             await ExtractFiles("clothing");
             await ExtractFiles("effects");
             await ExtractFiles("pets");
+            await ExtractFiles("generic");
 
-            Console.WriteLine("Nitro Furniture Extraction completed.");
+            Console.WriteLine("Nitro Furniture & Assets Extraction completed.");
         }
 
         private static async Task ExtractFiles(string folder)
@@ -29,7 +30,7 @@ namespace ConsoleApplication
                 var bundle = new NitroBundle(data);
 
                 string name = Path.GetFileNameWithoutExtension(file);
-                await ExtractedHandler.SaveExtractedFiles(folder, name, JsonSerializer.Serialize(bundle.JsonFile, new JsonSerializerOptions { WriteIndented = true }), bundle.BaseTexture);
+                await ExtractedHandler.SaveExtractedFiles(folder, name, JsonSerializer.Serialize(bundle.JsonFile, new JsonSerializerOptions { WriteIndented = true }), bundle.BaseTexture, bundle.TextureExtension);
             }
         }
     }

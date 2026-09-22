@@ -73,8 +73,9 @@ to keep notes**.
    clothes packs.
 3. **Hotel Tools** — Merge Furnidata / Productdata / Clothesdata using
    strict single JSON files, Generate SQL for `items_base` +
-   `catalog_items`, Decompile / Compile `.nitro` bundles, SWF → Nitro for
-   Furniture / Clothes / Pets / Effects.
+   `catalog_items`, Decompile / Compile `.nitro` bundles, Convert Nitro PNG → WebP Lossless,
+   Decompile `.swf` assets (images, XMLs, symbols, ActionScript `.as`, audio),
+   and SWF → Nitro for Furniture / Clothes / Pets / Effects.
 4. **Database Tools** — show DB version, optimize tables, fix offer_id,
    fix sit/lay/walk in `items_base`, fix sprite_id / item_id from JSON.
 
@@ -106,8 +107,8 @@ commit them):
 Habbo_Default/          downloaded official Habbo assets
 Merge/                  Original_/Import_/Merged_ for Furnidata, Productdata, Clothes
 Generate/               Furnidata/, Furniture/, Output_SQL/
-NitroCompiler/          compile/, compiled/, extract/, extracted/
-SWFCompiler/            import/, plus output directories per asset class
+NitroCompiler/          compile/, compiled/, extract/, extracted/, convert_webp/, converted_webp/
+SWFCompiler/            import/, decompile/, decompiled/, plus output directories per asset class
 Database/Variables/     drop FurnitureData.json here for the DB fix tools
 custom_downloads/       multi-source custom downloader output
 ```

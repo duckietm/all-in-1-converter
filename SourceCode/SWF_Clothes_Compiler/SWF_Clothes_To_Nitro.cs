@@ -1,4 +1,4 @@
-﻿using Habbo_Downloader.SWFCompiler.Mapper.Assests;
+using Habbo_Downloader.SWFCompiler.Mapper.Assests;
 using Habbo_Downloader.SWFCompiler.Mapper.Spritesheets;
 using Habbo_Downloader.Tools;
 using Habbo_Downloader.App.Workspaces;
@@ -39,21 +39,74 @@ namespace Habbo_Downloader.Compiler
                     return;
                 }
 
-                Console.WriteLine($"✅ Found {swfFiles.Length} SWF files.");
+                Console.WriteLine($"✅ Found {swfFiles.Length} clothing SWF files to convert.");
 
-                var nitroFilesGenerated = new ConcurrentBag<int>();
-                int maxParallelism = (int)(Environment.ProcessorCount * 0.8);
-                if (maxParallelism < 1) maxParallelism = 1;
+                int totalFiles = swfFiles.Length;
+                int processedCount = 0;
+                int convertedCount = 0;
+                int skippedCount = 0;
+                int failedCount = 0;
+                long totalOriginalBytes = 0;
+                long totalOutputBytes = 0;
+                int maxParallelism = Math.Max(2, (int)(Environment.ProcessorCount * 0.9));
+
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
                 await Parallel.ForEachAsync(swfFiles, new ParallelOptions { MaxDegreeOfParallelism = maxParallelism }, async (swfFile, _) =>
                 {
-                    if (await ProcessSwfFileAsync(swfFile))
+                    string fName = Path.GetFileNameWithoutExtension(swfFile);
+                    string targetNitroPath = Path.Combine(OutputDirectory, $"{fName}.nitro");
+                    long swfLength = 0;
+                    try { swfLength = new FileInfo(swfFile).Length; } catch { }
+                    Interlocked.Add(ref totalOriginalBytes, swfLength);
+
+                    if (string.Equals(Path.GetFileName(swfFile), "hh_human_fx.swf", StringComparison.OrdinalIgnoreCase))
                     {
-                        nitroFilesGenerated.Add(1);
+                        Interlocked.Increment(ref skippedCount);
+                    }
+                    else if (File.Exists(targetNitroPath))
+                    {
+                        Interlocked.Increment(ref skippedCount);
+                        try { Interlocked.Add(ref totalOutputBytes, new FileInfo(targetNitroPath).Length); } catch { }
+                    }
+                    else
+                    {
+                        bool converted = await ProcessSwfFileAsync(swfFile);
+                        if (converted && File.Exists(targetNitroPath))
+                        {
+                            Interlocked.Increment(ref convertedCount);
+                            try { Interlocked.Add(ref totalOutputBytes, new FileInfo(targetNitroPath).Length); } catch { }
+                        }
+                        else
+                        {
+                            Interlocked.Increment(ref failedCount);
+                        }
+                    }
+
+                    int current = Interlocked.Increment(ref processedCount);
+                    if (current % 50 == 0 || current == totalFiles || current <= 10)
+                    {
+                        double pct = (double)current / totalFiles * 100.0;
+                        double itemsPerSec = current / Math.Max(0.001, stopwatch.Elapsed.TotalSeconds);
+                        Console.WriteLine($"⚡ [{current,5}/{totalFiles}] ({pct,5:F1}%) | {itemsPerSec,5:F1} items/sec | Converted: {convertedCount} | Skipped: {skippedCount}");
                     }
                 });
 
-                Console.WriteLine($"✅ All SWF files have been converted. {nitroFilesGenerated.Count} nitro files were generated.");
+                stopwatch.Stop();
+
+                string formatLabel = ConverterSettings.UseWebp ? "WebP Lossless" : "Standard PNG";
+                ConversionSummaryPrinter.PrintSummary(
+                    processTitle: $"SWF Clothes -> Nitro ({formatLabel})",
+                    totalFiles: totalFiles,
+                    convertedFiles: convertedCount,
+                    skippedFiles: skippedCount,
+                    failedFiles: failedCount,
+                    totalOriginalBytes: totalOriginalBytes,
+                    totalOutputBytes: totalOutputBytes,
+                    elapsed: stopwatch.Elapsed,
+                    outputDirectory: OutputDirectory,
+                    formatName: formatLabel
+                );
             }
             catch (Exception ex)
             {
@@ -61,12 +114,11 @@ namespace Habbo_Downloader.Compiler
             }
         }
 
-        private static async Task<bool> ProcessSwfFileAsync(string swfFile)
+        public static async Task<bool> ProcessSwfFileAsync(string swfFile)
         {
             // Skip the effect file.
             if (string.Equals(Path.GetFileName(swfFile), "hh_human_fx.swf", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine("ℹ️ Skipping file: hh_human_fx.swf This is an effect file.");
                 return false;
             }
 
@@ -81,54 +133,49 @@ namespace Habbo_Downloader.Compiler
 
             string binaryOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}_binaryData");
 
-            Console.WriteLine($"🔍 Start Decompiling Clothes SWF: {fileName}...");
-            await FfdecExtractorClothes.ExtractSWFAsync(swfFile, binaryOutputPath);
-
-            if (!Directory.Exists(Path.Combine(binaryOutputPath, "binaryData")))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ Error: Extraction failed for {fileName}. No binaryData folder found.");
-                Console.ResetColor();
-                return false;
-            }
-
-            // Use CSV instead of debug.xml:
-            string csvPath = Path.Combine(binaryOutputPath, "symbolClass", "symbols.csv");
-            var imageSources = DebugXmlParser.ParseDebugXml(csvPath);
-
-            // For clothes, obtain the clothes mapping from the CSV.
-            var clothesMapping = ClothesDebugXmlParser.GetClothesImageMapping(csvPath);
-            if (clothesMapping.Count == 0)
-            {
-                Console.WriteLine("❌ No valid clothes image mappings found. Skipping sprite sheet generation.");
-                return false;
-            }
-
-            // Process asset data.
-            var assetDataResult = await GetAssetDataAsync(binaryOutputPath, imageSources, csvPath, fileOutputDirectory);
-
-            // Image Processing.
-            string imagesDirectory = Path.Combine(binaryOutputPath, "images");
-            string tmpDirectory = Path.Combine(binaryOutputPath, "tmp");
-
-            await ImageRestorer.RestoreImagesFromTmpAsync(tmpDirectory, imagesDirectory, clothesMapping);
-
-            var images = LoadImages(imagesDirectory);
-            if (images.Count == 0)
-            {
-                Console.WriteLine($"⚠️ No valid images found for {fileName}. Skipping sprite sheet generation.");
-                return false;
-            }
+            Dictionary<string, Image<Rgba32>>? images = null;
 
             try
             {
+                await FfdecExtractorClothes.ExtractSWFAsync(swfFile, binaryOutputPath);
+
+                if (!Directory.Exists(Path.Combine(binaryOutputPath, "binaryData")))
+                {
+                    return false;
+                }
+
+                // Use CSV instead of debug.xml:
+                string csvPath = Path.Combine(binaryOutputPath, "symbolClass", "symbols.csv");
+                var imageSources = DebugXmlParser.ParseDebugXml(csvPath);
+
+                // For clothes, obtain the clothes mapping from the CSV.
+                var clothesMapping = ClothesDebugXmlParser.GetClothesImageMapping(csvPath);
+                if (clothesMapping.Count == 0)
+                {
+                    return false;
+                }
+
+                // Process asset data.
+                var assetDataResult = await GetAssetDataAsync(binaryOutputPath, imageSources, csvPath, fileOutputDirectory);
+
+                // Image Processing.
+                string imagesDirectory = Path.Combine(binaryOutputPath, "images");
+                string tmpDirectory = Path.Combine(binaryOutputPath, "tmp");
+
+                await ImageRestorer.RestoreImagesFromTmpAsync(tmpDirectory, imagesDirectory, clothesMapping);
+
+                images = LoadImages(imagesDirectory);
+                if (images.Count == 0)
+                {
+                    return false;
+                }
+
                 var (spriteSheetPath, spriteSheetData) = SpritesheetClothesMapper.GenerateSpriteSheet(
                     images, fileOutputDirectory, fileName, maxWidth: 10240, maxHeight: 7000
                 );
 
                 if (spriteSheetPath == null || spriteSheetData == null)
                 {
-                    Console.WriteLine($"⚠️ No images found to generate spritesheet for {fileName}. Skipping...");
                     return false;
                 }
 
@@ -146,16 +193,23 @@ namespace Habbo_Downloader.Compiler
 
                 await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
                 await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);
-
-                // Optionally delete the output directory after bundling.
-                DeleteDirectory(fileOutputDirectory);
-
                 return true;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error generating sprite sheet for {fileName}: {ex.Message}");
                 return false;
+            }
+            finally
+            {
+                if (images != null)
+                {
+                    foreach (var img in images.Values)
+                    {
+                        try { img.Dispose(); } catch { }
+                    }
+                }
+                DeleteDirectory(fileOutputDirectory);
             }
         }
 

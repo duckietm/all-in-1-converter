@@ -78,7 +78,8 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
         {
             OperationCategory.HabboOriginal => ("Habbo Original", "Download official assets from the Habbo CDN"),
             OperationCategory.NitroCustom => ("Nitro Custom", "Import custom Nitro furniture and clothing"),
-            OperationCategory.HotelTools => ("Hotel Tools", "Merge, compile and convert your asset pipeline"),
+            OperationCategory.HotelTools => ("Hotel Tools", "Merge, compile and convert your asset pipeline (PNG)"),
+            OperationCategory.HotelToolsWebp => ("Hotel Tools (WebP)", "Convert SWF to Nitro with WebP Lossless, optimize existing Nitro and run benchmarks"),
             OperationCategory.Database => ("Database", "Inspect and maintain the configured hotel database"),
             _ => ("About", "Version and project information")
         };
@@ -95,19 +96,37 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
     {
         if (!CanRun || SelectedOperation is null) return;
         OperationDefinition operation = SelectedOperation;
-        _logBuilder.Clear();
+        lock (_logBuilder) { _logBuilder.Clear(); }
         LogText = string.Empty;
         IsRunning = true;
         StatusText = $"Running: {operation.Title}";
 
-        OperationResult result = await _runner.RunAsync(operation);
-        PostToUi(() =>
+        try
         {
-            IsRunning = false;
-            StatusText = result.Succeeded ? "Completed successfully" : $"Failed: {result.Error?.Message}";
-            RecentRuns.Insert(0, new RunHistoryItem(operation.Title, result.Succeeded, result.FinishedAt));
-            while (RecentRuns.Count > 8) RecentRuns.RemoveAt(RecentRuns.Count - 1);
-        });
+            OperationResult result = await _runner.RunAsync(operation);
+            PostToUi(() =>
+            {
+                IsRunning = false;
+                StatusText = result.Succeeded ? "Completed successfully" : $"Failed: {result.Error?.Message}";
+                RecentRuns.Insert(0, new RunHistoryItem(operation.Title, result.Succeeded, result.FinishedAt));
+                while (RecentRuns.Count > 8) RecentRuns.RemoveAt(RecentRuns.Count - 1);
+            });
+        }
+        catch (Exception ex)
+        {
+            PostToUi(() =>
+            {
+                IsRunning = false;
+                StatusText = $"Error: {ex.Message}";
+            });
+        }
+        finally
+        {
+            PostToUi(() =>
+            {
+                if (IsRunning) IsRunning = false;
+            });
+        }
     }
 
     public void SubmitInput()
@@ -121,16 +140,31 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
     public void NotifyCloseBlocked() =>
         StatusText = "Wait for the active operation to finish before closing";
 
-    private void HandleOutput(string text) => PostToUi(() =>
+    private void HandleOutput(string text)
     {
-        _logBuilder.Append(text);
-        LogText = _logBuilder.ToString();
-    });
+        lock (_logBuilder)
+        {
+            _logBuilder.Append(text);
+        }
+        PostToUi(() =>
+        {
+            lock (_logBuilder)
+            {
+                LogText = _logBuilder.ToString();
+            }
+        });
+    }
 
-    private void PostToUi(Action action)
+    private static void PostToUi(Action action)
     {
-        if (_uiContext is null || SynchronizationContext.Current == _uiContext) action();
-        else _uiContext.Post(_ => action(), null);
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        {
+            action();
+        }
+        else
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(action);
+        }
     }
 
     public async ValueTask DisposeAsync()

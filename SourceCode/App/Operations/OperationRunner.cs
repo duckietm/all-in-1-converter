@@ -25,6 +25,7 @@ public sealed class OperationRunner : IAsyncDisposable
         TextReader originalIn = Console.In;
         var writer = new EventWriter(text => OutputReceived?.Invoke(text));
         IsRunning = true;
+        _input.Reset();
 
         try
         {
@@ -41,6 +42,7 @@ public sealed class OperationRunner : IAsyncDisposable
         }
         finally
         {
+            _input.Reset();
             Console.SetOut(originalOut);
             Console.SetError(originalError);
             Console.SetIn(originalIn);
@@ -82,21 +84,33 @@ public sealed class OperationRunner : IAsyncDisposable
 
         public void Submit(string value)
         {
-            if (!_lines.IsAddingCompleted) _lines.Add(value);
+            if (!_lines.IsAddingCompleted)
+            {
+                try { _lines.Add(value); } catch { }
+            }
+        }
+
+        public void Reset()
+        {
+            while (_lines.TryTake(out _)) { }
         }
 
         public override string? ReadLine()
         {
             try { return _lines.Take(); }
-            catch (InvalidOperationException) { return null; }
+            catch { return string.Empty; }
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                _lines.CompleteAdding();
-                _lines.Dispose();
+                try
+                {
+                    _lines.CompleteAdding();
+                    _lines.Dispose();
+                }
+                catch { }
             }
             base.Dispose(disposing);
         }

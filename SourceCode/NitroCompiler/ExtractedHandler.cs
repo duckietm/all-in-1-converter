@@ -1,6 +1,6 @@
-﻿public static class ExtractedHandler
+public static class ExtractedHandler
 {
-    public static Task SaveExtractedFiles(string folder, string name, string jsonContent, string base64Image)
+    public static Task SaveExtractedFiles(string folder, string name, string jsonContent, string base64Image, string textureExtension = ".png")
     {
         if (string.IsNullOrEmpty(base64Image))
         {
@@ -22,7 +22,8 @@
             File.WriteAllText(jsonFilePath, jsonContent);
             Console.WriteLine($"Saved JSON file: {jsonFilePath}");
 
-            string textureFilePath = Path.Combine(outputFolder, $"{name}.png");
+            if (!textureExtension.StartsWith('.')) textureExtension = "." + textureExtension;
+            string textureFilePath = Path.Combine(outputFolder, $"{name}{textureExtension}");
             File.WriteAllBytes(textureFilePath, Convert.FromBase64String(base64Image));
             Console.WriteLine($"Saved texture file: {textureFilePath}");
         }
