@@ -206,6 +206,19 @@ namespace Habbo_Downloader.Compiler
                         try
                         {
                             using var image = Image.Load<Rgba32>(bytes);
+
+                            // The lossless encoder wants 8 bytes per pixel in one contiguous
+                            // buffer and ImageSharp caps a single buffer at 1 GiB, so an
+                            // oversized texture keeps its PNG instead of failing the bundle.
+                            if (!Tools.ConverterSettings.FitsWebpLossless(image.Width, image.Height))
+                            {
+                                Console.WriteLine(
+                                        $"\u2139\uFE0F Keeping {name} as PNG: {image.Width}x{image.Height} is past "
+                                        + "what the lossless WebP encoder can hold in one buffer.");
+                                newFiles[name] = bytes;
+                                continue;
+                            }
+
                             using var ms = new MemoryStream();
                             await image.SaveAsWebpAsync(ms, Tools.ConverterSettings.OptimalWebpEncoder);
 

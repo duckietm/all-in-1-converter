@@ -81,7 +81,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
             int imagesPerRow = (int)Math.Ceiling((double)imagesCount / numRows);
 
             int maxRowWidth = 0;
-            int maxRowHeight = 0;
+            int stackedRowHeight = 0;
 
             // Group images into rows.
             var imageGroups = images.Values
@@ -96,11 +96,14 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                 int rowWidth = FramePadding + group.Sum(x => x.Image.Width + FramePadding);
                 int rowHeight = group.Max(x => x.Image.Height);
                 maxRowWidth = Math.Max(maxRowWidth, rowWidth);
-                maxRowHeight = Math.Max(maxRowHeight, rowHeight);
+                stackedRowHeight += rowHeight + FramePadding;
             }
 
             int totalWidth = maxRowWidth;
-            int totalHeight = FramePadding + imageGroups.Count * (maxRowHeight + FramePadding);
+            // Each row is only as tall as its own sprites, which is exactly how the draw loop
+            // below advances, so sizing the canvas by the tallest row times the row count used
+            // to reserve rows nothing is ever drawn into.
+            int totalHeight = FramePadding + stackedRowHeight;
 
             if (totalWidth > maxWidth || totalHeight > maxHeight)
             {
@@ -112,7 +115,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
             // Create the sprite sheet (ImageSharp Image<Rgba32> defaults to transparent pixels).
             using var spriteSheet = new Image<Rgba32>(totalWidth, totalHeight);
 
-            string ext = Tools.ConverterSettings.ImageExtension;
+            string ext = Tools.ConverterSettings.ResolveSheetExtension(totalWidth, totalHeight, name);
             var spriteSheetData = new SpriteSheetData
             {
                 Meta = new MetaData
@@ -188,7 +191,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
             }
 
             string imagePath = Path.Combine(outputDirectory, $"{name}{ext}");
-            if (Tools.ConverterSettings.UseWebp)
+            if (ext == ".webp")
             {
                 spriteSheet.SaveAsWebp(imagePath, Tools.ConverterSettings.OptimalWebpEncoder);
             }

@@ -35,17 +35,18 @@ namespace ConsoleApplication
             if (args.ShowHelp)    { Console.WriteLine(Habbo_Downloader.App.Args.HelpText); return 0; }
             if (args.ShowVersion) { CliRunner.DisplayVersionAsync().GetAwaiter().GetResult(); return 0; }
 
+            // Java is no longer required to run: the native SWF parser handles both
+            // the .nitro converters and the SQL generator. It is only needed for the
+            // FFDEC fallback on a SWF the native parser cannot read, so a missing
+            // Java is a warning, not a reason to refuse to start.
             if (!Bootstrap.IsJavaAvailable())
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Java is not installed or not accessible from the command line.");
-                Console.WriteLine("Java is required for the SQL Generator to function properly.");
-                Console.WriteLine("Please download and install the latest version of Java from:");
-                Console.WriteLine("https://www.java.com/en/download/");
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("Java was not found on the command line.");
+                Console.WriteLine("Converting and generating SQL still work - they use the built-in SWF reader.");
+                Console.WriteLine("Only the FFDEC fallback for unusual SWF files is unavailable; install Java");
+                Console.WriteLine("from https://www.java.com/en/download/ if a file ever needs it.");
                 Console.ResetColor();
-                Console.WriteLine("Press any key to exit...");
-                Console.ReadKey();
-                return 1;
             }
 
             try { Bootstrap.CreateDirectories(); }

@@ -6,7 +6,6 @@
       "version": "11.0.0-rc.1.26425.128"
     },
     "configProperties": {
-      "System.Reflection.Metadata.MetadataUpdater.IsSupported": false,
       "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false
     }
   }

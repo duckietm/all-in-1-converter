@@ -42,8 +42,8 @@ namespace ConsoleApplication
             new("7",  "SWF Furniture to Nitro", OperationCatalog.Get("tools.swf-furniture").Action, HowToUse:
                 "Convert legacy Flash .swf furniture to modern .nitro format.\n" +
                 "Source prompt: (H) Habbo_Default/hof_furni or (I) SWFCompiler/import/furniture.\n" +
-                "Uses FFDec (Tools/ffdec/) to extract assets, then ImageSharp to build the\n" +
-                "spritesheet (cross-platform: Windows + Linux). Output: SWFCompiler/furniture/."),
+                "Uses the built-in SWF reader to extract assets (FFDec only as fallback), then\n" +
+                "ImageSharp to build the spritesheet (Windows + Linux). Output: SWFCompiler/furniture/."),
 
             new("8",  "SWF Clothes to Nitro", OperationCatalog.Get("tools.swf-clothes").Action, HowToUse:
                 "Convert clothing .swf files to .nitro. Source (H) Habbo_Default/clothes or\n" +

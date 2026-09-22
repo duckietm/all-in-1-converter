@@ -9,36 +9,19 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Habbo_Downloader.Tools
 {
-    /// <summary>
-    /// Native SWF extractor replacing the per-file `java -jar ffdec-cli.jar`
-    /// invocation. Habbo asset SWFs only need three tag types (SymbolClass,
-    /// DefineBinaryData and the bitmap tags), so a direct parse is orders of
-    /// magnitude faster than booting a JVM per file.
-    ///
-    /// It reproduces FFDEC's raw export layout exactly so the existing
-    /// Rebuild* pipelines keep working unchanged:
-    ///   {out}/symbolClass/symbols.csv        lines: {id};"{name}" in tag order
-    ///   {out}/binaryData/{id}_{name}.bin
-    ///   {out}/images/{id}.png                when the id has multiple symbol names
-    ///   {out}/images/{id}_{name}.png         when the id has exactly one
-    ///
-    /// Extract returns false whenever the file uses anything this parser does
-    /// not support (LZMA container, exotic bitmap tags, broken JPEG data) so
-    /// callers fall back to FFDEC — behaviour can never get worse than before.
-    /// </summary>
     public static class NativeSwfExtractor
     {
         private const string DisableEnvVar = "CONFURTER_DISABLE_NATIVE_SWF";
         private const string VerifyEnvVar = "CONFURTER_VERIFY_NATIVE_SWF";
 
-        /// <summary>
-        /// Runs the native extractor with an FFDEC fallback. The ffdecRunner
-        /// receives the directory FFDEC should export into.
-        /// </summary>
+        // includeImages: false skips bitmap decoding for callers that only read
+        // binaryData (the SQL generator) - faster, and a SWF whose bitmaps this
+        // parser cannot decode no longer falls back to FFDEC for images nobody wants.
         public static async Task ExtractWithFallbackAsync(
             string swfFilePath,
             string outputDirectory,
-            Func<string, Task> ffdecRunner)
+            Func<string, Task> ffdecRunner,
+            bool includeImages = true)
         {
             if (Environment.GetEnvironmentVariable(DisableEnvVar) == "1")
             {
@@ -49,7 +32,7 @@ namespace Habbo_Downloader.Tools
             bool nativeOk = false;
             try
             {
-                nativeOk = Extract(swfFilePath, outputDirectory);
+                nativeOk = Extract(swfFilePath, outputDirectory, includeImages);
             }
             catch (Exception ex)
             {
@@ -72,7 +55,7 @@ namespace Habbo_Downloader.Tools
             }
         }
 
-        public static bool Extract(string swfFilePath, string outputDirectory)
+        public static bool Extract(string swfFilePath, string outputDirectory, bool includeImages = true)
         {
             byte[]? body = ReadBody(swfFilePath);
             if (body == null) return false;
@@ -126,11 +109,12 @@ namespace Habbo_Downloader.Tools
                     case 36: // DefineBitsLossless2
                     case 21: // DefineBitsJPEG2
                     case 35: // DefineBitsJPEG3
-                        bitmapTags.Add((code, body.Skip(pos).Take(length).ToArray()));
+                        if (includeImages) bitmapTags.Add((code, body.Skip(pos).Take(length).ToArray()));
                         break;
                     case 6:  // DefineBits (needs JPEGTables)
                     case 90: // DefineBitsJPEG4
-                        return false; // let FFDEC handle these rare formats
+                        if (includeImages) return false; // let FFDEC handle these rare formats
+                        break;
                 }
 
                 pos += length;
@@ -142,7 +126,9 @@ namespace Habbo_Downloader.Tools
                 .ToDictionary(g => g.Key, g => g.Select(s => s.Name).ToList());
 
             // Pass 2: write the export tree.
-            string imagesDir = ResetDirectory(Path.Combine(outputDirectory, "images"));
+            string imagesDir = includeImages
+                    ? ResetDirectory(Path.Combine(outputDirectory, "images"))
+                    : string.Empty;
             string binaryDir = ResetDirectory(Path.Combine(outputDirectory, "binaryData"));
             string symbolDir = ResetDirectory(Path.Combine(outputDirectory, "symbolClass"));
 

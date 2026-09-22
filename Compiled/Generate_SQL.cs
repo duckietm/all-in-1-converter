@@ -1,4 +1,5 @@
 ﻿using Habbo_Downloader.IO;
+using Habbo_Downloader.Tools;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
@@ -17,7 +18,6 @@ namespace ConsoleApplication
             string furnidataDir = Path.Combine(baseDir, "Furnidata");
             string furnitureDir = Path.Combine(baseDir, "Furniture");
             string outputDir = Path.Combine(baseDir, "Output_SQL");
-            string ffdecPath = Path.Combine(Directory.GetCurrentDirectory(), "Tools", "ffdec", "ffdec.jar");
             Directory.CreateDirectory(outputDir);
 
             if (CheckForDuplicateFiles(furnitureDir))
@@ -65,7 +65,7 @@ namespace ConsoleApplication
                 {
                     Console.WriteLine($"Processing SWF file: {fileName}");
                     string extractedDir = Path.Combine(furnitureDir, $"{fileName}_extracted");
-                    ExtractSWF(file, extractedDir, ffdecPath);
+                    ExtractSWF(file, extractedDir);
                     ProcessExtractedSWF(extractedDir, furnidata, fileName, roomItems, wallItems, itemsBaseSQL, catalogItemsSQL, ref startId, pageId);
                     Console.WriteLine($"✅ Completed processing SWF file: {fileName}");
                     if (Directory.Exists(extractedDir))
@@ -162,31 +162,56 @@ namespace ConsoleApplication
             return false;
         }
 
-        private static void ExtractSWF(string swfFilePath, string outputDir, string ffdecPath)
+        /// <summary>
+        /// Extracts a SWF's binaryData with the same native parser the .nitro
+        /// converters use, so generating SQL needs no JVM and no FFDEC install.
+        /// FFDEC stays as the automatic fallback for a SWF the native parser
+        /// cannot read, launched through <see cref="FfdecInvocation"/> so it
+        /// finds the shipped ffdec-cli (exe on Windows, jar elsewhere) rather
+        /// than the ffdec.jar this method used to hardcode - that file is not
+        /// part of the bundled tools, so the old path always threw.
+        /// </summary>
+        private static void ExtractSWF(string swfFilePath, string outputDir)
         {
-            if (!File.Exists(ffdecPath))
-            {
-                throw new FileNotFoundException($"❌ FFDec tool not found at: {ffdecPath}");
-            }
-
             Directory.CreateDirectory(outputDir);
-            var process = new Process
+
+            NativeSwfExtractor
+                    .ExtractWithFallbackAsync(
+                            swfFilePath,
+                            outputDir,
+                            dir => RunFfdecBinaryDataExportAsync(swfFilePath, dir),
+                            includeImages: false)
+                    .GetAwaiter()
+                    .GetResult();
+        }
+
+        private static async Task RunFfdecBinaryDataExportAsync(string swfFilePath, string outputDir)
+        {
+            using var process = new Process
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "java",
-                    Arguments = $"-jar \"{ffdecPath}\" -export binaryData \"{outputDir}\" \"{swfFilePath}\"",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
+                StartInfo = FfdecInvocation.BuildStartInfo(
+                        $"-onerror ignore -export binaryData \"{outputDir}\" \"{swfFilePath}\"")
             };
 
-            process.Start();
-            process.StandardOutput.ReadToEnd();
-            process.StandardError.ReadToEnd();
-            process.WaitForExit();
+            try
+            {
+                process.Start();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                        $"⚠️ Could not start FFDEC for {Path.GetFileName(swfFilePath)} ({ex.Message}); "
+                        + "this furni is skipped.");
+                return;
+            }
+
+            _ = Task.Run(async () => await process.StandardOutput.ReadToEndAsync());
+            _ = Task.Run(async () => await process.StandardError.ReadToEndAsync());
+
+            if (!await Task.Run(() => process.WaitForExit(60000)))
+            {
+                process.Kill(true);
+            }
         }
 
         private static void ProcessExtractedSWF(string extractedDir, JObject furnidata, string fileName, HashSet<string> roomItems, HashSet<string> wallItems, List<string> itemsBaseSQL, List<string> catalogItemsSQL, ref int startId, int pageId)
@@ -197,7 +222,9 @@ namespace ConsoleApplication
                 try
                 {
                     var typeAttribute = Path.GetFileNameWithoutExtension(logicFile).Split('_')[1];
-                    var visualizationFilePath = Directory.GetFiles(extractedDir, "*_visualization.bin", SearchOption.TopDirectoryOnly)
+                    // Both exporters write into {extractedDir}/binaryData, so this has to
+                    // recurse exactly like the *_logic.bin lookup above.
+                    var visualizationFilePath = Directory.GetFiles(extractedDir, "*_visualization.bin", SearchOption.AllDirectories)
                         .FirstOrDefault(file => file.Contains(typeAttribute));
 
                     if (visualizationFilePath == null)
