@@ -7,7 +7,7 @@ namespace Habbo_Downloader.App.Menus
     /// <summary>
     /// Static facade that routes a menu request to the presenter matching the
     /// current run mode (set by App.RunAsync). Sub-menus call this without
-    /// caring whether they will be drawn in Console plain or Terminal.Gui mainframe style.
+    /// caring how they are drawn (the console menu; the Professional window has its own pages).
     ///
     /// Also auto-injects a "?" help item at the end of the list whenever at least
     /// one of the items carries a HowToUse description.
@@ -32,12 +32,7 @@ namespace Habbo_Downloader.App.Menus
         public static Task ShowAsync(string title, MenuItem[] items, bool isTopLevel = false)
         {
             var enriched = WithHelp(title, items);
-            return Mode switch
-            {
-                RunMode.Gui => Gui.GuiMenuPresenter.ShowAsync(title, enriched, isTopLevel),
-                RunMode.Tui => TuiMenuPresenter.ShowAsync(title, enriched, isTopLevel),
-                _           => ConsoleMenuPresenter.ShowAsync(title, enriched, isTopLevel)
-            };
+            return ConsoleMenuPresenter.ShowAsync(title, enriched, isTopLevel);
         }
 
         private static MenuItem[] WithHelp(string title, MenuItem[] items)

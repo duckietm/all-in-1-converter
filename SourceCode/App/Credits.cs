@@ -4,9 +4,8 @@ using System.Threading.Tasks;
 namespace Habbo_Downloader.App
 {
     /// <summary>
-    /// Credits screen. Reused by every runner (CLI / TUI / GUI) via Console.WriteLine
-    /// so it is captured into the output windows of the TUI/GUI presenters and shows
-    /// in the green theme of the rest of the workstation.
+    /// Credits screen, written with Console.WriteLine so the CLI and the
+    /// Professional log both show it.
     /// </summary>
     public static class Credits
     {
@@ -41,8 +40,7 @@ namespace Habbo_Downloader.App
             Console.WriteLine("  -----");
             Console.WriteLine("    .NET 11 Preview |  Newtonsoft.Json 13.0.4  |  MySql.Data 9.7");
             Console.WriteLine("    SixLabors.ImageSharp 3.1.12  (cross-platform sprite sheet generation)");
-            Console.WriteLine("    Terminal.Gui 1.19            (mouse-driven TUI with 3270 theme)");
-            Console.WriteLine("    Avalonia 11.3                (desktop GUI; Mainframe + Matrix themes)");
+            Console.WriteLine("    Avalonia 12                  (Professional desktop window)");
             Console.WriteLine("    SharpZipLib 1.4.2            (nitro bundle compression)");
             Console.WriteLine("    JPEXS Free Flash Decompiler  (Tools/ffdec - SWF extraction)");
             Console.WriteLine();

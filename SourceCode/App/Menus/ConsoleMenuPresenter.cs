@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace Habbo_Downloader.App.Menus
 {
     /// <summary>
-    /// Console rendering of the menu, styled to mirror the mainframe TUI:
+    /// Console rendering of the menu, in the mainframe style:
     /// cyan header bar, green double-line ASCII frame with the menu items on a
     /// black background, red [BACK] / [EXIT] button, cyan footer help line.
     /// No mouse, only keyboard - the operator types the item key (e.g. "1") or

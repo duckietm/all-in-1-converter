@@ -15,10 +15,10 @@ namespace ConsoleApplication
     internal static class Program
     {
         /// <summary>
-        /// STA + synchronous entry-point. Avalonia (used in GUI mode) refuses to
+        /// STA + synchronous entry-point. Avalonia (the Professional window) refuses to
         /// initialise its dispatcher on a thread that has already pumped through
         /// .GetAwaiter().GetResult() of an async path, so we keep the main thread
-        /// virgin here and only branch into the async runner for CLI/TUI modes.
+        /// virgin here and only branch into the async runner for CLI mode.
         /// </summary>
         [STAThread]
         private static int Main(string[] argv)
@@ -57,8 +57,8 @@ namespace ConsoleApplication
                 Console.ResetColor();
             }
 
-            // Decide the initial UI mode: Explorer launch -> GUI direct,
-            // terminal -> ModeSelector with TUI/CLI only.
+            // Decide the initial UI mode: Explorer launch -> the start window,
+            // terminal -> ModeSelector (Professional or CLI).
             bool showDesktopSelector = false;
             if (!args.ModeExplicitlySet && string.IsNullOrEmpty(args.Command))
             {
@@ -78,14 +78,14 @@ namespace ConsoleApplication
                 }
             }
 
-            // Outer loop. GUI mode runs on the virgin main STA thread; CLI / TUI
-            // go through the async runner path.
+            // Outer loop. Professional runs on the virgin main STA thread; CLI goes
+            // through the async runner path.
             while (true)
             {
                 MenuHost.SwitchRequested = false;
                 MenuHost.Mode = args.Mode;
 
-                if (args.Mode is RunMode.Gui or RunMode.Professional)
+                if (args.Mode is RunMode.Professional)
                 {
                     RunDesktop(args.Mode, showDesktopSelector);
                 }
@@ -103,10 +103,6 @@ namespace ConsoleApplication
 
         private static void RunDesktop(RunMode initialMode, bool showSelector)
         {
-            GuiTheme guiTheme = GuiMenuPresenter.ConsumeQueuedTheme()
-                ?? (initialMode == RunMode.Gui && !showSelector
-                    ? GuiRunner.PromptThemeFromConsole()
-                    : GuiTheme.Mainframe());
             AppBuilder.Configure<AvaloniaApp>()
                 .UsePlatformDetect()
                 .WithInterFont()
@@ -132,12 +128,7 @@ namespace ConsoleApplication
                                 window.Show();
                                 await window.ClosedTask;
                             }
-                            else if (selectedMode == RunMode.Gui)
-                            {
-                                GuiMenuPresenter.ActiveTheme = GuiMenuPresenter.ConsumeQueuedTheme() ?? guiTheme;
-                                await MenuHost.ShowAsync("Main Menu: Select a Topic", MainMenuFactory.Build(), isTopLevel: true);
-                            }
-                            else if (selectedMode is RunMode.Cli or RunMode.Tui)
+                            else if (selectedMode is RunMode.Cli)
                             {
                                 MenuHost.RequestSwitch(selectedMode);
                             }

@@ -55,7 +55,7 @@ public sealed class OperationRunner : IAsyncDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         _input.Submit(value);
-        OutputReceived?.Invoke($"{value}{Environment.NewLine}");
+        OutputReceived?.Invoke($"{(value.Length == 0 ? "(Enter: default)" : value)}{Environment.NewLine}");
     }
 
     public ValueTask DisposeAsync()

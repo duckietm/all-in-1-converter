@@ -15,8 +15,7 @@
           "MySql.Data": "9.7.0",
           "Newtonsoft.Json": "13.0.4",
           "SharpZipLib": "1.4.2",
-          "SixLabors.ImageSharp": "3.1.12",
-          "Terminal.Gui": "1.19.0"
+          "SixLabors.ImageSharp": "3.1.12"
         },
         "runtime": {
           "Habbo Downloader.dll": {}
@@ -514,15 +513,6 @@
           }
         }
       },
-      "NStack.Core/1.1.1": {
-        "runtime": {
-          "lib/netstandard2.0/NStack.dll": {
-            "assemblyVersion": "1.1.1.0",
-            "fileVersion": "1.1.1.0",
-            "localPath": "NStack.dll"
-          }
-        }
-      },
       "SharpZipLib/1.4.2": {
         "runtime": {
           "lib/net6.0/ICSharpCode.SharpZipLib.dll": {
@@ -686,15 +676,6 @@
           }
         }
       },
-      "System.CodeDom/9.0.4": {
-        "runtime": {
-          "lib/net9.0/System.CodeDom.dll": {
-            "assemblyVersion": "9.0.0.0",
-            "fileVersion": "9.0.425.16305",
-            "localPath": "System.CodeDom.dll"
-          }
-        }
-      },
       "System.Configuration.ConfigurationManager/8.0.0": {
         "dependencies": {
           "System.Diagnostics.EventLog": "8.0.0",
@@ -730,27 +711,6 @@
             "assemblyVersion": "8.0.0.0",
             "fileVersion": "8.0.23.53103",
             "localPath": "runtimes/win/lib/net8.0/System.Diagnostics.EventLog.dll"
-          }
-        }
-      },
-      "System.Management/9.0.4": {
-        "dependencies": {
-          "System.CodeDom": "9.0.4"
-        },
-        "runtime": {
-          "lib/net9.0/System.Management.dll": {
-            "assemblyVersion": "9.0.0.4",
-            "fileVersion": "9.0.425.16305",
-            "localPath": "System.Management.dll"
-          }
-        },
-        "runtimeTargets": {
-          "runtimes/win/lib/net9.0/System.Management.dll": {
-            "rid": "win",
-            "assetType": "runtime",
-            "assemblyVersion": "9.0.0.4",
-            "fileVersion": "9.0.425.16305",
-            "localPath": "runtimes/win/lib/net9.0/System.Management.dll"
           }
         }
       },
@@ -790,33 +750,6 @@
             "assemblyVersion": "8.0.0.0",
             "fileVersion": "8.0.23.53103",
             "localPath": "runtimes/win/lib/net8.0/System.Windows.Extensions.dll"
-          }
-        }
-      },
-      "Terminal.Gui/1.19.0": {
-        "dependencies": {
-          "NStack.Core": "1.1.1",
-          "System.Management": "9.0.4"
-        },
-        "runtime": {
-          "lib/net8.0/Terminal.Gui.dll": {
-            "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.0.0",
-            "localPath": "Terminal.Gui.dll"
-          }
-        },
-        "resources": {
-          "lib/net8.0/fr-FR/Terminal.Gui.resources.dll": {
-            "locale": "fr-FR",
-            "localPath": "fr-FR/Terminal.Gui.resources.dll"
-          },
-          "lib/net8.0/ja-JP/Terminal.Gui.resources.dll": {
-            "locale": "ja-JP",
-            "localPath": "ja-JP/Terminal.Gui.resources.dll"
-          },
-          "lib/net8.0/pt-PT/Terminal.Gui.resources.dll": {
-            "locale": "pt-PT",
-            "localPath": "pt-PT/Terminal.Gui.resources.dll"
           }
         }
       },
@@ -1021,13 +954,6 @@
       "path": "newtonsoft.json/13.0.4",
       "hashPath": "newtonsoft.json.13.0.4.nupkg.sha512"
     },
-    "NStack.Core/1.1.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-5LhlYsmAe3A55zl8xCSD7AbuhDqZODpsfdMGgtygeBlHZmlb0tHmK5/PeKODnwYUhC6EbL2qHKGskPNvpY+z3w==",
-      "path": "nstack.core/1.1.1",
-      "hashPath": "nstack.core.1.1.1.nupkg.sha512"
-    },
     "SharpZipLib/1.4.2": {
       "type": "package",
       "serviceable": true,
@@ -1070,13 +996,6 @@
       "path": "skiasharp.nativeassets.win32/3.119.4-preview.1.1",
       "hashPath": "skiasharp.nativeassets.win32.3.119.4-preview.1.1.nupkg.sha512"
     },
-    "System.CodeDom/9.0.4": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-aJdv7Z87PoPW8ijvGIincocooYRbH3Umtlz7OrJKf6GDInbdu1bvk5X1fFlmbl7WP+9ntoIBd7NjKz+siVFdHA==",
-      "path": "system.codedom/9.0.4",
-      "hashPath": "system.codedom.9.0.4.nupkg.sha512"
-    },
     "System.Configuration.ConfigurationManager/8.0.0": {
       "type": "package",
       "serviceable": true,
@@ -1090,13 +1009,6 @@
       "sha512": "sha512-fdYxcRjQqTTacKId/2IECojlDSFvp7LP5N78+0z/xH7v/Tuw5ZAxu23Y6PTCRinqyu2ePx+Gn1098NC6jM6d+A==",
       "path": "system.diagnostics.eventlog/8.0.0",
       "hashPath": "system.diagnostics.eventlog.8.0.0.nupkg.sha512"
-    },
-    "System.Management/9.0.4": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-MfY9+SrkSvchAoFiChTkhQYCAjBaQQ9u3LwiKmho7oTbujucnxCzORlPgLhId/ChLSptsQ/1UmtPGLZaKYVdsA==",
-      "path": "system.management/9.0.4",
-      "hashPath": "system.management.9.0.4.nupkg.sha512"
     },
     "System.Security.Cryptography.ProtectedData/8.0.0": {
       "type": "package",
@@ -1118,13 +1030,6 @@
       "sha512": "sha512-Obg3a90MkOw9mYKxrardLpY2u0axDMrSmy4JCdq2cYbelM2cUwmUir5Bomvd1yxmPL9h5LVHU1tuKBZpUjfASg==",
       "path": "system.windows.extensions/8.0.0",
       "hashPath": "system.windows.extensions.8.0.0.nupkg.sha512"
-    },
-    "Terminal.Gui/1.19.0": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-Pgdlgout2KsBX+tO4t4mmg3YAL0vhT8falV4T77ohuQECel0q9agGKDWEfB0Cs1EnsGlrs7kCxocwphguKOVww==",
-      "path": "terminal.gui/1.19.0",
-      "hashPath": "terminal.gui.1.19.0.nupkg.sha512"
     },
     "Tmds.DBus.Protocol/0.92.0": {
       "type": "package",

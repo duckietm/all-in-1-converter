@@ -4,7 +4,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
-using Habbo_Downloader.App.Gui;
+using static Habbo_Downloader.App.Professional.ProfessionalTheme;
 
 namespace Habbo_Downloader.App.Professional.Views;
 
@@ -15,97 +15,99 @@ public sealed class InterfaceSelectorWindow : Window
 
     public InterfaceSelectorWindow()
     {
-        Title = "All-in-1 Converter — Choose interface";
-        Width = 980;
-        Height = 650;
-        MinWidth = 820;
-        MinHeight = 580;
+        ProfessionalTheme.Install(Application.Current!);
+        Title = "All-in-1 Converter";
+        Width = 860;
+        Height = 440;
+        MinWidth = 760;
+        MinHeight = 420;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         RequestedThemeVariant = ThemeVariant.Default;
+        this.Bind(BackgroundProperty, "Pro.Surface");
         Content = BuildContent();
         Closed += (_, _) => _result.TrySetResult(RunMode.Quit);
     }
 
     private Control BuildContent()
     {
-        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), Margin = new Thickness(42, 34) };
-        var header = new StackPanel { Spacing = 7 };
-        header.Children.Add(new TextBlock { Text = "Choose your workspace", FontSize = 32, FontWeight = FontWeight.Bold });
-        header.Children.Add(new TextBlock { Text = "All four interfaces use the same converter functions and configuration.", FontSize = 15, Foreground = Brushes.Gray });
+        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"), Margin = new Thickness(40, 34, 40, 28) };
+
+        var brand = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(0, 0, 0, 22) };
+        var logo = Icon(Icons.Cube, 16);
+        logo.Foreground = Brushes.White;
+        brand.Children.Add(new Border { Width = 30, Height = 30, CornerRadius = new CornerRadius(8), Background = Solid(Brand), Child = logo });
+        var name = Text("All-in-1 Converter", 14, "Pro.Muted", FontWeight.SemiBold);
+        name.VerticalAlignment = VerticalAlignment.Center;
+        brand.Children.Add(name);
+        root.Children.Add(brand);
+
+        var header = new StackPanel { Spacing = 6 };
+        header.Children.Add(Text("Choose your workspace", 28, weight: FontWeight.Bold));
+        header.Children.Add(Text("Both interfaces use the same converter functions and configuration.", 14, "Pro.Muted"));
+        Grid.SetRow(header, 1);
         root.Children.Add(header);
 
-        var choices = new UniformGrid { Columns = 2, Rows = 2, Margin = new Thickness(0, 28, 0, 24) };
-        choices.Children.Add(Choice("Professional", "Modern MVVM dashboard with native operation pages, live logs and system theme.", RunMode.Professional, true));
-        choices.Children.Add(Choice("Desktop GUI", "The original Avalonia menu interface with Mainframe and Matrix themes.", RunMode.Gui));
-        choices.Children.Add(Choice("Terminal UI", "Mouse-driven Terminal.Gui interface for local terminals and SSH.", RunMode.Tui));
-        choices.Children.Add(Choice("Classic CLI", "Keyboard-only numbered menus for simple console workflows.", RunMode.Cli));
-        Grid.SetRow(choices, 1);
+        var choices = new UniformGrid { Columns = 2, Rows = 1, Margin = new Thickness(-8, 24, -8, 20), VerticalAlignment = VerticalAlignment.Top };
+        choices.Children.Add(Choice("Professional", "Dashboard with operation pages, live output and the light or dark system theme.", Icons.Home, RunMode.Professional, true));
+        choices.Children.Add(Choice("Classic CLI", "Keyboard-only numbered menus for console workflows, scripts and SSH.", Icons.Swap, RunMode.Cli));
+        Grid.SetRow(choices, 2);
         root.Children.Add(choices);
 
         var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-        footer.Children.Add(new TextBlock { Text = ".NET 11 • Windows + Linux • Strict JSON", Foreground = Brushes.Gray, VerticalAlignment = VerticalAlignment.Center });
-        var close = new Button { Content = "Exit", Padding = new Thickness(22, 9) };
+        var hint = Text("You can switch later from the sidebar, or with 's' in the CLI menu.", 12, "Pro.Muted");
+        hint.VerticalAlignment = VerticalAlignment.Center;
+        footer.Children.Add(hint);
+        var close = new Button { Content = "Exit", Padding = new Thickness(20, 8), Classes = { "secondary" } };
         close.Click += (_, _) => Select(RunMode.Quit);
         Grid.SetColumn(close, 1);
         footer.Children.Add(close);
-        Grid.SetRow(footer, 2);
+        Grid.SetRow(footer, 3);
         root.Children.Add(footer);
         return root;
     }
 
-    private Border Choice(string title, string description, RunMode mode, bool recommended = false)
+    private Button Choice(string title, string description, string icon, RunMode mode, bool recommended = false)
     {
-        var panel = new StackPanel { Spacing = 10 };
-        var titleRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        titleRow.Children.Add(new TextBlock { Text = title, FontSize = 21, FontWeight = FontWeight.SemiBold });
+        var panel = new StackPanel { Spacing = 8 };
+        var top = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Margin = new Thickness(0, 0, 0, 6) };
+        var glyph = Icon(icon, 20).Bind(PathIcon.ForegroundProperty, "Pro.AccentText");
+        top.Children.Add(new Border { Width = 42, Height = 42, CornerRadius = new CornerRadius(11), Child = glyph }
+            .Bind(Border.BackgroundProperty, "Pro.AccentSoft"));
         if (recommended)
-            titleRow.Children.Add(new Border
-            {
-                Background = new SolidColorBrush(ProfessionalPalette.CallToAction),
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(8, 3),
-                Child = new TextBlock { Text = "RECOMMENDED", Foreground = Brushes.White, FontSize = 10 }
-            });
-        panel.Children.Add(titleRow);
-        panel.Children.Add(new TextBlock { Text = description, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Gray, MinHeight = 52 });
-        if (mode == RunMode.Gui)
         {
-            var themes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            var mainframe = new Button { Content = "Mainframe", Padding = new Thickness(15, 8) };
-            mainframe.Click += (_, _) => SelectGui(GuiTheme.Mainframe());
-            var matrix = new Button { Content = "Matrix", Padding = new Thickness(15, 8) };
-            matrix.Click += (_, _) => SelectGui(GuiTheme.Matrix());
-            themes.Children.Add(mainframe);
-            themes.Children.Add(matrix);
-            panel.Children.Add(themes);
+            var chip = Chip("RECOMMENDED", "Pro.AccentSoft", "Pro.AccentText");
+            chip.VerticalAlignment = VerticalAlignment.Top;
+            Grid.SetColumn(chip, 2);
+            top.Children.Add(chip);
         }
-        else
+        panel.Children.Add(top);
+        panel.Children.Add(Text(title, 18, weight: FontWeight.SemiBold));
+        panel.Children.Add(Text(description, 13, "Pro.Muted"));
+        var open = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = new Thickness(0, 8, 0, 0) };
+        open.Children.Add(Text("Open", 13, "Pro.AccentText", FontWeight.SemiBold));
+        open.Children.Add(Icon(Icons.ChevronRight, 16).Bind(PathIcon.ForegroundProperty, "Pro.AccentText"));
+        panel.Children.Add(open);
+
+        var button = new Button
         {
-            var open = new Button { Content = "Open", Padding = new Thickness(18, 8), HorizontalAlignment = HorizontalAlignment.Left };
-            open.Click += (_, _) => Select(mode);
-            panel.Children.Add(open);
-        }
-        return new Border
-        {
-            Child = panel,
-            Padding = new Thickness(22),
-            Margin = new Thickness(7),
-            BorderBrush = recommended ? new SolidColorBrush(ProfessionalPalette.Accent) : new SolidColorBrush(ProfessionalPalette.CardBorder),
-            BorderThickness = new Thickness(recommended ? 2 : 1),
+            Name = mode == RunMode.Professional ? "ChooseProfessional" : "ChooseCli",
+            Content = panel,
+            Padding = new Thickness(22, 20),
+            Margin = new Thickness(8, 0),
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
             CornerRadius = new CornerRadius(14),
-            Background = new SolidColorBrush(Color.Parse("#0DFFFFFF"))
+            BorderThickness = new Thickness(recommended ? 2 : 1),
+            Classes = { "tile" }
         };
+        if (recommended) button.BorderBrush = Solid(Brand);
+        button.Click += (_, _) => Select(mode);
+        return button;
     }
 
     private void Select(RunMode mode)
     {
         _result.TrySetResult(mode);
         Close();
-    }
-
-    private void SelectGui(GuiTheme theme)
-    {
-        GuiMenuPresenter.QueueTheme(theme);
-        Select(RunMode.Gui);
     }
 }

@@ -5,8 +5,7 @@ using Habbo_Downloader.App.Runners;
 namespace Habbo_Downloader.App
 {
     /// <summary>
-    /// Centralised main-menu definition reused by CliRunner / TuiRunner / Program.RunGui,
-    /// so every shell sees exactly the same entries (including the HowToUse pages).
+    /// Main-menu definition for the CLI, including the HowToUse pages.
     /// </summary>
     public static class MainMenuFactory
     {

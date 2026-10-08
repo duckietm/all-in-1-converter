@@ -9,8 +9,7 @@ namespace Habbo_Downloader.App
     /// Pressing it sets MenuHost.RequestSwitch(...) and returns; the runner exits its
     /// top-level menu and App.RunAsync restarts with the new mode.
     ///
-    /// In a CLI/TUI session the switch options are TUI, CLI and GUI. In GUI mode the
-    /// same set is offered (operator can drop back to a terminal-style UI if they want).
+    /// The two interfaces are the Professional window and the classic CLI.
     /// </summary>
     public static class UiSwitcher
     {
@@ -25,10 +24,7 @@ namespace Habbo_Downloader.App
                 HowToUse:
                     "Closes the current UI and reopens the workstation in the mode you pick.\n" +
                     "Available targets: Professional (native MVVM dashboard),\n" +
-                    "                  TUI (mouse-driven mainframe terminal),\n" +
-                    "                  CLI (classic console, keyboard only),\n" +
-                    "                  GUI (Avalonia desktop window, Mainframe or Matrix theme).\n" +
-                    "Useful for instance when running over SSH (-> TUI) or for screenshots (-> GUI).");
+                    "                  CLI (classic console, keyboard only; also over SSH).");
         }
 
         private static Task PromptAndRequestSwitchAsync(RunMode current)
@@ -41,9 +37,7 @@ namespace Habbo_Downloader.App
             Console.WriteLine($"  Current mode: {current}");
             Console.WriteLine();
             Console.WriteLine("    [1] PROFESSIONAL - Native MVVM dashboard (recommended)");
-            Console.WriteLine("    [2] GUI  - Desktop window (Avalonia, Mainframe or Matrix theme)");
-            Console.WriteLine("    [3] TUI  - Mouse-driven mainframe terminal UI (Terminal.Gui)");
-            Console.WriteLine("    [4] CLI  - Classic console menu, keyboard only");
+            Console.WriteLine("    [2] CLI  - Classic console menu, keyboard only");
             Console.WriteLine("    [x] CANCEL - stay in the current UI");
             Console.WriteLine();
             Console.Write("Choice: ");
@@ -52,9 +46,7 @@ namespace Habbo_Downloader.App
             RunMode? target = raw switch
             {
                 "1" or "professional" or "pro" => RunMode.Professional,
-                "2" or "gui" => RunMode.Gui,
-                "3" or "tui" => RunMode.Tui,
-                "4" or "cli" => RunMode.Cli,
+                "2" or "cli" => RunMode.Cli,
                 _            => null
             };
 

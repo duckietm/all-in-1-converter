@@ -65,6 +65,13 @@ namespace Habbo_Downloader.Compiler
             }
 
             stopwatch.Stop();
+            if (done + failed == 0)
+            {
+                Console.WriteLine($"⚠️ No {extension} files found. Put them in NitroCompiler/extract/<type>/{extension.TrimStart('.')}/");
+                Console.WriteLine($"   Types: {string.Join(", ", AssetTypes)}. The folders have been created for you.");
+                return;
+            }
+
             ConversionSummaryPrinter.PrintSummary(
                 processTitle: $"Decompile {extension} bundles",
                 totalFiles: done + failed,
@@ -117,6 +124,13 @@ namespace Habbo_Downloader.Compiler
             }
 
             stopwatch.Stop();
+            if (compiled + failed == 0)
+            {
+                Console.WriteLine("⚠️ Nothing to compile. Put one folder per asset (json + sheet) in NitroCompiler/compile/<type>/<name>/");
+                Console.WriteLine($"   Types: {string.Join(", ", AssetTypes)}. The folders have been created for you.");
+                return;
+            }
+
             ConversionSummaryPrinter.PrintSummary(
                 processTitle: $"Compile {extension} bundles",
                 totalFiles: compiled + failed,

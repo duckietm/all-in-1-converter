@@ -57,6 +57,13 @@ namespace Habbo_Downloader.Tools
             set => _cachedFormat = value;
         }
 
+        /// <summary>Forgets the cached values, so an edited config.ini is read again.</summary>
+        public static void Reload()
+        {
+            _cachedFormat = null;
+            _cachedDownloadFormat = null;
+        }
+
         public static bool UseWebp => string.Equals(SpritesheetFormat, "webp", StringComparison.OrdinalIgnoreCase);
 
         private static string? _cachedDownloadFormat;

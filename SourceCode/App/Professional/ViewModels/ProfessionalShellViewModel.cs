@@ -9,13 +9,19 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
     private readonly OperationRunner _runner = new();
     private readonly SynchronizationContext? _uiContext = SynchronizationContext.Current;
     private readonly StringBuilder _logBuilder = new();
+    // A long run (thousands of lines) must not rebuild the text box on every write.
+    private const int MaxLogChars = 300_000;
+    private const int LogFlushMs = 100;
+    private bool _logFlushPending;
     private OperationDefinition? _selectedOperation;
     private string _pageTitle = "Dashboard";
     private string _pageSubtitle = "Your Habbo asset workstation at a glance";
-    private string _logText = "Select an operation to begin.\n";
+    private string _logText = string.Empty;
     private string _statusText = "Ready";
     private string _inputText = string.Empty;
     private bool _isRunning;
+    private bool _hasFinishedRun;
+    private bool _lastRunSucceeded;
 
     public ProfessionalShellViewModel()
     {
@@ -54,6 +60,22 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
         }
     }
     public bool CanRun => SelectedOperation is not null && !IsRunning;
+
+    /// <summary>True from the end of a run until its log is cleared (Done, or another page).</summary>
+    public bool HasFinishedRun { get => _hasFinishedRun; private set => SetProperty(ref _hasFinishedRun, value); }
+
+    /// <summary>Outcome of the last run; read it while <see cref="HasFinishedRun"/> is true.</summary>
+    public bool LastRunSucceeded { get => _lastRunSucceeded; private set => SetProperty(ref _lastRunSucceeded, value); }
+
+    /// <summary>Clears the log of the last run; a running operation keeps its log.</summary>
+    public void ClearLog()
+    {
+        if (IsRunning) return;
+        lock (_logBuilder) { _logBuilder.Clear(); }
+        LogText = string.Empty;
+        HasFinishedRun = false;
+        StatusText = "Ready";
+    }
     public bool NeedsInput => SelectedOperation?.RequiresInput == true;
 
     public void ShowDashboard()
@@ -68,6 +90,14 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
     {
         PageTitle = "Asset Workspace";
         PageSubtitle = "Connect the converter directly to your Nitro asset folders";
+        VisibleOperations.Clear();
+        SelectedOperation = null;
+    }
+
+    public void ShowSettings()
+    {
+        PageTitle = "Settings";
+        PageSubtitle = "Edit config.ini: Habbo hotel, downloads, Nitro retro and database";
         VisibleOperations.Clear();
         SelectedOperation = null;
     }
@@ -97,6 +127,7 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
         OperationDefinition operation = SelectedOperation;
         lock (_logBuilder) { _logBuilder.Clear(); }
         LogText = string.Empty;
+        HasFinishedRun = false;
         IsRunning = true;
         StatusText = $"Running: {operation.Title}";
 
@@ -106,7 +137,11 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
             PostToUi(() =>
             {
                 IsRunning = false;
-                StatusText = result.Succeeded ? "Completed successfully" : $"Failed: {result.Error?.Message}";
+                LastRunSucceeded = result.Succeeded;
+                HasFinishedRun = true;
+                StatusText = result.Succeeded
+                    ? $"{operation.Title} completed in {Duration(result.FinishedAt - result.StartedAt)}"
+                    : $"{operation.Title} failed: {result.Error?.Message}";
                 RecentRuns.Insert(0, new RunHistoryItem(operation.Title, result.Succeeded, result.FinishedAt));
                 while (RecentRuns.Count > 8) RecentRuns.RemoveAt(RecentRuns.Count - 1);
             });
@@ -116,6 +151,8 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
             PostToUi(() =>
             {
                 IsRunning = false;
+                LastRunSucceeded = false;
+                HasFinishedRun = true;
                 StatusText = $"Error: {ex.Message}";
             });
         }
@@ -128,30 +165,53 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
         }
     }
 
+    /// <summary>Sends the typed answer; an empty answer is Enter, so the prompt takes its default.</summary>
     public void SubmitInput()
     {
-        if (!IsRunning || string.IsNullOrWhiteSpace(InputText)) return;
-        string value = InputText;
+        if (!IsRunning) return;
+        string value = InputText?.Trim() ?? string.Empty;
         InputText = string.Empty;
         _runner.SubmitInput(value);
     }
 
+    private static string Duration(TimeSpan time) =>
+        time.TotalSeconds < 60 ? $"{time.TotalSeconds:0.0} s" : $"{(int)time.TotalMinutes} min {time.Seconds} s";
+
     public void NotifyCloseBlocked() =>
         StatusText = "Wait for the active operation to finish before closing";
 
+    /// <summary>Collects output and shows it at most every 100 ms; only the newest 300k characters are kept.</summary>
     private void HandleOutput(string text)
     {
         lock (_logBuilder)
         {
             _logBuilder.Append(text);
-        }
-        PostToUi(() =>
-        {
-            lock (_logBuilder)
+            if (_logBuilder.Length > MaxLogChars)
             {
-                LogText = _logBuilder.ToString();
+                int cut = _logBuilder.Length - MaxLogChars;
+                for (int i = cut; i < _logBuilder.Length && i < cut + 2000; i++)
+                {
+                    if (_logBuilder[i] != '\n') continue;
+                    cut = i + 1;
+                    break;
+                }
+                _logBuilder.Remove(0, cut);
             }
-        });
+
+            if (_logFlushPending) return;
+            _logFlushPending = true;
+        }
+
+        _ = Task.Delay(LogFlushMs).ContinueWith(_ => PostToUi(FlushLog), TaskScheduler.Default);
+    }
+
+    private void FlushLog()
+    {
+        lock (_logBuilder)
+        {
+            _logFlushPending = false;
+            LogText = _logBuilder.ToString();
+        }
     }
 
     private static void PostToUi(Action action)

@@ -5,7 +5,7 @@ namespace Habbo_Downloader.App
 {
     /// <summary>
     /// Interactive welcome screen shown when the user launches the binary without
-    /// an explicit --cli/--tui/--gui flag. Lets them pick the UI mode and explains
+    /// an explicit --professional/--cli flag. Lets them pick the UI mode and explains
     /// what each one is good for.
     /// </summary>
     internal static class ModeSelector
@@ -25,7 +25,7 @@ namespace Habbo_Downloader.App
             Console.WriteLine(new string('=', w));
             Console.ResetColor();
 
-            // Green body with the four interface options
+            // Green body with the interface options
             Console.BackgroundColor = ConsoleColor.Black;
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine();
@@ -36,9 +36,7 @@ namespace Habbo_Downloader.App
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("              Modern cards, native operation pages, live logs and system theme.");
             Console.WriteLine();
-            Console.WriteLine("    [2] GUI  - Original Avalonia Mainframe / Matrix desktop interface");
-            Console.WriteLine("    [3] TUI  - Mouse-driven terminal interface");
-            Console.WriteLine("    [4] CLI  - Classic keyboard-only console menu");
+            Console.WriteLine("    [2] CLI  - Classic keyboard-only console menu");
             Console.WriteLine();
             Console.WriteLine("    [Q] QUIT");
             Console.WriteLine();
@@ -49,7 +47,7 @@ namespace Habbo_Downloader.App
             // Cyan prompt footer
             Console.BackgroundColor = ConsoleColor.Cyan;
             Console.ForegroundColor = ConsoleColor.Black;
-            Console.WriteLine(" Type 1, 2, 3, 4 or Q and press ENTER (empty = default) ".PadRight(w));
+            Console.WriteLine(" Type 1, 2 or Q and press ENTER (empty = default) ".PadRight(w));
             Console.ResetColor();
 
             Console.BackgroundColor = ConsoleColor.Black;
@@ -61,9 +59,7 @@ namespace Habbo_Downloader.App
             return raw switch
             {
                 "1" or "professional" or "pro" => RunMode.Professional,
-                "2" or "gui" => RunMode.Gui,
-                "3" or "tui" => RunMode.Tui,
-                "4" or "cli" => RunMode.Cli,
+                "2" or "cli" => RunMode.Cli,
                 "q" or "quit" or "exit" => RunMode.Quit,
                 ""            => defaultMode,
                 _             => defaultMode
@@ -79,9 +75,7 @@ namespace Habbo_Downloader.App
         private static string Default(RunMode m) => m switch
         {
             RunMode.Cli => "CLI",
-            RunMode.Gui => "GUI",
-            RunMode.Professional => "PROFESSIONAL",
-            _           => "TUI"
+            _           => "PROFESSIONAL"
         };
     }
 }
