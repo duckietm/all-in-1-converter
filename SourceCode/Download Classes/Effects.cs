@@ -140,17 +140,16 @@ namespace ConsoleApplication
                                   .Distinct();
 
                 int count = swfItems.Count();
-                Console.WriteLine($"Found {count} SWF items in effectmap.xml.");
+                Console.WriteLine($"Found {count} effect libraries in effectmap.xml.");
 
-                string destinationDirectory = "./SWFCompiler/import/effects";
-                Directory.CreateDirectory(destinationDirectory);
+                var folder = Habbo_Downloader.Tools.HabboAssetFolder.Effects;
+                Console.WriteLine($"Download format: {Habbo_Downloader.Tools.ConverterSettings.DownloadFormat} (config.ini download_format) into {folder.Root}");
+                HabboAssetDownloader.PrepareFolder(folder);
 
-                foreach (var item in swfItems)
-                {
-                    string swfUrl = $"{effectUrl}/{releaseEffect}/{item}.swf";
-                    string destinationPath = Path.Combine(destinationDirectory, $"{item}.swf");
-                    await DownloadFileAsync(swfUrl, destinationPath, $"{item}.swf");
-                }
+                var counts = await HabboAssetDownloader.DownloadLibrariesAsync(folder,
+                    swfItems.Select(item => (item!, $"{effectUrl}/{releaseEffect}/{item}")));
+
+                Console.WriteLine(HabboAssetDownloader.Summary("effect files", counts));
             }
             catch (Exception ex)
             {

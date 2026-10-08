@@ -67,8 +67,8 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
             Dictionary<string, string> canonicalMapping, // new parameter
             bool disableCleanKey = false, // control cleaning
             int numRows = 10,
-            int maxWidth = 7500,
-            int maxHeight = 12500)
+            int maxWidth = 14000,
+            int maxHeight = 14000)
         {
             if (images == null || images.Count == 0)
             {

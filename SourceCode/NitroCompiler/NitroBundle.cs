@@ -23,6 +23,13 @@ public class NitroBundle
 
     public void Parse(byte[] arrayBuffer)
     {
+        if (HabBundle.IsHab(arrayBuffer))
+        {
+            foreach (var (fileName, data) in HabBundle.Read(arrayBuffer).Files) AddEntry(fileName, data);
+            WarnWithoutTexture();
+            return;
+        }
+
         using MemoryStream memoryStream = new MemoryStream(arrayBuffer);
         using System.IO.BinaryReader binaryReader = new System.IO.BinaryReader(memoryStream);
 
@@ -57,27 +64,7 @@ public class NitroBundle
             {
                 try
                 {
-                    byte[] decompressed = DetectAndDecompress(buffer);
-
-                    if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _jsonFile = JsonSerializer.Deserialize<object>(Encoding.UTF8.GetString(decompressed));
-                    }
-                    else if (fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _textureExtension = ".png";
-                        _baseTexture = ArrayBufferToBase64(decompressed); //Convert PNG to Base64
-                    }
-                    else if (fileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _textureExtension = ".webp";
-                        _baseTexture = ArrayBufferToBase64(decompressed); //Convert WebP to Base64
-                    }
-
-                    // Save the extracted file in the correct directory
-                    SaveExtractedFile(fileName, decompressed);
-
-                    Console.WriteLine($"✅ Extracted: {fileName}");
+                    AddEntry(fileName, DetectAndDecompress(buffer));
                 }
                 catch (Exception ex)
                 {
@@ -88,11 +75,38 @@ public class NitroBundle
             fileCount--;
         }
 
-        // Debug: Check if Base64 image is correctly stored
+        WarnWithoutTexture();
+    }
+
+    private void WarnWithoutTexture()
+    {
         if (string.IsNullOrEmpty(_baseTexture))
         {
             Console.WriteLine("⚠️ Warning: Base64 image data is null or empty.");
         }
+    }
+
+    private void AddEntry(string fileName, byte[] decompressed)
+    {
+        if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            _jsonFile = JsonSerializer.Deserialize<object>(Encoding.UTF8.GetString(decompressed));
+        }
+        else if (fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+        {
+            _textureExtension = ".png";
+            _baseTexture = ArrayBufferToBase64(decompressed); //Convert PNG to Base64
+        }
+        else if (fileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
+        {
+            _textureExtension = ".webp";
+            _baseTexture = ArrayBufferToBase64(decompressed); //Convert WebP to Base64
+        }
+
+        // Save the extracted file in the correct directory
+        SaveExtractedFile(fileName, decompressed);
+
+        Console.WriteLine($"✅ Extracted: {fileName}");
     }
 
     private void SaveExtractedFile(string fileName, byte[] data)

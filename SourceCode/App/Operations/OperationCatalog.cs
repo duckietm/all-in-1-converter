@@ -22,7 +22,7 @@ public static class OperationCatalog
         Op("habbo.clothes", OperationCategory.HabboOriginal, "Download clothes", "Download official FigureData.json and FigureMap.json.", ClothesDownloader.DownloadClothesAsync, true),
         Op("habbo.effects", OperationCategory.HabboOriginal, "Download effects", "Download effect map metadata and avatar actions.", EffectsDownloader.DownloadEffectsAsync, true),
         Op("habbo.furnidata", OperationCategory.HabboOriginal, "Download furnidata", "Download and convert official furnidata to FurnitureData.json.", FurnidataDownloader.DownloadFurnidata),
-        Op("habbo.furniture", OperationCategory.HabboOriginal, "Download furniture", "Download official furniture SWF assets.", FurnitureDownloader.DownloadFurnitureAsync),
+        Op("habbo.furniture", OperationCategory.HabboOriginal, "Download furniture", "Download official furniture as .swf and/or .hab (config.ini furniture_download_format), plus icons.", FurnitureDownloader.DownloadFurnitureAsync),
         Op("habbo.icons", OperationCategory.HabboOriginal, "Download catalogue icons", "Download official catalogue icon images.", IconDownloader.DownloadIcons),
         Op("habbo.mp3", OperationCategory.HabboOriginal, "Download MP3", "Download official sound assets.", Mp3Downloader.DownloadMp3sAsync),
         Op("habbo.productdata", OperationCategory.HabboOriginal, "Download productdata", "Download official ProductData.json.", ProductDataDownloader.DownloadProductDataAsync),
@@ -30,6 +30,7 @@ public static class OperationCatalog
         Op("habbo.reception", OperationCategory.HabboOriginal, "Download reception images", "Download official reception and promotional artwork.", ReceptionDownloader.DownloadReceptionImages),
         Op("habbo.texts", OperationCategory.HabboOriginal, "Download texts", "Download official external text resources.", TextsDownloader.DownloadTextsAsync),
         Op("habbo.variables", OperationCategory.HabboOriginal, "Download variables", "Download official external variable resources.", VariablesDownloader.DownloadVariablesAsync),
+        Op("habbo.pets", OperationCategory.HabboOriginal, "Download pets", "Download official pet libraries as .swf and/or .hab (config.ini download_format).", PetsDownloader.DownloadPetsAsync),
         Op("habbo.all", OperationCategory.HabboOriginal, "Download all", "Run the complete official asset download sequence.", DownloadAllAsync, true),
 
         Op("nitro.furniture", OperationCategory.NitroCustom, "Download Nitro furniture", "Download custom Nitro furniture, icons and FurnitureData.json.", NitroFurnitureDownloader.DownloadFurnitureAsync, true),
@@ -39,21 +40,23 @@ public static class OperationCatalog
         Op("tools.merge-productdata", OperationCategory.HotelTools, "Merge productdata", "Merge strict ProductData.json files with conflict control.", CompareProductData.Compare, true),
         Op("tools.merge-clothes", OperationCategory.HotelTools, "Merge clothes", "Merge strict FigureData.json and FigureMap.json files.", CompareClothesData.Compare, true),
         Op("tools.generate-sql", OperationCategory.HotelTools, "Generate SQL", "Generate items_base and catalog_items SQL from furniture assets.", GenerateSqlAsync, true),
-        Op("tools.decompile-nitro", OperationCategory.HotelTools, "Decompile Nitro files", "Extract Nitro manifests and spritesheets.", NitroExtractor.Extract),
-        Op("tools.compile-nitro", OperationCategory.HotelTools, "Compile Nitro files", "Compile manifests and spritesheets into Nitro bundles.", NitroFurniCompile.Compile),
-        Op("tools.decompile-swf", OperationCategory.HotelTools, "Decompile SWF files", "Extract raw images, binaryData, symbols, ActionScript code and sounds from SWF files.", SwfDecompiler.DecompileAsync, true),
-        Op("tools.swf-furniture", OperationCategory.HotelTools, "SWF furniture to Nitro (PNG)", "Convert legacy furniture SWF assets to Nitro with standard PNG.", async () => { Tools.ConverterSettings.SpritesheetFormat = "png"; await SWF_Furni_To_Nitro.ConvertSwfFilesAsync(); }, true),
-        Op("tools.swf-clothes", OperationCategory.HotelTools, "SWF clothes to Nitro (PNG)", "Convert legacy clothing SWF assets to Nitro with standard PNG.", async () => { Tools.ConverterSettings.SpritesheetFormat = "png"; await SWF_clothes_To_Nitro.ConvertSwfFilesAsync(); }, true),
-        Op("tools.swf-pets", OperationCategory.HotelTools, "SWF pets to Nitro (PNG)", "Convert legacy pet SWF assets to Nitro with standard PNG.", async () => { Tools.ConverterSettings.SpritesheetFormat = "png"; await SWF_Pets_To_Nitro.ConvertSwfFilesAsync(); }),
-        Op("tools.swf-effects", OperationCategory.HotelTools, "SWF effects to Nitro (PNG)", "Convert legacy effect SWF assets to Nitro with standard PNG.", async () => { Tools.ConverterSettings.SpritesheetFormat = "png"; await SWF_Effects_To_Nitro.ConvertSwfFilesAsync(); }),
-
-        Op("tools.webp-furniture", OperationCategory.HotelToolsWebp, "SWF furniture to Nitro (WebP)", "Convert legacy furniture SWF assets to Nitro with WebP Lossless.", async () => { Tools.ConverterSettings.SpritesheetFormat = "webp"; await SWF_Furni_To_Nitro.ConvertSwfFilesAsync(); }, true),
-        Op("tools.webp-clothes", OperationCategory.HotelToolsWebp, "SWF clothes to Nitro (WebP)", "Convert legacy clothing SWF assets to Nitro with WebP Lossless.", async () => { Tools.ConverterSettings.SpritesheetFormat = "webp"; await SWF_clothes_To_Nitro.ConvertSwfFilesAsync(); }, true),
-        Op("tools.webp-pets", OperationCategory.HotelToolsWebp, "SWF pets to Nitro (WebP)", "Convert legacy pet SWF assets to Nitro with WebP Lossless.", async () => { Tools.ConverterSettings.SpritesheetFormat = "webp"; await SWF_Pets_To_Nitro.ConvertSwfFilesAsync(); }),
-        Op("tools.webp-effects", OperationCategory.HotelToolsWebp, "SWF effects to Nitro (WebP)", "Convert legacy effect SWF assets to Nitro with WebP Lossless.", async () => { Tools.ConverterSettings.SpritesheetFormat = "webp"; await SWF_Effects_To_Nitro.ConvertSwfFilesAsync(); }),
-        Op("tools.webp-generic", OperationCategory.HotelToolsWebp, "Generic Nitro to WebP", "Convert generic Nitro assets (room, badges, cursors, placeholders) to WebP Lossless.", NitroPngToWebpConverter.ConvertGenericAsync),
-        Op("tools.convert-nitro-webp", OperationCategory.HotelToolsWebp, "Convert Nitro (PNG to WebP)", "Convert existing Nitro bundles containing PNG into WebP Lossless.", NitroPngToWebpConverter.ConvertAsync, true),
-        Op("tools.benchmark-webp", OperationCategory.HotelToolsWebp, "WebP Lossless Benchmark", "Run PNG vs WebP lossless benchmark and pixel-by-pixel accuracy test.", async () => await Tools.BenchmarkRunner.RunAsync(30)),
+        Op("tools.decompile-nitro", OperationCategory.HotelTools, "Decompile NitroFiles", "Extract .nitro bundles into their json and sheet.", () => BundleTools.DecompileAsync(".nitro")),
+        Op("tools.compile-nitro", OperationCategory.HotelTools, "Compile NitroFiles", "Pack json + sheet folders into .nitro bundles (WebP Lossless).", () => BundleTools.CompileAsync(".nitro")),
+        Op("tools.decompile-hab", OperationCategory.HotelTools, "Decompile HabFiles", "Extract .hab bundles into their json and sheet.", () => BundleTools.DecompileAsync(".hab")),
+        Op("tools.compile-hab", OperationCategory.HotelTools, "Compile HabFiles", "Pack json + sheet folders into .hab bundles (WebP Lossless).", () => BundleTools.CompileAsync(".hab")),
+        Op("tools.swf-furniture-nitro", OperationCategory.HotelTools, "SWF Furniture to Nitro", "Convert furniture SWF files to .nitro (json + WebP Lossless).", Swf(".nitro", SWF_Furni_To_Nitro.ConvertSwfFilesAsync), true),
+        Op("tools.swf-furniture-hab", OperationCategory.HotelTools, "SWF Furniture to HAB", "Convert furniture SWF files to .hab (json + WebP Lossless).", Swf(".hab", SWF_Furni_To_Nitro.ConvertSwfFilesAsync), true),
+        Op("tools.nitro-furniture-hab", OperationCategory.HotelTools, "Nitro Furniture to HAB", "Repack furniture .nitro bundles as .hab (json + WebP Lossless).", NitroToHabConverter.FurnitureAsync, true),
+        Op("tools.swf-clothes-nitro", OperationCategory.HotelTools, "SWF Clothes to Nitro", "Convert clothing SWF files to .nitro (json + WebP Lossless).", Swf(".nitro", SWF_clothes_To_Nitro.ConvertSwfFilesAsync), true),
+        Op("tools.swf-clothes-hab", OperationCategory.HotelTools, "SWF Clothes to HAB", "Convert clothing SWF files to .hab (json + WebP Lossless).", Swf(".hab", SWF_clothes_To_Nitro.ConvertSwfFilesAsync), true),
+        Op("tools.nitro-clothes-hab", OperationCategory.HotelTools, "Nitro Clothes to HAB", "Repack clothing .nitro bundles as .hab (json + WebP Lossless).", NitroToHabConverter.ClothesAsync, true),
+        Op("tools.swf-pets-nitro", OperationCategory.HotelTools, "SWF Pets to Nitro", "Convert pet SWF files to .nitro (json + WebP Lossless).", Swf(".nitro", SWF_Pets_To_Nitro.ConvertSwfFilesAsync), true),
+        Op("tools.swf-pets-hab", OperationCategory.HotelTools, "SWF Pets to HAB", "Convert pet SWF files to .hab (json + WebP Lossless).", Swf(".hab", SWF_Pets_To_Nitro.ConvertSwfFilesAsync), true),
+        Op("tools.nitro-pets-hab", OperationCategory.HotelTools, "Nitro Pets to HAB", "Repack pet .nitro bundles as .hab (json + WebP Lossless).", NitroToHabConverter.PetsAsync, true),
+        Op("tools.swf-effects-nitro", OperationCategory.HotelTools, "SWF Effects to Nitro", "Convert effect SWF files to .nitro (json + WebP Lossless).", Swf(".nitro", SWF_Effects_To_Nitro.ConvertSwfFilesAsync), true),
+        Op("tools.swf-effects-hab", OperationCategory.HotelTools, "SWF Effects to HAB", "Convert effect SWF files to .hab (json + WebP Lossless).", Swf(".hab", SWF_Effects_To_Nitro.ConvertSwfFilesAsync), true),
+        Op("tools.nitro-effects-hab", OperationCategory.HotelTools, "Nitro Effects to HAB", "Repack effect .nitro bundles as .hab (json + WebP Lossless).", NitroToHabConverter.EffectsAsync, true),
+        Op("tools.decompile-swf", OperationCategory.HotelTools, "Decompile SWF Files", "Extract raw images, binaryData, symbols, ActionScript code and sounds from SWF files.", SwfDecompiler.DecompileAsync, true),
 
         Op("database.info", OperationCategory.Database, "Database information", "Show server version, databases and sizes.", DatabaseGeneralInfo.ShowDatabaseVersionAsync),
         Op("database.optimize", OperationCategory.Database, "Optimize database", "Optimize every table in the configured database.", DatabaseOptimizer.OptimizeDatabaseTablesAsync, false, true),
@@ -75,12 +78,21 @@ public static class OperationCatalog
         bool isDestructive = false) =>
         new(id, category, title, description, action, requiresInput, isDestructive);
 
+    /// <summary>A SWF conversion into .nitro or .hab; every sheet is WebP Lossless.</summary>
+    private static Func<Task> Swf(string extension, Func<Task> convert) => async () =>
+    {
+        Tools.ConverterSettings.SpritesheetFormat = "webp";
+        AssetBundleWriter.Extension = extension;
+        await convert();
+    };
+
     private static async Task DownloadAllAsync()
     {
         await ClothesDownloader.DownloadClothesAsync();
         await FurnidataDownloader.DownloadFurnidata();
         await ProductDataDownloader.DownloadProductDataAsync();
         await FurnitureDownloader.DownloadFurnitureAsync();
+        await PetsDownloader.DownloadPetsAsync();
         await VariablesDownloader.DownloadVariablesAsync();
         await TextsDownloader.DownloadTextsAsync();
         await IconDownloader.DownloadIcons();

@@ -52,11 +52,9 @@ namespace Habbo_Downloader.App.Runners
                 case "habbo":      await HabboOriginalMenu.DisplayMenu(); break;
                 case "nitro":      await NitroCustomMenu.DisplayMenu(); break;
                 case "tools":      await HotelToolsMenu.DisplayMenu(); break;
-                case "webp":
-                case "tools-webp": await HotelToolsWebpMenu.DisplayMenu(); break;
                 case "database":   await DatabaseMenu.DisplayMenu(); break;
                 default:
-                    Console.Error.WriteLine($"Unknown command: {command}. Valid: habbo, nitro, tools, webp, database.");
+                    Console.Error.WriteLine($"Unknown command: {command}. Valid: habbo, nitro, tools, database.");
                     Environment.ExitCode = 2;
                     break;
             }

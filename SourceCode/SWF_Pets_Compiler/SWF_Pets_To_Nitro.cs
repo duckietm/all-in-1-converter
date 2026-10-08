@@ -30,7 +30,11 @@ namespace Habbo_Downloader.Compiler
         {
             try
             {
-                ImportDirectory = Path.Combine("SWFCompiler", "import", "pets");
+                Console.WriteLine("Do you want (H) Habbo_Default pets or (I) Imported pets? (Default is H):");
+                ImportDirectory = Console.ReadLine()?.Trim().ToUpper() == "I"
+                    ? Path.Combine("SWFCompiler", "import", "pets")
+                    : Tools.HabboAssetFolder.Pets.SwfSource;
+                Directory.CreateDirectory(ImportDirectory);
                 Console.WriteLine($"✅ Converting SWF to Nitro from source {ImportDirectory}");
 
                 Directory.CreateDirectory(OutputDirectory);
@@ -38,7 +42,7 @@ namespace Habbo_Downloader.Compiler
 
                 if (swfFiles.Length == 0)
                 {
-                    Console.WriteLine("ℹ️ No SWF files found in the import (SWFCompiler\\import\\pets) directory.");
+                    Console.WriteLine($"ℹ️ No SWF files found in {ImportDirectory}.");
                     return;
                 }
 
@@ -58,12 +62,12 @@ namespace Habbo_Downloader.Compiler
                 await Parallel.ForEachAsync(swfFiles, new ParallelOptions { MaxDegreeOfParallelism = maxParallelism }, async (swfFile, _) =>
                 {
                     string fName = Path.GetFileNameWithoutExtension(swfFile);
-                    string targetNitroPath = Path.Combine(OutputDirectory, $"{fName}.nitro");
+                    string targetNitroPath = AssetBundleWriter.OutputPath(OutputDirectory, fName);
                     long swfLength = 0;
                     try { swfLength = new FileInfo(swfFile).Length; } catch { }
                     Interlocked.Add(ref totalOriginalBytes, swfLength);
 
-                    if (File.Exists(targetNitroPath))
+                    if (AssetBundleWriter.Exists(OutputDirectory, fName))
                     {
                         Interlocked.Increment(ref skippedCount);
                         try { Interlocked.Add(ref totalOutputBytes, new FileInfo(targetNitroPath).Length); } catch { }
@@ -93,9 +97,9 @@ namespace Habbo_Downloader.Compiler
 
                 stopwatch.Stop();
 
-                string formatLabel = ConverterSettings.UseWebp ? "WebP Lossless" : "Standard PNG";
+                string formatLabel = AssetBundleWriter.Label;
                 ConversionSummaryPrinter.PrintSummary(
-                    processTitle: $"SWF Pets -> Nitro ({formatLabel})",
+                    processTitle: $"SWF Pets -> {formatLabel}",
                     totalFiles: totalFiles,
                     convertedFiles: convertedCount,
                     skippedFiles: skippedCount,
@@ -103,7 +107,7 @@ namespace Habbo_Downloader.Compiler
                     totalOriginalBytes: totalOriginalBytes,
                     totalOutputBytes: totalOutputBytes,
                     elapsed: stopwatch.Elapsed,
-                    outputDirectory: OutputDirectory,
+                    outputDirectory: AssetBundleWriter.Folder(OutputDirectory),
                     formatName: formatLabel
                 );
             }
@@ -116,9 +120,7 @@ namespace Habbo_Downloader.Compiler
         public static async Task<bool> ProcessSwfFileAsync(string swfFile)
         {
             string fileName = Path.GetFileNameWithoutExtension(swfFile);
-            string nitroFilePath = Path.Combine(OutputDirectory, $"{fileName}.nitro");
-
-            if (File.Exists(nitroFilePath)) return false;
+            if (AssetBundleWriter.Exists(OutputDirectory, fileName)) return false;
 
             string fileOutputDirectory = Path.Combine(OutputDirectory, fileName);
             Directory.CreateDirectory(fileOutputDirectory);
@@ -190,8 +192,8 @@ namespace Habbo_Downloader.Compiler
                     canonicalMapping,
                     disableCleanKey: false,
                     numRows: 10,
-                    maxWidth: 7500,
-                    maxHeight: 12500
+                    maxWidth: 14000,
+                    maxHeight: 14000
                 );
 
                 if (spriteSheetPath == null || spriteSheetData == null)
@@ -387,17 +389,8 @@ namespace Habbo_Downloader.Compiler
 
         private static async Task BundleNitroFileAsync(string outputDirectory, string fileName, string nitroOutputDirectory, string spriteSheetPath)
         {
-            var nitroBundler = new NitroBundler();
-            string jsonFilePath = Path.Combine(outputDirectory, $"{fileName}.json");
-
-            if (File.Exists(jsonFilePath))
-                nitroBundler.AddFile($"{fileName}.json", await File.ReadAllBytesAsync(jsonFilePath));
-
-            if (File.Exists(spriteSheetPath))
-                nitroBundler.AddFile(Path.GetFileName(spriteSheetPath), await File.ReadAllBytesAsync(spriteSheetPath));
-
-            await File.WriteAllBytesAsync(Path.Combine(nitroOutputDirectory, $"{fileName}.nitro"), await nitroBundler.ToBufferAsync());
-            Console.WriteLine($"📦 Generated {fileName}.nitro -> {nitroOutputDirectory}");
+            var files = await AssetBundleWriter.ReadFilesAsync(Path.Combine(outputDirectory, $"{fileName}.json"), spriteSheetPath);
+            await AssetBundleWriter.WriteAsync(nitroOutputDirectory, fileName, files);
         }
 
         private static bool IsVisualizationEmpty(Visualization v)

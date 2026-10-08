@@ -5,7 +5,6 @@ public enum OperationCategory
     HabboOriginal,
     NitroCustom,
     HotelTools,
-    HotelToolsWebp,
     Database,
     General
 }

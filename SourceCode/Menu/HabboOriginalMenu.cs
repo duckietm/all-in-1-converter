@@ -14,18 +14,20 @@ namespace ConsoleApplication
                     "Pulls every badge .gif/.png from the official Habbo CDN.\n" +
                     "Output: Habbo_Default/badges/. Skips files already on disk."),
 
-            new("2",   "Download Clothes (figuredata + figuremap)",
+            new("2",   $"Download Clothes (figuredata + figuremap + {Format})",
                 OperationCatalog.Get("habbo.clothes").Action,
                 HowToUse:
                     "Downloads FigureData.json (palettes + setTypes) and FigureMap.json\n" +
                     "(libraries) from Habbo. Saves to Habbo_Default/files/json/ for use by\n" +
-                    "Merge Clothes (option 3 of Hotel Tools)."),
+                    "Merge Clothes (option 3 of Hotel Tools).\n" +
+                    "The clothes libraries go to Habbo_Default/clothes/swf and /hab (config.ini download_format)."),
 
-            new("3",   "Download Effects (effectmap + HabboAvatarActions)",
+            new("3",   $"Download Effects (effectmap + HabboAvatarActions + {Format})",
                 OperationCatalog.Get("habbo.effects").Action,
                 HowToUse:
                     "Fetches effect map metadata and the HabboAvatarActions.json file.\n" +
-                    "Required for SWF Effects to Nitro conversion."),
+                    "Required for SWF Effects to Nitro conversion.\n" +
+                    "The effect libraries go to Habbo_Default/effects/swf and /hab (config.ini download_format)."),
 
             new("4",   "Download Furnidata -> FurnitureData.json",
                 OperationCatalog.Get("habbo.furnidata").Action,
@@ -34,11 +36,13 @@ namespace ConsoleApplication
                     "FurnitureData.json in Habbo_Default/files/json/. Used by Merge Furnidata\n" +
                     "and Generate SQL."),
 
-            new("5",   "Download Furniture (SWF)",
+            new("5",   $"Download Furniture ({Format})",
                 OperationCatalog.Get("habbo.furniture").Action,
                 HowToUse:
-                    "Pulls every .swf furniture asset from Habbo CDN into Habbo_Default/hof_furni/.\n" +
-                    "These are the files SWF Furniture to Nitro (Hotel Tools option 7, H mode) reads."),
+                    "Pulls Habbo's furniture into Habbo_Default/hof_furni/: .swf into swf/, .hab into hab/,\n" +
+                    "icons into icons/. config.ini download_format picks swf, hab or both.\n" +
+                    "A .hab gets a lossless WebP sheet (spritesheet_format=webp); its json is not changed.\n" +
+                    "The swf/ files are what SWF Furniture to Nitro (Hotel Tools option 9/10, H mode) reads."),
 
             new("6",   "Download Catalogue icons",
                 OperationCatalog.Get("habbo.icons").Action,
@@ -81,6 +85,13 @@ namespace ConsoleApplication
                     "Downloads external_variables (URLs, feature flags, host config).\n" +
                     "Useful for inspecting which CDN endpoints Habbo currently advertises."),
 
+            new("13",  $"Download Pets ({Format})",
+                OperationCatalog.Get("habbo.pets").Action,
+                HowToUse:
+                    "Downloads Habbo's pet libraries into Habbo_Default/pets/swf and /hab\n" +
+                    "(config.ini download_format). The list can be changed with config.ini pet_libraries.\n" +
+                    "A .hab gets a lossless WebP sheet (spritesheet_format=webp); its json is not changed."),
+
             new("all", "Download All (clothes + furni + product + ...)",
                 OperationCatalog.Get("habbo.all").Action,
                 HowToUse:
@@ -89,5 +100,6 @@ namespace ConsoleApplication
                     "hotel - everything Merge / Generate SQL / SWF->Nitro will need afterwards."),
         });
 
+        private static string Format => Habbo_Downloader.Tools.ConverterSettings.DownloadFormat.ToUpperInvariant();
     }
 }

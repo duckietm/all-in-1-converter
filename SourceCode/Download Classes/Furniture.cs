@@ -1,190 +1,96 @@
-﻿using System.Xml.Linq;
+using System.Xml.Linq;
+using Habbo_Downloader.Tools;
+using static ConsoleApplication.HabboAssetDownloader;
 
 
 namespace ConsoleApplication
 {
+    /// <summary>Downloads Habbo's furniture into Habbo_Default/hof_furni/{swf,hab,icons}.</summary>
     internal static class FurnitureDownloader
     {
-        private static readonly HttpClient httpClient = new HttpClient();
-
         internal static async Task DownloadFurnitureAsync()
         {
-            string configFilePath = "config.ini";
-            var config = IniFileParser.Parse(configFilePath);
+            var config = IniFileParser.Parse("config.ini");
 
             string furnidataUrl = config["AppSettings:furnidataXML"];
-            string furnitureUrl = config["AppSettings:furnitureurl"];
+            string furnitureUrl = config["AppSettings:furnitureurl"].TrimEnd('/');
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+            Console.WriteLine($"Furniture download format: {ConverterSettings.DownloadFormat} (config.ini download_format)");
 
-            Directory.CreateDirectory("./Habbo_Default/hof_furni");
-            Directory.CreateDirectory("./Habbo_Default/hof_furni/icons");
-            Directory.CreateDirectory("./temp");
+            Directory.CreateDirectory(HofFurniPaths.Icons);
+            PrepareFolder(HabboAssetFolder.Furniture);
 
-            string furnidataXmlPath = "./temp/furnidata.xml";
-
+            string furnidataXml;
             try
             {
                 Console.WriteLine("Downloading furnidata...");
-                await DownloadFileAsync(furnidataUrl, furnidataXmlPath, "furnidata.xml");
+                furnidataXml = await Http.GetStringAsync(furnidataUrl);
                 Console.WriteLine("Furnidata downloaded successfully.");
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Error downloading furnidata: " + ex.Message);
-                Console.ForegroundColor = ConsoleColor.Gray;
+                Log(ConsoleColor.Red, "Error downloading furnidata: " + ex.Message);
                 return;
             }
 
-            int downloadedCount = 0;
-            int iconDownloadCount = 0;
-
+            XElement? root;
             try
             {
-                XDocument doc = XDocument.Load(furnidataXmlPath);
-                var root = doc.Element("furnidata");
-                if (root == null)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Error: Invalid furnidata XML format.");
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    return;
-                }
-
-                var furniEntries = new List<(string classname, int revision)>();
-
-                var roomItems = root.Element("roomitemtypes");
-                if (roomItems != null)
-                {
-                    foreach (var item in roomItems.Elements("furnitype"))
-                    {
-                        string classname = (string)item.Attribute("classname") ?? "";
-                        int revision = (int?)item.Element("revision") ?? 0;
-                        if (!string.IsNullOrEmpty(classname))
-                            furniEntries.Add((classname, revision));
-                    }
-                }
-
-                var wallItems = root.Element("wallitemtypes");
-                if (wallItems != null)
-                {
-                    foreach (var item in wallItems.Elements("furnitype"))
-                    {
-                        string classname = (string)item.Attribute("classname") ?? "";
-                        int revision = (int?)item.Element("revision") ?? 0;
-                        if (!string.IsNullOrEmpty(classname))
-                            furniEntries.Add((classname, revision));
-                    }
-                }
-
-                Console.WriteLine($"Found {furniEntries.Count} furniture entries.");
-
-                foreach (var (classname, revision) in furniEntries)
-                {
-                    string furnitureName = classname.Split('*')[0];
-                    string variant = classname.Contains('*') ? classname.Split('*')[1] : "";
-                    string iconName = string.IsNullOrEmpty(variant) ? furnitureName : $"{furnitureName}_{variant}";
-
-                    string swfFilePath = $"./Habbo_Default/hof_furni/{furnitureName}.swf";
-                    string iconFilePath = $"./Habbo_Default/hof_furni/icons/{iconName}_icon.png";
-
-                    if (!File.Exists(swfFilePath))
-                    {
-                        string swfUrl = $"{furnitureUrl}/{revision}/{furnitureName}.swf";
-
-                        if (await FileExistsOnServerAsync(swfUrl))
-                        {
-                            try
-                            {
-                                Console.ForegroundColor = ConsoleColor.Green;
-                                Console.WriteLine($"Downloading: {furnitureName}.swf");
-                                await DownloadFileAsync(swfUrl, swfFilePath, $"{furnitureName}.swf");
-                                downloadedCount++;
-                            }
-                            catch (HttpRequestException ex)
-                            {
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($"Error downloading {furnitureName}.swf: {ex.Message}");
-                                Console.ForegroundColor = ConsoleColor.Gray;
-                            }
-                        }
-                    }
-
-                    if (!File.Exists(iconFilePath))
-                    {
-                        string iconUrl = $"{furnitureUrl}/{revision}/{iconName}_icon.png";
-
-                        if (await FileExistsOnServerAsync(iconUrl))
-                        {
-                            try
-                            {
-                                Console.ForegroundColor = ConsoleColor.Green;
-                                Console.WriteLine($"Downloading: {iconName}_icon.png");
-                                await DownloadFileAsync(iconUrl, iconFilePath, $"{iconName}_icon.png");
-                                iconDownloadCount++;
-                            }
-                            catch (HttpRequestException ex)
-                            {
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($"Error downloading {iconName}_icon.png: {ex.Message}");
-                                Console.ForegroundColor = ConsoleColor.Gray;
-                            }
-                        }
-                    }
-                }
-
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Downloading furniture completed!");
-                Console.WriteLine($"Downloaded {downloadedCount} new .swf files and {iconDownloadCount} new icons.");
-                Console.ForegroundColor = ConsoleColor.Gray;
+                root = XDocument.Parse(furnidataXml).Element("furnidata");
             }
-            finally
+            catch (Exception ex)
             {
-                foreach (string file in Directory.GetFiles("./temp"))
+                Log(ConsoleColor.Red, "Error: Invalid furnidata XML format. " + ex.Message);
+                return;
+            }
+
+            if (root == null)
+            {
+                Log(ConsoleColor.Red, "Error: Invalid furnidata XML format.");
+                return;
+            }
+
+            var entries = new List<(string classname, int revision)>();
+            foreach (var section in new[] { "roomitemtypes", "wallitemtypes" })
+            {
+                foreach (var item in root.Element(section)?.Elements("furnitype") ?? Enumerable.Empty<XElement>())
                 {
-                    File.Delete(file);
+                    string classname = (string?)item.Attribute("classname") ?? "";
+                    int revision = (int?)item.Element("revision") ?? 0;
+                    if (!string.IsNullOrEmpty(classname)) entries.Add((classname, revision));
                 }
-                Directory.Delete("./temp");
             }
-        }
 
-        private static async Task<bool> FileExistsOnServerAsync(string url)
-        {
-            try
-            {
-                var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url));
-                return response.IsSuccessStatusCode;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+            Console.WriteLine($"Found {entries.Count} furniture entries.");
 
-        private static async Task DownloadFileAsync(string url, string filePath, string fileName)
-        {
-            try
-            {
-                var response = await httpClient.GetAsync(url);
-                response.EnsureSuccessStatusCode();
+            // One library per furni (colour variants share it), one icon per variant.
+            var libraries = entries
+                .GroupBy(entry => entry.classname.Split('*')[0], StringComparer.OrdinalIgnoreCase)
+                .Select(group => (name: group.Key, baseUrl: $"{furnitureUrl}/{group.Max(entry => entry.revision)}/{group.Key}"));
 
-                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            Counts counts = await DownloadLibrariesAsync(HabboAssetFolder.Furniture, libraries);
+
+            int iconCount = 0;
+            await Parallel.ForEachAsync(entries, new ParallelOptions { MaxDegreeOfParallelism = MaxParallelDownloads }, async (entry, _) =>
+            {
+                string furnitureName = entry.classname.Split('*')[0];
+                string variant = entry.classname.Contains('*') ? entry.classname.Split('*')[1] : "";
+                string iconName = string.IsNullOrEmpty(variant) ? furnitureName : $"{furnitureName}_{variant}";
+                string iconPath = Path.Combine(HofFurniPaths.Icons, $"{iconName}_icon.png");
+
+                if (File.Exists(iconPath)) return;
+
+                byte[]? icon = await TryGetAsync($"{furnitureUrl}/{entry.revision}/{iconName}_icon.png");
+                if (icon != null && IsPng(icon))
                 {
-                    await response.Content.CopyToAsync(fileStream);
+                    await SaveAsync(iconPath, icon);
+                    Interlocked.Increment(ref iconCount);
+                    Log(ConsoleColor.Green, $"Downloaded: {iconName}_icon.png");
                 }
+            });
 
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Downloaded: {fileName}");
-                Console.ForegroundColor = ConsoleColor.Gray;
-            }
-            catch (HttpRequestException ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Error downloading {fileName}: {ex.Message}");
-                Console.ForegroundColor = ConsoleColor.Gray;
-                throw;
-            }
+            Log(ConsoleColor.Green, "Downloading furniture completed!");
+            Log(ConsoleColor.Green, Summary($"furniture files and {iconCount} new icons", counts));
         }
     }
 }

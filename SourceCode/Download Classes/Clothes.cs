@@ -93,7 +93,6 @@ namespace ConsoleApplication
 
                 string xmlDirectory = Path.Combine(currentDirectory, "Habbo_Default", "files", "xml");
                 string jsonDirectory = Path.Combine(currentDirectory, "Habbo_Default", "files", "json");
-                string swfDirectory = Path.Combine(currentDirectory, "Habbo_Default", "clothes");
 
                 string figuremapUrl = $"{gordonDirectory}{release}/figuremap.xml";
                 string figuredataUrl = "http://habbo.com/gamedata/figuredata/1";
@@ -136,45 +135,16 @@ namespace ConsoleApplication
                     return;
                 }
 
-                int totalLibs = libIds.Count;
-                int processedLibs = 0;
-                int downloadCount = 0;
+                Console.WriteLine($"Found {libIds.Count} clothes libraries; download format: {Habbo_Downloader.Tools.ConverterSettings.DownloadFormat} (config.ini download_format)");
 
-                foreach (string id in libIds)
-                {
-                    string swfUrl = $"{gordonDirectory}{release}/{id}.swf";
-                    string swfFilePath = Path.Combine(swfDirectory, $"{id}.swf");
+                var folder = Habbo_Downloader.Tools.HabboAssetFolder.Clothes;
+                HabboAssetDownloader.PrepareFolder(folder);
 
-                    if (!File.Exists(swfFilePath))
-                    {
-                        bool success = await DownloadFileAsync(swfUrl, swfFilePath, id, silent: true);
-                        if (success)
-                        {
-                            downloadCount++;
-                        }
-                    }
+                var counts = await HabboAssetDownloader.DownloadLibrariesAsync(folder,
+                    libIds.Distinct(StringComparer.OrdinalIgnoreCase).Select(id => (id, $"{gordonDirectory}{release}/{id}")));
 
-                    processedLibs++;
-                    lock (consoleLock)
-                    {
-                        string progressBar = BuildProgressBar(processedLibs, totalLibs, 50);
-                        double percent = ((double)processedLibs / totalLibs) * 100;
-                        Console.Write($"\r{progressBar} {percent:F2}% ({processedLibs}/{totalLibs} SWF files processed)");
-                    }
-                }
-
-                Console.WriteLine();
-
-                if (downloadCount > 0)
-                {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"Downloaded {downloadCount} new clothes!");
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("You have the latest clothes!");
-                }
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine(HabboAssetDownloader.Summary("clothes files", counts));
                 Console.ForegroundColor = ConsoleColor.Gray;
 
                 Console.WriteLine();
@@ -407,12 +377,5 @@ namespace ConsoleApplication
             }
         }
 
-        private static string BuildProgressBar(int processed, int total, int barWidth)
-        {
-            double fraction = (double)processed / total;
-            int filledBars = (int)(fraction * barWidth);
-            int emptyBars = barWidth - filledBars;
-            return "[" + new string('▓', filledBars) + new string('-', emptyBars) + "]";
-        }
     }
 }

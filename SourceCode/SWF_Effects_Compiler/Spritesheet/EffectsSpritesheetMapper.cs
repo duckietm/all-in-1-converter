@@ -46,8 +46,8 @@ namespace Habbo_Downloader.SWF_Effects_Compiler.Spritesheet
             string outputDirectory,
             string name,
             int numRows = 10,
-            int maxWidth = 10240,
-            int maxHeight = 7000)
+            int maxWidth = 14000,
+            int maxHeight = 14000)
         {
             if (images == null || images.Count == 0)
             {

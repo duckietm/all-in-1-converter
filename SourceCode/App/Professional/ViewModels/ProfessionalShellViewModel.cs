@@ -78,8 +78,7 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
         {
             OperationCategory.HabboOriginal => ("Habbo Original", "Download official assets from the Habbo CDN"),
             OperationCategory.NitroCustom => ("Nitro Custom", "Import custom Nitro furniture and clothing"),
-            OperationCategory.HotelTools => ("Hotel Tools", "Merge, compile and convert your asset pipeline (PNG)"),
-            OperationCategory.HotelToolsWebp => ("Hotel Tools (WebP)", "Convert SWF to Nitro with WebP Lossless, optimize existing Nitro and run benchmarks"),
+            OperationCategory.HotelTools => ("Hotel Tools", "Merge, (de)compile and convert to .nitro / .hab (json + WebP Lossless)"),
             OperationCategory.Database => ("Database", "Inspect and maintain the configured hotel database"),
             _ => ("About", "Version and project information")
         };

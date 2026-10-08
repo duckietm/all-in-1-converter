@@ -32,17 +32,11 @@ namespace Habbo_Downloader.App
                 "Hosts every transformation step of the classic asset pipeline: merge\n" +
                 "furnidata / productdata / clothesdata using strict JSON files,\n" +
                 "generate items_base +\n" +
-                "catalog_items SQL from .nitro / .swf, decompile / compile .nitro\n" +
-                "bundles, and convert SWF -> Nitro for furniture / clothes / pets\n" +
-                "/ effects with standard PNG spritesheets."),
+                "catalog_items SQL from .nitro / .hab / .swf, decompile / compile .nitro\n" +
+                "and .hab bundles, convert SWF -> Nitro or HAB and Nitro -> HAB for\n" +
+                "furniture / clothes / pets / effects. Every bundle is json + WebP Lossless."),
 
-            new("4", "Hotel Tools (WebP)", HotelToolsWebpMenu.DisplayMenu, IsSubMenu: true, HowToUse:
-                "Open the Hotel Tools (WebP) sub-menu.\n" +
-                "Hosts modern WebP Lossless compilation and conversion tools:\n" +
-                "convert SWF to Nitro with WebP Lossless (100% alpha transparency, 25-40% smaller),\n" +
-                "convert existing .nitro files from PNG to WebP, and run quality benchmarks."),
-
-            new("5", "Database Tools", DatabaseMenu.DisplayMenu, IsSubMenu: true, HowToUse:
+            new("4", "Database Tools", DatabaseMenu.DisplayMenu, IsSubMenu: true, HowToUse:
                 "Open the Database Tools sub-menu.\n" +
                 "Hits the configured MariaDB / MySQL (credentials in config.ini\n" +
                 "[Database Settings]) to inspect or repair the hotel DB: show\n" +

@@ -27,7 +27,7 @@ namespace Habbo_Downloader.Tools
                 Console.WriteLine(" [3] Imported Clothes (SWFCompiler/import/clothes)");
                 Console.WriteLine(" [4] Imported Effects (SWFCompiler/import/effects)");
                 Console.WriteLine(" [5] Imported Pets (SWFCompiler/import/pets)");
-                Console.WriteLine(" [6] Habbo Default hof_furni (Habbo_Default/hof_furni)");
+                Console.WriteLine(" [6] Habbo Default hof_furni (Habbo_Default/hof_furni/swf)");
                 Console.WriteLine(" [7] Custom folder path");
                 Console.Write("Select source [Default is 1]: ");
 
@@ -38,7 +38,7 @@ namespace Habbo_Downloader.Tools
                     "3" => Path.Combine("SWFCompiler", "import", "clothes"),
                     "4" => Path.Combine("SWFCompiler", "import", "effects"),
                     "5" => Path.Combine("SWFCompiler", "import", "pets"),
-                    "6" => Path.Combine("Habbo_Default", "hof_furni"),
+                    "6" => HofFurniPaths.SwfSource,
                     "7" => AskCustomDirectory(),
                     _ => BaseDecompileDir
                 };

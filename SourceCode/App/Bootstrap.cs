@@ -48,10 +48,18 @@ namespace Habbo_Downloader.App
                 { "Habbo_Default", new[]
                 {
                     "badges", "clothes",
+                    Path.Combine("clothes", "swf"),
+                    Path.Combine("clothes", "hab"),
+                    Path.Combine("effects", "swf"),
+                    Path.Combine("effects", "hab"),
+                    Path.Combine("pets", "swf"),
+                    Path.Combine("pets", "hab"),
                     Path.Combine("files", "txt"),
                     Path.Combine("files", "xml"),
                     Path.Combine("files", "json"),
                     "hof_furni",
+                    Path.Combine("hof_furni", "swf"),
+                    Path.Combine("hof_furni", "hab"),
                     Path.Combine("hof_furni", "icons"),
                     "icons", "mp3", "quests",
                     "reception",

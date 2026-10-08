@@ -53,10 +53,7 @@ namespace ConsoleApplication
             List<string> catalogItemsSQL = new List<string>();
 
             // Process physical files.
-            var furnitureFiles = Directory.GetFiles(furnitureDir, "*.*", SearchOption.AllDirectories)
-                .Where(f => f.EndsWith(".nitro", StringComparison.OrdinalIgnoreCase) ||
-                            f.EndsWith(".swf", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            var furnitureFiles = FurnitureFiles(furnitureDir);
 
             foreach (var file in furnitureFiles)
             {
@@ -73,7 +70,7 @@ namespace ConsoleApplication
                         Directory.Delete(extractedDir, true);
                     }
                 }
-                else if (file.EndsWith(".nitro", StringComparison.OrdinalIgnoreCase))
+                else if (file.EndsWith(".nitro", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".hab", StringComparison.OrdinalIgnoreCase))
                 {
                     ProcessNitroFile(file, furnidata, roomItems, wallItems, itemsBaseSQL, catalogItemsSQL, ref startId, pageId);
                     Console.WriteLine($"✅ Nitro file: {fileName} is done!");
@@ -140,11 +137,28 @@ namespace ConsoleApplication
             Console.WriteLine($"📦 SQL file generated successfully:\n {outputPath}");
         }
 
+        /// <summary>
+        /// One file per furni and folder: .swf before .nitro before .hab, so a .hab saved next to its .swf
+        /// (Habbo download) or its .nitro is not counted twice.
+        /// </summary>
+        private static List<string> FurnitureFiles(string furnitureDir) =>
+            Directory.GetFiles(furnitureDir, "*.*", SearchOption.AllDirectories)
+                .Where(f => FurnitureFileRank(f) >= 0)
+                .GroupBy(f => Path.Combine(Path.GetDirectoryName(f) ?? "", Path.GetFileNameWithoutExtension(f)), StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.OrderBy(FurnitureFileRank).First())
+                .ToList();
+
+        private static int FurnitureFileRank(string file) => Path.GetExtension(file).ToLowerInvariant() switch
+        {
+            ".swf" => 0,
+            ".nitro" => 1,
+            ".hab" => 2,
+            _ => -1
+        };
+
         private static bool CheckForDuplicateFiles(string furnitureDir)
         {
-            var allFiles = Directory.GetFiles(furnitureDir, "*.*", SearchOption.AllDirectories)
-                .Where(f => f.EndsWith(".nitro", StringComparison.OrdinalIgnoreCase) ||
-                            f.EndsWith(".swf", StringComparison.OrdinalIgnoreCase))
+            var allFiles = FurnitureFiles(furnitureDir)
                 .Select(f => Path.GetFileNameWithoutExtension(f))
                 .GroupBy(name => name)
                 .Where(group => group.Count() > 1)

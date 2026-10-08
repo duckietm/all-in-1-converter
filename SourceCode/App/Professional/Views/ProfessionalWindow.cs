@@ -37,16 +37,21 @@ public sealed class ProfessionalWindow : Window
         "nitro.clothes",
         "tools.decompile-nitro",
         "tools.compile-nitro",
-        "tools.convert-nitro-webp",
+        "tools.decompile-hab",
+        "tools.compile-hab",
         "tools.decompile-swf",
-        "tools.swf-furniture",
-        "tools.swf-clothes",
-        "tools.swf-pets",
-        "tools.swf-effects",
-        "tools.webp-furniture",
-        "tools.webp-clothes",
-        "tools.webp-pets",
-        "tools.webp-effects",
+        "tools.swf-furniture-nitro",
+        "tools.swf-furniture-hab",
+        "tools.nitro-furniture-hab",
+        "tools.swf-clothes-nitro",
+        "tools.swf-clothes-hab",
+        "tools.nitro-clothes-hab",
+        "tools.swf-pets-nitro",
+        "tools.swf-pets-hab",
+        "tools.nitro-pets-hab",
+        "tools.swf-effects-nitro",
+        "tools.swf-effects-hab",
+        "tools.nitro-effects-hab",
         "database.offer-id",
         "database.item-settings",
         "database.sprite-id"
@@ -181,7 +186,6 @@ public sealed class ProfessionalWindow : Window
         nav.Children.Add(NavButton("↓  Habbo Original", () => ShowCategory(OperationCategory.HabboOriginal), OperationCategory.HabboOriginal));
         nav.Children.Add(NavButton("◆  Nitro Custom", () => ShowCategory(OperationCategory.NitroCustom), OperationCategory.NitroCustom));
         nav.Children.Add(NavButton("⚒  Hotel Tools", () => ShowCategory(OperationCategory.HotelTools), OperationCategory.HotelTools));
-        nav.Children.Add(NavButton("⚡  Hotel Tools (WebP)", () => ShowCategory(OperationCategory.HotelToolsWebp), OperationCategory.HotelToolsWebp));
         nav.Children.Add(NavButton("▤  Database", () => ShowCategory(OperationCategory.Database), OperationCategory.Database));
         nav.Children.Add(NavButton("ⓘ  About", () => ShowCategory(OperationCategory.General), OperationCategory.General));
         Grid.SetRow(nav, 1);

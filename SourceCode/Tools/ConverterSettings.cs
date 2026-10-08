@@ -59,6 +59,57 @@ namespace Habbo_Downloader.Tools
 
         public static bool UseWebp => string.Equals(SpritesheetFormat, "webp", StringComparison.OrdinalIgnoreCase);
 
+        private static string? _cachedDownloadFormat;
+
+        /// <summary>
+        /// config.ini download_format: swf, hab or both, for furniture, clothes, effects and pets.
+        /// Older configs: furniture_download_format, else .swf plus the .hab when download_hab is on.
+        /// </summary>
+        public static string DownloadFormat
+        {
+            get
+            {
+                if (_cachedDownloadFormat != null) return _cachedDownloadFormat;
+
+                string? value = (ReadSetting("download_format") ?? ReadSetting("furniture_download_format"))?.ToLowerInvariant();
+                if (value is not ("swf" or "hab" or "both"))
+                {
+                    string? legacy = ReadSetting("download_hab")?.ToLowerInvariant();
+                    value = legacy is "false" or "0" ? "swf" : "both";
+                }
+
+                _cachedDownloadFormat = value;
+                return value;
+            }
+            set => _cachedDownloadFormat = value;
+        }
+
+        public static bool DownloadSwf => DownloadFormat is "swf" or "both";
+
+        public static bool DownloadHab => DownloadFormat is "hab" or "both";
+
+        /// <summary>The value of a config.ini line "key=value", or null.</summary>
+        private static string? ReadSetting(string key)
+        {
+            try
+            {
+                string configPath = Path.Combine(Environment.CurrentDirectory, "config.ini");
+                if (!File.Exists(configPath)) return null;
+
+                foreach (var line in File.ReadAllLines(configPath))
+                {
+                    var parts = line.Trim().Split('=', 2);
+                    if (parts.Length == 2 && parts[0].Trim().Equals(key, StringComparison.OrdinalIgnoreCase))
+                        return parts[1].Trim();
+                }
+            }
+            catch
+            {
+                // Fallback to default
+            }
+            return null;
+        }
+
         public static string ImageExtension => UseWebp ? ".webp" : ".png";
 
         /// <summary>

@@ -20,7 +20,7 @@ namespace Habbo_Downloader.Tools
             Console.WriteLine("        🚀 HABBO ALL-IN-1: WEBP LOSSLESS BENCHMARK & TEST SUITE                ");
             Console.WriteLine("===============================================================================");
 
-            string sourceDir = Path.Combine("Habbo_Default", "hof_furni");
+            string sourceDir = HofFurniPaths.SwfSource;
             if (!Directory.Exists(sourceDir))
             {
                 Console.WriteLine($"❌ Source directory '{sourceDir}' does not exist!");
@@ -91,7 +91,7 @@ namespace Habbo_Downloader.Tools
                     string pngDir = Path.Combine(furniDir, "png_out");
                     Directory.CreateDirectory(pngDir);
                     var (pngSheetPath, _) = SpriteSheetMapper.GenerateSpriteSheet(
-                        images, pngDir, name, canonicalMapping, false, 10, 11266, 12800);
+                        images, pngDir, name, canonicalMapping, false, 10, 14000, 14000);
                     long pngSheetSize = pngSheetPath != null && File.Exists(pngSheetPath) ? new FileInfo(pngSheetPath).Length : 0;
 
                     // 3. Generate WebP Spritesheet
@@ -99,7 +99,7 @@ namespace Habbo_Downloader.Tools
                     string webpDir = Path.Combine(furniDir, "webp_out");
                     Directory.CreateDirectory(webpDir);
                     var (webpSheetPath, _) = SpriteSheetMapper.GenerateSpriteSheet(
-                        images, webpDir, name, canonicalMapping, false, 10, 11266, 12800);
+                        images, webpDir, name, canonicalMapping, false, 10, 14000, 14000);
                     long webpSheetSize = webpSheetPath != null && File.Exists(webpSheetPath) ? new FileInfo(webpSheetPath).Length : 0;
 
                     // 4. Pixel match check (Bit-for-bit RGBA pixel comparison)
