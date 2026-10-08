@@ -131,6 +131,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 
             int currentY = FramePadding;
             int imageIndex = 0;
+            var keys = images.Keys.ToList();
             foreach (var group in imageGroups)
             {
                 int currentX = FramePadding;
@@ -139,7 +140,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                 foreach (var imageItem in group)
                 {
                     var image = imageItem.Image;
-                    var key = images.Keys.ElementAt(imageIndex);
+                    var key = keys[imageIndex];
                     string shortKey = CleanAssetName(key, disableCleanKey: false);
                     string finalKey = canonicalMapping.ContainsKey(shortKey)
                         ? canonicalMapping[shortKey]

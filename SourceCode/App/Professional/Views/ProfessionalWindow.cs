@@ -82,6 +82,7 @@ public sealed class ProfessionalWindow : Window
     private HabboHotel? _hotel;
     private bool _hotelKnown;
     private readonly ContentControl _footerFlag = new() { VerticalAlignment = VerticalAlignment.Center };
+    private (bool Known, HabboHotel? Hotel)? _footerFlagKey;
     private Button? _switchButton;
 
     // Operation page
@@ -94,17 +95,7 @@ public sealed class ProfessionalWindow : Window
     private readonly WrapPanel _activityChips = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _workspaceNote = Text("", 12, "Pro.AccentText");
     private readonly ProgressBar _progress = new() { IsIndeterminate = true, Height = 3, MinHeight = 3, IsVisible = false, Foreground = Solid(Brand) };
-    private readonly TextBox _log = new()
-    {
-        AcceptsReturn = true,
-        IsReadOnly = true,
-        TextWrapping = TextWrapping.NoWrap,
-        FontFamily = new FontFamily("Cascadia Mono, Consolas, DejaVu Sans Mono, monospace"),
-        FontSize = 12,
-        Padding = new Thickness(14, 12),
-        CornerRadius = new CornerRadius(8),
-        PlaceholderText = "Output appears here when the operation runs."
-    };
+    private readonly LogView _log;
     private readonly Grid _inputRow = new() { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8, Margin = new Thickness(0, 10, 0, 0) };
     private readonly TextBox _input = new() { PlaceholderText = "Answer the prompt and press Enter (empty = default)" };
     private readonly Button _send = new() { Content = "Send", Padding = new Thickness(18, 8), Classes = { "secondary" } };
@@ -138,10 +129,12 @@ public sealed class ProfessionalWindow : Window
             RefreshHotel();
         });
         RefreshHotel();
+        _log = new LogView(_viewModel.LogLines);
         _operationPage = BuildOperationPage();
         _workspacePanel = BuildWorkspacePanel();
         Content = BuildLayout();
         _viewModel.PropertyChanged += ViewModelChanged;
+        _viewModel.LogUpdated += _log.FollowOutput;
         Closing += (_, eventArgs) =>
         {
             if (!_viewModel.IsRunning) return;
@@ -151,6 +144,7 @@ public sealed class ProfessionalWindow : Window
         Closed += async (_, _) =>
         {
             _viewModel.PropertyChanged -= ViewModelChanged;
+            _viewModel.LogUpdated -= _log.FollowOutput;
             await _viewModel.DisposeAsync();
             _closed.TrySetResult();
         };
@@ -654,7 +648,7 @@ public sealed class ProfessionalWindow : Window
     {
         string? path = _workspaceViewModel.Paths?.Root;
         if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return;
-        Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+        Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true })?.Dispose();
     }
 
     // ---------------------------------------------------------------- operations
@@ -714,6 +708,7 @@ public sealed class ProfessionalWindow : Window
         _doneButton.Click += (_, _) =>
         {
             _viewModel.ClearLog();
+            _log.ResetFollow();
             RefreshActivity();
         };
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 10, 0, 0) };
@@ -726,13 +721,22 @@ public sealed class ProfessionalWindow : Window
         Grid.SetRow(_progress, 1);
         detail.Children.Add(_progress);
 
+        var outputRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(0, 14, 0, 8) };
         var outputLabel = Text("OUTPUT", 10.5, "Pro.Subtle", FontWeight.SemiBold);
         outputLabel.LetterSpacing = 1;
-        outputLabel.Margin = new Thickness(0, 18, 0, 8);
-        Grid.SetRow(outputLabel, 2);
-        detail.Children.Add(outputLabel);
+        outputLabel.VerticalAlignment = VerticalAlignment.Bottom;
+        outputRow.Children.Add(outputLabel);
+        var copy = new Button { Content = "Copy output", Padding = new Thickness(10, 4), FontSize = 12, Classes = { "secondary" } };
+        copy.Click += async (_, _) =>
+        {
+            int count = await _log.CopyAsync(selectedOnly: false);
+            _status.Text = count == 0 ? "Nothing to copy" : $"Copied {count:N0} lines";
+        };
+        Grid.SetColumn(copy, 1);
+        outputRow.Children.Add(copy);
+        Grid.SetRow(outputRow, 2);
+        detail.Children.Add(outputRow);
 
-        ConsoleStyle(_log);
         Grid.SetRow(_log, 3);
         detail.Children.Add(_log);
 
@@ -840,6 +844,7 @@ public sealed class ProfessionalWindow : Window
         if (AssetWorkspaceRuntime.Router.IsConfigured && WorkspaceOperationIds.Contains(operation.Id) &&
             !await ConfirmWorkspaceAccessAsync(operation)) return;
         if (operation.IsDestructive && !await ConfirmDestructiveAsync(operation.Title)) return;
+        _log.ResetFollow();
         await _viewModel.RunSelectedAsync();
     }
 
@@ -908,13 +913,6 @@ public sealed class ProfessionalWindow : Window
 
     private void ViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ProfessionalShellViewModel.LogText))
-        {
-            _log.Text = _viewModel.LogText;
-            _log.CaretIndex = _log.Text?.Length ?? 0;
-            return;
-        }
-
         RefreshHeader();
         RefreshActivity();
         if (e.PropertyName == nameof(ProfessionalShellViewModel.IsRunning) && _viewModel.IsRunning) _input.Focus();
@@ -943,7 +941,12 @@ public sealed class ProfessionalWindow : Window
         string workspace = paths is null ? "No asset workspace" : $"Workspace: {paths.Root}";
         string hotel = _hotel is not null ? $"{_hotel.Name} ({_hotel.Language})" : "Custom hotel URLs";
         _workspaceFooter.Text = _hotelKnown ? $"{hotel}   •   {workspace}" : workspace;
-        _footerFlag.Content = _hotelKnown ? Flags.For(_hotel, 18) : null;
+        // Built again only when the hotel changes: the footer refreshes on every view-model change.
+        if (_footerFlagKey != (_hotelKnown, _hotel))
+        {
+            _footerFlagKey = (_hotelKnown, _hotel);
+            _footerFlag.Content = _hotelKnown ? Flags.For(_hotel, 18) : null;
+        }
     }
 
     private void RefreshActivity()

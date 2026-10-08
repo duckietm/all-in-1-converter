@@ -87,6 +87,13 @@ namespace ConsoleApplication
 
                 if (args.Mode is RunMode.Professional)
                 {
+                    // Avalonia can be set up once per process: back from the CLI, start a fresh copy instead.
+                    if (_desktopStarted)
+                    {
+                        RelaunchProfessional();
+                        break;
+                    }
+                    _desktopStarted = true;
                     RunDesktop(args.Mode, showDesktopSelector);
                 }
                 else
@@ -99,6 +106,27 @@ namespace ConsoleApplication
                 showDesktopSelector = false;
             }
             return Environment.ExitCode;
+        }
+
+        private static bool _desktopStarted;
+
+        private static void RelaunchProfessional()
+        {
+            try
+            {
+                string? host = Environment.ProcessPath;
+                if (string.IsNullOrEmpty(host)) throw new InvalidOperationException("the program path is unknown");
+                var start = new System.Diagnostics.ProcessStartInfo(host) { UseShellExecute = false, WorkingDirectory = Environment.CurrentDirectory };
+                // Run as "dotnet app.dll": pass the dll again.
+                if (string.Equals(Path.GetFileNameWithoutExtension(host), "dotnet", StringComparison.OrdinalIgnoreCase))
+                    start.ArgumentList.Add(Environment.GetCommandLineArgs()[0]);
+                start.ArgumentList.Add("--professional");
+                System.Diagnostics.Process.Start(start)?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not reopen the Professional window ({ex.Message}). Start the converter again with --professional.");
+            }
         }
 
         private static void RunDesktop(RunMode initialMode, bool showSelector)
@@ -151,5 +179,21 @@ namespace ConsoleApplication
     public static class UserAgentClass
     {
         public static string UserAgent { get; } = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36";
+    }
+
+    public static class HttpClientUserAgent
+    {
+        /// <summary>
+        /// Sets the User-Agent once. The downloaders share static clients, so adding it on every run made the
+        /// header longer each time (and is not safe while another download uses the client).
+        /// </summary>
+        public static void EnsureUserAgent(this HttpClient client)
+        {
+            lock (client)
+            {
+                if (client.DefaultRequestHeaders.UserAgent.Count == 0)
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+            }
+        }
     }
 }

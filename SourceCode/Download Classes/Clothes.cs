@@ -56,7 +56,7 @@ namespace ConsoleApplication
 
         internal static async Task DownloadClothesAsync()
         {
-            httpClient.DefaultRequestHeaders.Add("user-agent", UserAgentClass.UserAgent);
+            httpClient.EnsureUserAgent();
 
             try
             {
@@ -163,7 +163,7 @@ namespace ConsoleApplication
         {
             try
             {
-                var response = await httpClient.GetAsync(url);
+                using var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))

@@ -12,7 +12,7 @@
             string furnidataTXT = config["AppSettings:furnidataTXT"];
             string furnidataXML = config["AppSettings:furnidataXML"];
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+            httpClient.EnsureUserAgent();
 
             Console.WriteLine("🚀 Saving Starting the furnidata download");
 
@@ -65,7 +65,7 @@
         {
             try
             {
-                var response = await httpClient.GetAsync(url);
+                using var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))

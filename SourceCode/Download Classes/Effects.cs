@@ -16,11 +16,11 @@ namespace ConsoleApplication
             string externalVarsUrl = config["AppSettings:externalvarsurl"];
             string effectUrl = config["AppSettings:effecturl"];
 
-            httpClient.DefaultRequestHeaders.Add("User-Agent", UserAgentClass.UserAgent);
+            httpClient.EnsureUserAgent();
 
             try
             {
-                HttpResponseMessage res = await httpClient.GetAsync(externalVarsUrl);
+                using HttpResponseMessage res = await httpClient.GetAsync(externalVarsUrl);
                 string source = await res.Content.ReadAsStringAsync();
 
                 string releaseEffect = null;
@@ -318,7 +318,7 @@ namespace ConsoleApplication
         {
             try
             {
-                var response = await httpClient.GetAsync(url);
+                using var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 string directory = Path.GetDirectoryName(filePath);

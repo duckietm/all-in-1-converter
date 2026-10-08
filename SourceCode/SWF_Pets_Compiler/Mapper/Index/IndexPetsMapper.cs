@@ -6,6 +6,9 @@ namespace Habbo_DownloaderSWF_Pets_Compiler.Mapper.Index
 {
     public static class IndexPetsMapper
     {
+        // Shared: a new options object per file throws away System.Text.Json's metadata cache.
+        private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
         public static async Task<IndexPetsData> ParsePetsIndexFileAsync(string indexFilePath)
         {
             try
@@ -51,10 +54,7 @@ namespace Habbo_DownloaderSWF_Pets_Compiler.Mapper.Index
                 visualizationType = indexData.VisualizationType
             };
 
-            return JsonSerializer.Serialize(json, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+            return JsonSerializer.Serialize(json, JsonOptions);
         }
     }
 

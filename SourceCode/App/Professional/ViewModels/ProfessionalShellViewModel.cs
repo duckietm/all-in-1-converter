@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text;
+using Avalonia.Collections;
 using Habbo_Downloader.App.Operations;
 
 namespace Habbo_Downloader.App.Professional.ViewModels;
@@ -8,15 +9,16 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
 {
     private readonly OperationRunner _runner = new();
     private readonly SynchronizationContext? _uiContext = SynchronizationContext.Current;
-    private readonly StringBuilder _logBuilder = new();
-    // A long run (thousands of lines) must not rebuild the text box on every write.
-    private const int MaxLogChars = 300_000;
+    // Output waits here and reaches the UI as lines every 100 ms; only the newest lines are kept.
+    private readonly StringBuilder _pendingOutput = new();
+    private const int MaxLogLines = 5_000;
+    private const int MaxPendingChars = 2_000_000;
     private const int LogFlushMs = 100;
     private bool _logFlushPending;
+    private bool _lastLineOpen;
     private OperationDefinition? _selectedOperation;
     private string _pageTitle = "Dashboard";
     private string _pageSubtitle = "Your Habbo asset workstation at a glance";
-    private string _logText = string.Empty;
     private string _statusText = "Ready";
     private string _inputText = string.Empty;
     private bool _isRunning;
@@ -47,7 +49,13 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
 
     public string PageTitle { get => _pageTitle; private set => SetProperty(ref _pageTitle, value); }
     public string PageSubtitle { get => _pageSubtitle; private set => SetProperty(ref _pageSubtitle, value); }
-    public string LogText { get => _logText; private set => SetProperty(ref _logText, value); }
+    /// <summary>The output of the current or last run; the last line is still open for more text.</summary>
+    public AvaloniaList<string> LogLines { get; } = new();
+
+    /// <summary>Raised on the UI thread after new output was added to <see cref="LogLines"/>.</summary>
+    public event Action? LogUpdated;
+
+    public string LogText => string.Join(Environment.NewLine, LogLines);
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
     public string InputText { get => _inputText; set => SetProperty(ref _inputText, value); }
     public bool IsRunning
@@ -71,8 +79,7 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
     public void ClearLog()
     {
         if (IsRunning) return;
-        lock (_logBuilder) { _logBuilder.Clear(); }
-        LogText = string.Empty;
+        ResetLog();
         HasFinishedRun = false;
         StatusText = "Ready";
     }
@@ -125,8 +132,7 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
     {
         if (!CanRun || SelectedOperation is null) return;
         OperationDefinition operation = SelectedOperation;
-        lock (_logBuilder) { _logBuilder.Clear(); }
-        LogText = string.Empty;
+        ResetLog();
         HasFinishedRun = false;
         IsRunning = true;
         StatusText = $"Running: {operation.Title}";
@@ -180,23 +186,15 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
     public void NotifyCloseBlocked() =>
         StatusText = "Wait for the active operation to finish before closing";
 
-    /// <summary>Collects output and shows it at most every 100 ms; only the newest 300k characters are kept.</summary>
+    /// <summary>Collects output from any thread; it is shown at most every 100 ms.</summary>
     private void HandleOutput(string text)
     {
-        lock (_logBuilder)
+        lock (_pendingOutput)
         {
-            _logBuilder.Append(text);
-            if (_logBuilder.Length > MaxLogChars)
-            {
-                int cut = _logBuilder.Length - MaxLogChars;
-                for (int i = cut; i < _logBuilder.Length && i < cut + 2000; i++)
-                {
-                    if (_logBuilder[i] != '\n') continue;
-                    cut = i + 1;
-                    break;
-                }
-                _logBuilder.Remove(0, cut);
-            }
+            _pendingOutput.Append(text);
+            // A flood faster than the UI drains: drop the oldest part, it would be trimmed anyway.
+            if (_pendingOutput.Length > MaxPendingChars)
+                _pendingOutput.Remove(0, _pendingOutput.Length - MaxPendingChars / 2);
 
             if (_logFlushPending) return;
             _logFlushPending = true;
@@ -207,11 +205,35 @@ public sealed class ProfessionalShellViewModel : ObservableObject, IAsyncDisposa
 
     private void FlushLog()
     {
-        lock (_logBuilder)
+        string chunk;
+        lock (_pendingOutput)
         {
             _logFlushPending = false;
-            LogText = _logBuilder.ToString();
+            chunk = _pendingOutput.ToString();
+            _pendingOutput.Clear();
         }
+        if (chunk.Length == 0) return;
+
+        // The last part has no newline yet: the next output continues it (prompts, progress dots).
+        string[] parts = chunk.Replace("\r\n", "\n").Split('\n');
+        int first = 0;
+        if (_lastLineOpen && LogLines.Count > 0)
+        {
+            LogLines[^1] += parts[0];
+            first = 1;
+        }
+        if (parts.Length > first) LogLines.AddRange(parts.Skip(first));
+        _lastLineOpen = true;
+
+        if (LogLines.Count > MaxLogLines) LogLines.RemoveRange(0, LogLines.Count - MaxLogLines);
+        LogUpdated?.Invoke();
+    }
+
+    private void ResetLog()
+    {
+        lock (_pendingOutput) { _pendingOutput.Clear(); }
+        LogLines.Clear();
+        _lastLineOpen = false;
     }
 
     private static void PostToUi(Action action)

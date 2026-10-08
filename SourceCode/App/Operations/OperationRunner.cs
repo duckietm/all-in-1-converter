@@ -70,6 +70,15 @@ public sealed class OperationRunner : IAsyncDisposable
     {
         public override Encoding Encoding => Encoding.UTF8;
         public override void Write(char value) => write(value.ToString());
+        // Without these, a TextWriter writes char[] and spans one char (one string) at a time.
+        public override void Write(char[] buffer, int index, int count)
+        {
+            if (count > 0) write(new string(buffer, index, count));
+        }
+        public override void Write(ReadOnlySpan<char> buffer)
+        {
+            if (!buffer.IsEmpty) write(new string(buffer));
+        }
         public override void Write(string? value)
         {
             if (!string.IsNullOrEmpty(value)) write(value);

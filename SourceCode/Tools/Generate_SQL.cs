@@ -10,9 +10,48 @@ namespace ConsoleApplication
 {
     public static class SQLGenerator
     {
-        private static Dictionary<string, FileSettings> processedFileSettings = new Dictionary<string, FileSettings>(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, FileSettings> processedFileSettings = new Dictionary<string, FileSettings>(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, JToken> furniByClassname = new Dictionary<string, JToken>(StringComparer.Ordinal);
+        private static JObject? indexedFurnidata;
 
         public static void GenerateSQL()
+        {
+            // Per run: settings of an earlier run must not add variants again, and the furnidata is released after.
+            ResetRunState();
+            try
+            {
+                GenerateSqlRun();
+            }
+            finally
+            {
+                ResetRunState();
+            }
+        }
+
+        private static void ResetRunState()
+        {
+            processedFileSettings.Clear();
+            furniByClassname.Clear();
+            indexedFurnidata = null;
+        }
+
+        /// <summary>The furnidata entry of a classname (the first one, as before), from an index built once per run.</summary>
+        private static JToken? FindFurni(JObject furnidata, string classname)
+        {
+            if (!ReferenceEquals(indexedFurnidata, furnidata))
+            {
+                furniByClassname.Clear();
+                foreach (JToken item in furnidata["roomitemtypes"]["furnitype"].Concat(furnidata["wallitemtypes"]["furnitype"]))
+                {
+                    string? name = item["classname"]?.ToString();
+                    if (name != null) furniByClassname.TryAdd(name, item);
+                }
+                indexedFurnidata = furnidata;
+            }
+            return furniByClassname.GetValueOrDefault(classname);
+        }
+
+        private static void GenerateSqlRun()
         {
             string baseDir = Path.Combine(Directory.GetCurrentDirectory(), "Generate");
             string furnidataDir = Path.Combine(baseDir, "Furnidata");
@@ -222,7 +261,7 @@ namespace ConsoleApplication
             _ = Task.Run(async () => await process.StandardOutput.ReadToEndAsync());
             _ = Task.Run(async () => await process.StandardError.ReadToEndAsync());
 
-            if (!await Task.Run(() => process.WaitForExit(60000)))
+            if (!await FfdecInvocation.WaitForExitAsync(process, 60000))
             {
                 process.Kill(true);
             }
@@ -263,9 +302,7 @@ namespace ConsoleApplication
                             stackHeight = double.Parse(dimensionsElement.Attribute("z").Value, CultureInfo.InvariantCulture);
                     }
 
-                    var itemData = furnidata["roomitemtypes"]["furnitype"]
-                        .Concat(furnidata["wallitemtypes"]["furnitype"])
-                        .FirstOrDefault(item => item["classname"]?.ToString() == fileName);
+                    var itemData = FindFurni(furnidata, fileName);
 
                     if (itemData == null)
                     {
@@ -318,9 +355,7 @@ namespace ConsoleApplication
             string fileName = Path.GetFileNameWithoutExtension(nitroFilePath);
             try
             {
-                var itemData = furnidata["roomitemtypes"]["furnitype"]
-                    .Concat(furnidata["wallitemtypes"]["furnitype"])
-                    .FirstOrDefault(item => item["classname"]?.ToString() == fileName);
+                var itemData = FindFurni(furnidata, fileName);
 
                 if (itemData == null)
                 {

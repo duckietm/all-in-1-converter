@@ -158,7 +158,8 @@ namespace ConsoleApplication.FixSettings
 
             int processedBatches = 0;
             int totalBatches = (int)Math.Ceiling(totalToUpdate / 100.0);
-            System.Timers.Timer timer = new System.Timers.Timer(500);
+            // using: an error (e.g. no database connection) must not leave the progress timer printing forever.
+            using var timer = new System.Timers.Timer(500);
             timer.Elapsed += (sender, e) =>
             {
                 lock (consoleLock)

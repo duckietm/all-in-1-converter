@@ -7,7 +7,22 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Assests
     public static class ClothesAssetsMapper
     {
         // In-memory image mapping (ID → original tag name)
-        public static Dictionary<string, string> LatestImageMapping { get; private set; } = new Dictionary<string, string>();
+        // One mapping per file conversion: several files convert in parallel.
+        private static readonly System.Threading.AsyncLocal<System.Runtime.CompilerServices.StrongBox<Dictionary<string, string>>?> CurrentMapping = new();
+        private static Dictionary<string, string> _unscopedMapping = new Dictionary<string, string>();
+
+        /// <summary>Starts the mapping scope of one file conversion.</summary>
+        public static void BeginFile() => CurrentMapping.Value = new(new Dictionary<string, string>());
+
+        public static Dictionary<string, string> LatestImageMapping
+        {
+            get => CurrentMapping.Value?.Value ?? _unscopedMapping;
+            private set
+            {
+                if (CurrentMapping.Value is { } scope) scope.Value = value;
+                else _unscopedMapping = value;
+            }
+        }
 
         // Updated Asset class now includes a Source property.
         public class Asset

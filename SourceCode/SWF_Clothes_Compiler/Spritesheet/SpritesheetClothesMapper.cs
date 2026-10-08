@@ -103,6 +103,7 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
 
             int currentY = FramePadding;
             int imageIndex = 0;
+            var keys = images.Keys.ToList();
 
             foreach (var group in imageGroups)
             {
@@ -113,11 +114,9 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Spritesheets
                 {
                     var image = imageItem.Image;
 
-                    var key = images.Keys.ElementAt(imageIndex);
+                    var key = keys[imageIndex];
 
-                    var originalName = ClothesAssetsMapper.LatestImageMapping.ContainsKey(key)
-                        ? ClothesAssetsMapper.LatestImageMapping[key]
-                        : key;
+                    var originalName = ClothesAssetsMapper.LatestImageMapping.TryGetValue(key, out string? mapped) ? mapped : key;
 
                     int drawX = currentX;
                     int drawY = currentY;

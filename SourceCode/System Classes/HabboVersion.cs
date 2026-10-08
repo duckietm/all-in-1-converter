@@ -6,7 +6,7 @@
 
         internal static async Task CheckVersionAsync()
         {
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+            httpClient.EnsureUserAgent();
 
             try
             {

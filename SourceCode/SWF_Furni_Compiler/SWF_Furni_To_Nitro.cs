@@ -21,6 +21,9 @@ namespace Habbo_Downloader.Compiler
 {
     public static class SWF_Furni_To_Nitro
     {
+        // Shared: a new options object per file throws away System.Text.Json's metadata cache.
+        private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals, Converters = { new FloatToFixedDecimalConverter() } };
+
         private static string ImportDirectory;
         private static string OutputDirectory => AssetWorkspaceRuntime.Router.AssetDirectory(
             WorkspaceAssetKind.Furniture,
@@ -122,6 +125,7 @@ namespace Habbo_Downloader.Compiler
 
         public static async Task<bool> ProcessSwfFileAsync(string swfFile)
         {
+            AssetsMapper.BeginFile();
             string fileName = Path.GetFileNameWithoutExtension(swfFile);
             if (AssetBundleWriter.Exists(OutputDirectory, fileName)) return false; // Skip already converted files
 
@@ -196,13 +200,7 @@ namespace Habbo_Downloader.Compiler
 
                 var jsonOutputPath = Path.Combine(fileOutputDirectory, $"{fileName}.json");
 
-                var jsonOptions = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
-                    Converters = { new FloatToFixedDecimalConverter() }
-                };
+                var jsonOptions = JsonOptions;
 
                 var logicObject = new
                 {

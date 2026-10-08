@@ -14,6 +14,9 @@ namespace Habbo_Downloader.Compiler
 {
     public static class SWF_Effects_To_Nitro
     {
+        // Shared: a new options object per file throws away System.Text.Json's metadata cache.
+        private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+
         private static string ImportDirectory = Path.Combine("SWFCompiler", "import", "effects");
         private static string OutputDirectory => AssetWorkspaceRuntime.Router.AssetDirectory(
             WorkspaceAssetKind.Effects,
@@ -204,11 +207,7 @@ namespace Habbo_Downloader.Compiler
                     name = fileName,
                     spritesheet = spriteSheetData
                 },
-                new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                });
+                JsonOptions);
 
                 await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
                 await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);

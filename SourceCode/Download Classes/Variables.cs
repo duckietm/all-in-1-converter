@@ -28,7 +28,7 @@ namespace ConsoleApplication
                     return;
                 }
 
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+                httpClient.EnsureUserAgent();
 
                 for (int retryCount = 3; retryCount > 0; retryCount--)
                 {
@@ -95,7 +95,7 @@ namespace ConsoleApplication
 
         private static async Task DownloadFileAsync(string url, string filePath, string fileName)
         {
-            var response = await httpClient.GetAsync(url);
+            using var response = await httpClient.GetAsync(url);
             response.EnsureSuccessStatusCode();
 
             Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);

@@ -104,6 +104,7 @@ namespace Habbo_Downloader.SWF_Effects_Compiler.Spritesheet
 
             int currentY = FramePadding;
             int imageIndex = 0;
+            var keys = images.Keys.ToList();
 
             foreach (var group in imageGroups)
             {
@@ -114,11 +115,10 @@ namespace Habbo_Downloader.SWF_Effects_Compiler.Spritesheet
                 {
                     var image = imageItem.Image;
 
-                    var key = images.Keys.ElementAt(imageIndex);
+                    var key = keys[imageIndex];
 
-                    var originalName = ClothesAssetsMapper.LatestImageMapping.ContainsKey(key)
-                        ? ClothesAssetsMapper.LatestImageMapping[key]
-                        : key;
+                    // Effect sprites keep their own name (this read the clothes mapping, empty for effects).
+                    var originalName = key;
 
                     int drawX = currentX;
                     int drawY = currentY;

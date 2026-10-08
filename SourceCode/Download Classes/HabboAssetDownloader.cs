@@ -139,7 +139,8 @@ namespace ConsoleApplication
             Console.WriteLine($"Moving {habs.Length} .hab files into {folder.Hab}...");
             Directory.CreateDirectory(folder.Hab);
 
-            Parallel.ForEach(habs, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, habFile =>
+            // Each file is decoded, WebP-encoded and checked: half the cores keeps the machine usable.
+            Parallel.ForEach(habs, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2) }, habFile =>
             {
                 string name = Path.GetFileNameWithoutExtension(habFile);
                 string target = Path.Combine(folder.Hab, name + ".hab");

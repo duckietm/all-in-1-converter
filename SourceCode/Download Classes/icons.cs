@@ -9,7 +9,7 @@
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+            httpClient.EnsureUserAgent();
 
             string catalogIconUrl = config["AppSettings:catalogiconurl"];
             int iconNumber = 1;

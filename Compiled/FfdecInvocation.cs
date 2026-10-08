@@ -20,6 +20,24 @@ namespace Habbo_Downloader.Tools
         // rejects a flag (conversions start failing immediately), drop this line.
         private const string JvmFastStartOptions = "-XX:TieredStopAtLevel=1 -XX:+UseSerialGC";
 
+        /// <summary>
+        /// Waits for FFDEC without holding a thread-pool thread (many conversions run in parallel).
+        /// False when it did not exit within the timeout.
+        /// </summary>
+        public static async Task<bool> WaitForExitAsync(Process process, int timeoutMs)
+        {
+            using var timeout = new System.Threading.CancellationTokenSource(timeoutMs);
+            try
+            {
+                await process.WaitForExitAsync(timeout.Token);
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+        }
+
         public static ProcessStartInfo BuildStartInfo(string ffdecArguments)
         {
             var toolsDir = Path.Combine("Tools", "ffdec");

@@ -20,6 +20,8 @@ namespace ConsoleApplication
 
         internal static async Task DownloadFurnitureAsync()
         {
+            // One lock per file of this run; a long session would otherwise keep them all.
+            fileLocks.Clear();
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
 
@@ -204,7 +206,7 @@ namespace ConsoleApplication
         {
             try
             {
-                var response = await httpClient.GetAsync(url);
+                using var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 byte[] content = await response.Content.ReadAsByteArrayAsync();

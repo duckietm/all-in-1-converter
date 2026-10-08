@@ -24,7 +24,7 @@ namespace ConsoleApplication
                     return;
                 }
 
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+                httpClient.EnsureUserAgent();
 
                 string textFilePath = "./Habbo_Default/files/txt/productdata.txt";
                 await DownloadFileAsync(productdataurl, textFilePath, "productdata.txt");
@@ -48,7 +48,7 @@ namespace ConsoleApplication
         {
             try
             {
-                var response = await httpClient.GetAsync(url);
+                using var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 Directory.CreateDirectory(Path.GetDirectoryName(filePath));

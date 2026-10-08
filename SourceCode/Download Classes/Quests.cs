@@ -38,7 +38,7 @@
                     File.Delete(tempFilePath);
                 }
 
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+                httpClient.EnsureUserAgent();
 
                 await DownloadFileAsync(externaltexturl, tempFilePath, "external_texts.txt");
 
@@ -126,7 +126,7 @@
         {
             try
             {
-                var response = await httpClient.GetAsync(url);
+                using var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))

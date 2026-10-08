@@ -50,15 +50,19 @@ public static class SheetWebp
             : file;
     }
 
+    /// <summary>Row by row, so no extra copy of a (possibly huge) sheet is made.</summary>
     private static bool SamePixels(Image<Rgba32> expected, Image<Rgba32> actual)
     {
         if (expected.Width != actual.Width || expected.Height != actual.Height) return false;
 
-        var a = new Rgba32[expected.Width * expected.Height];
-        var b = new Rgba32[a.Length];
-        expected.CopyPixelDataTo(a);
-        actual.CopyPixelDataTo(b);
-        return a.AsSpan().SequenceEqual(b);
+        bool same = true;
+        expected.ProcessPixelRows(actual, (left, right) =>
+        {
+            for (int y = 0; y < left.Height && same; y++)
+                same = System.Runtime.InteropServices.MemoryMarshal.AsBytes(left.GetRowSpan(y))
+                    .SequenceEqual(System.Runtime.InteropServices.MemoryMarshal.AsBytes(right.GetRowSpan(y)));
+        });
+        return same;
     }
 }
 

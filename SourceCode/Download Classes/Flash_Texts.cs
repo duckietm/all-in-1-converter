@@ -14,7 +14,7 @@ namespace ConsoleApplication
 
             string externalTextUrl = config["AppSettings:externaltexturl"];
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+            httpClient.EnsureUserAgent();
 
             try
             {
@@ -78,7 +78,7 @@ namespace ConsoleApplication
         {
             try
             {
-                var response = await httpClient.GetAsync(url);
+                using var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);

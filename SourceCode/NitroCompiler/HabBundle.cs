@@ -61,8 +61,8 @@ public static class HabBundle
             writer.Write((uint)rawIndex.Length);
             writer.Write((uint)data.Length);
             writer.Write(index);
-            writer.Write(data.ToArray());
         }
+        data.WriteTo(output);
 
         return output.ToArray();
     }

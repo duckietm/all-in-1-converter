@@ -15,7 +15,7 @@ namespace ConsoleApplication
             string externalVariablesPath = "./temp/external_variables.txt";
             Console.WriteLine("Downloading external variables");
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+            httpClient.EnsureUserAgent();
 
             var externalVariablesUrl = "https://www.habbo.com/gamedata/external_variables/";
             var externalVariablesContent = await httpClient.GetStringAsync(externalVariablesUrl);

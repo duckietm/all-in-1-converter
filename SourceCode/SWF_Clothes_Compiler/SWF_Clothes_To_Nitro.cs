@@ -12,6 +12,9 @@ namespace Habbo_Downloader.Compiler
 {
     public static class SWF_clothes_To_Nitro
     {
+        // Shared: a new options object per file throws away System.Text.Json's metadata cache.
+        private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+
         private static string ImportDirectory;
         private static string OutputDirectory => AssetWorkspaceRuntime.Router.AssetDirectory(
             WorkspaceAssetKind.Clothing,
@@ -116,6 +119,7 @@ namespace Habbo_Downloader.Compiler
 
         public static async Task<bool> ProcessSwfFileAsync(string swfFile)
         {
+            ClothesAssetsMapper.BeginFile();
             // Skip the effect file.
             if (string.Equals(Path.GetFileName(swfFile), "hh_human_fx.swf", StringComparison.OrdinalIgnoreCase))
             {
@@ -183,11 +187,7 @@ namespace Habbo_Downloader.Compiler
                     assets = assetDataResult.Assets,
                     name = assetDataResult.LibraryName,
                     spritesheet = spriteSheetData
-                }, new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                });
+                }, JsonOptions);
 
                 await File.WriteAllTextAsync(jsonOutputPath, jsonContent);
                 await BundleNitroFileAsync(fileOutputDirectory, fileName, OutputDirectory, spriteSheetPath);

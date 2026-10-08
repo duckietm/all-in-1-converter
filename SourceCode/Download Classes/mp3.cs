@@ -9,7 +9,7 @@
             string configFilePath = "config.ini";
             var config = IniFileParser.Parse(configFilePath);
 
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentClass.UserAgent);
+            httpClient.EnsureUserAgent();
 
             string soundMachineUrl = config["AppSettings:soundmachineurl"];
             int mp3Number = 1;
@@ -67,7 +67,7 @@
         {
             try
             {
-                var response = await httpClient.GetAsync(url);
+                using var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))

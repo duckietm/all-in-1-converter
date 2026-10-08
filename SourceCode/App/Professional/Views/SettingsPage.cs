@@ -403,7 +403,7 @@ public sealed class SettingsPage
         }
         try
         {
-            Process.Start(new ProcessStartInfo { FileName = _file.FilePath, UseShellExecute = true });
+            Process.Start(new ProcessStartInfo { FileName = _file.FilePath, UseShellExecute = true })?.Dispose();
         }
         catch (Exception ex)
         {

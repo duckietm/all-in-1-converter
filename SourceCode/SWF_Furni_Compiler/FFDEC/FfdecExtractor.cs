@@ -30,7 +30,7 @@ namespace Habbo_Downloader.Tools
             _ = Task.Run(async () => await process.StandardOutput.ReadToEndAsync());
             _ = Task.Run(async () => await process.StandardError.ReadToEndAsync());
 
-            bool exited = await Task.Run(() => process.WaitForExit(60000)); // 60 seconds timeout
+            bool exited = await FfdecInvocation.WaitForExitAsync(process, 60000); // 60 seconds timeout
 
             if (!exited)
             {

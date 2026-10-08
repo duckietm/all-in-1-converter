@@ -204,19 +204,6 @@ public static class ProfessionalTheme
     public static PathIcon Icon(string data, double size = 18) =>
         new() { Data = Geometry.Parse(data), Width = size, Height = size };
 
-    /// <summary>Applies the console colours to a read-only log box (the same in both themes).</summary>
-    public static void ConsoleStyle(TextBox box)
-    {
-        IBrush back = Solid(ConsoleBackground), fore = Solid(ConsoleText), border = Solid(ConsoleBorder);
-        foreach (string state in new[] { "", "PointerOver", "Focused", "Disabled" })
-        {
-            box.Resources["TextControlBackground" + state] = back;
-            box.Resources["TextControlForeground" + state] = fore;
-            box.Resources["TextControlBorderBrush" + state] = border;
-        }
-        box.Resources["TextControlBorderThemeThicknessFocused"] = new Thickness(1);
-    }
-
     /// <summary>Material Design icon paths (Apache 2.0), 24x24.</summary>
     public static class Icons
     {
