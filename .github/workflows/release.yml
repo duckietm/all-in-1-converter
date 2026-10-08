@@ -24,7 +24,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '11.0.100-preview.6.26359.118'
+          # Installs the SDK pinned in global.json, so the two can't drift apart.
+          global-json-file: global.json
       - name: Publish win-x64
         working-directory: SourceCode
         run: |
@@ -51,7 +52,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '11.0.100-preview.6.26359.118'
+          # Installs the SDK pinned in global.json, so the two can't drift apart.
+          global-json-file: global.json
       - name: Publish linux-x64
         working-directory: SourceCode
         run: |
@@ -68,7 +70,7 @@ jobs:
           [Desktop Entry]
           Type=Application
           Name=All-in-1 Converter
-          Comment=Habbo asset workstation (Professional / GUI / TUI / CLI)
+          Comment=Habbo asset workstation (Professional / CLI)
           Exec=sh -c 'cd "$(dirname "$1")" && exec "./Habbo Downloader"' sh %k
           Terminal=true
           Categories=Development;Utility;
