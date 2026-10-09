@@ -115,7 +115,14 @@ namespace ConsoleApplication
                 "Decompile SWF assets permanently to raw images, XMLs (binaryData),\n" +
                 "symbols (symbolClass), ActionScript (.as scripts), and audio.\n" +
                 "Reads from SWFCompiler/decompile/ (or import folders).\n" +
-                "Output: SWFCompiler/decompiled/<name>/.")
+                "Output: SWFCompiler/decompiled/<name>/."),
+
+            new("22", "Add size 32 to HAB Furniture", OperationCatalog.Get("tools.hab-furniture-32").Action, HowToUse:
+                "Habbo's .hab furniture has no size 32 (the zoomed-out room). This copies the size 32\n" +
+                "sprites, assets and visualization from a .nitro (or .hab) of the same furni into it;\n" +
+                "the 64 graphics stay as they are. Only when both have the same 64 graphics.\n" +
+                "Reads Habbo_Default/hof_furni/hab/ and SWFCompiler/furniture/nitro/ (or custom folders).\n" +
+                "Output: SWFCompiler/furniture/hab/. Skips files already there.")
         });
     }
 }

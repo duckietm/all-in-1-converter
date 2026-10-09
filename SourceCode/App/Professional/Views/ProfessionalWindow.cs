@@ -35,6 +35,7 @@ public sealed class ProfessionalWindow : Window
         "tools.swf-furniture-nitro",
         "tools.swf-furniture-hab",
         "tools.nitro-furniture-hab",
+        "tools.hab-furniture-32",
         "tools.swf-clothes-nitro",
         "tools.swf-clothes-hab",
         "tools.nitro-clothes-hab",

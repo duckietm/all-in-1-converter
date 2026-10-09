@@ -130,6 +130,7 @@ namespace Habbo_Downloader.SWF_Pets_Compiler.Mapper.Visualizations
         public int Id { get; set; }
         public int? RandomX { get; set; }
         public int? RandomY { get; set; }
+        public int? X { get; set; }
         public int? Y { get; set; }
 
         [JsonPropertyName("offsets")]
@@ -141,6 +142,7 @@ namespace Habbo_Downloader.SWF_Pets_Compiler.Mapper.Visualizations
             Id = int.TryParse(xml.Attribute("id")?.Value, out int id) ? id : 0;
             RandomX = int.TryParse(xml.Attribute("randomX")?.Value, out int randomX) ? randomX : (int?)null;
             RandomY = int.TryParse(xml.Attribute("randomY")?.Value, out int randomY) ? randomY : (int?)null;
+            X = int.TryParse(xml.Attribute("x")?.Value, out int x) ? x : (int?)null;
             Y = int.TryParse(xml.Attribute("y")?.Value, out int y) ? y : (int?)null;
 
             Offsets = ParseOffsets(xml);
@@ -238,6 +240,12 @@ namespace Habbo_Downloader.SWF_Pets_Compiler.Mapper.Visualizations
             {
                 writer.WritePropertyName("randomY");
                 writer.WriteNumberValue(value.RandomY.Value);
+            }
+
+            if (value.X.HasValue)
+            {
+                writer.WritePropertyName("x");
+                writer.WriteNumberValue(value.X.Value);
             }
 
             if (value.Y.HasValue)

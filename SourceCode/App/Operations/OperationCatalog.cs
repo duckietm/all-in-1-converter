@@ -31,6 +31,7 @@ public static class OperationCatalog
         Op("habbo.texts", OperationCategory.HabboOriginal, "Download texts", "Download official external text resources.", TextsDownloader.DownloadTextsAsync),
         Op("habbo.variables", OperationCategory.HabboOriginal, "Download variables", "Download official external variable resources.", VariablesDownloader.DownloadVariablesAsync),
         Op("habbo.pets", OperationCategory.HabboOriginal, "Download pets", "Download official pet libraries as .swf and/or .hab (config.ini download_format).", PetsDownloader.DownloadPetsAsync),
+        Op("habbo.effect-icons", OperationCategory.HabboOriginal, "Extract effect icons", "Extract the avatar effect icons (fx_icon_<type>) from Habbo's inventory bundle into fx_icons/.", EffectIconsExtractor.ExtractAsync),
         Op("habbo.all", OperationCategory.HabboOriginal, "Download all", "Run the complete official asset download sequence.", DownloadAllAsync, true),
 
         Op("nitro.furniture", OperationCategory.NitroCustom, "Download Nitro furniture", "Download custom Nitro furniture, icons and FurnitureData.json.", NitroFurnitureDownloader.DownloadFurnitureAsync, true),
@@ -47,6 +48,7 @@ public static class OperationCatalog
         Op("tools.swf-furniture-nitro", OperationCategory.HotelTools, "SWF Furniture to Nitro", "Convert furniture SWF files to .nitro (json + WebP Lossless).", Swf(".nitro", SWF_Furni_To_Nitro.ConvertSwfFilesAsync), true),
         Op("tools.swf-furniture-hab", OperationCategory.HotelTools, "SWF Furniture to HAB", "Convert furniture SWF files to .hab (json + WebP Lossless).", Swf(".hab", SWF_Furni_To_Nitro.ConvertSwfFilesAsync), true),
         Op("tools.nitro-furniture-hab", OperationCategory.HotelTools, "Nitro Furniture to HAB", "Repack furniture .nitro bundles as .hab (json + WebP Lossless).", NitroToHabConverter.FurnitureAsync, true),
+        Op("tools.hab-furniture-32", OperationCategory.HotelTools, "Add size 32 to HAB Furniture", "Copy the zoomed-out size 32 graphics from your .nitro furniture into Habbo's .hab furniture, which has none.", HabSize32Merger.FurnitureAsync, true),
         Op("tools.swf-clothes-nitro", OperationCategory.HotelTools, "SWF Clothes to Nitro", "Convert clothing SWF files to .nitro (json + WebP Lossless).", Swf(".nitro", SWF_clothes_To_Nitro.ConvertSwfFilesAsync), true),
         Op("tools.swf-clothes-hab", OperationCategory.HotelTools, "SWF Clothes to HAB", "Convert clothing SWF files to .hab (json + WebP Lossless).", Swf(".hab", SWF_clothes_To_Nitro.ConvertSwfFilesAsync), true),
         Op("tools.nitro-clothes-hab", OperationCategory.HotelTools, "Nitro Clothes to HAB", "Repack clothing .nitro bundles as .hab (json + WebP Lossless).", NitroToHabConverter.ClothesAsync, true),

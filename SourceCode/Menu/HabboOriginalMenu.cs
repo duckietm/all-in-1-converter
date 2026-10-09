@@ -92,6 +92,16 @@ namespace ConsoleApplication
                     "(config.ini download_format). The list can be changed with config.ini pet_libraries.\n" +
                     "A .hab gets a lossless WebP sheet (spritesheet_format=webp); its json is not changed."),
 
+            new("14",  "Extract Effect icons (fx_icon_<type> for the avatar editor)",
+                OperationCatalog.Get("habbo.effect-icons").Action,
+                HowToUse:
+                    "Habbo has no CDN URL for the effect icons: they ship inside the Habbo Classic app at\n" +
+                    "HabboClassicWin.zip > resources/app.asar > client/generated/habbo-inventory-com.hab.\n" +
+                    "Put the zip, the app.asar, that .hab or a folder of fx_icon_<type> PNGs in Habbo_Default/import/effect_icons\n" +
+                    "(or set config.ini effect_icons_source), or set config.ini effect_icons_url to a download link\n" +
+                    "of one of them (for example a mirror). Output: Habbo_Default/fx_icons/fx_icon_<type>.png,\n" +
+                    "for the client's avatareditor.effects.icon.url (${image.library.url}fx_icons/fx_icon_%type%.png)."),
+
             new("all", "Download All (clothes + furni + product + ...)",
                 OperationCatalog.Get("habbo.all").Action,
                 HowToUse:

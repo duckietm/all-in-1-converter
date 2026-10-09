@@ -100,12 +100,22 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
 
     public class FrameSequence
     {
+        [JsonPropertyName("loopCount")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? LoopCount { get; set; }
+
+        [JsonPropertyName("random")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int? Random { get; set; }
+
         [JsonPropertyName("frames")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public Dictionary<int, Frame> Frames { get; set; } = new();
 
         public FrameSequence(XElement xml)
         {
+            LoopCount = int.TryParse(xml.Attribute("loopCount")?.Value, out int loopCount) ? loopCount : (int?)null;
+            Random = int.TryParse(xml.Attribute("random")?.Value, out int random) ? random : (int?)null;
             Frames = ParseFrames(xml);
         }
 
@@ -128,12 +138,17 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
     public class Frame
     {
         public int Id { get; set; }
+        public int? X { get; set; }
+        public int? Y { get; set; }
         public int? RandomX { get; set; }
         public int? RandomY { get; set; }
 
         public Frame(XElement xml)
         {
             Id = int.TryParse(xml.Attribute("id")?.Value, out int id) ? id : 0;
+            // Per-frame offsets (moving clouds, falling leaves, ...).
+            X = int.TryParse(xml.Attribute("x")?.Value, out int x) ? x : (int?)null;
+            Y = int.TryParse(xml.Attribute("y")?.Value, out int y) ? y : (int?)null;
             RandomX = int.TryParse(xml.Attribute("randomX")?.Value, out int randomX) ? randomX : (int?)null;
             RandomY = int.TryParse(xml.Attribute("randomY")?.Value, out int randomY) ? randomY : (int?)null;
         }
@@ -152,6 +167,18 @@ namespace Habbo_Downloader.SWFCompiler.Mapper.Visualizations
 
             writer.WritePropertyName("id");
             writer.WriteNumberValue(value.Id);
+
+            if (value.X.HasValue)
+            {
+                writer.WritePropertyName("x");
+                writer.WriteNumberValue(value.X.Value);
+            }
+
+            if (value.Y.HasValue)
+            {
+                writer.WritePropertyName("y");
+                writer.WriteNumberValue(value.Y.Value);
+            }
 
             if (value.RandomX.HasValue)
             {
