@@ -271,7 +271,9 @@ namespace ConsoleApplication
                                  })
                                  .ToList();
 
-                var actionsMap = new { actions = actions };
+                var actionOffsets = BuildActionOffsets(actions, Path.GetDirectoryName(avatarActionsFilePath));
+
+                var actionsMap = new { actions = actions, actionOffsets = actionOffsets.Count > 0 ? actionOffsets : null };
 
                 var options = new JsonSerializerOptions
                 {
@@ -295,6 +297,58 @@ namespace ConsoleApplication
                 Console.WriteLine("❌ generating AvatarActions JSON: " + ex.Message);
                 Console.ForegroundColor = ConsoleColor.Gray;
             }
+        }
+
+        // habbo-avatar-render-lib action_offset_lay.xml / action_offset_swim.xml, used when no
+        // action_offset_<state>.xml sits next to HabboAvatarActions.xml.
+        private static readonly Dictionary<string, (string size, int direction, double x, double y, double z)[]> DefaultActionOffsets = new()
+        {
+            ["lay"] = new[]
+            {
+                ("h", 4, -17d, 17d, -0.9), ("h", 2, 22d, 17d, -0.9),
+                ("sh", 4, -5d, 16d, -0.9), ("sh", 2, 9d, 16d, -0.9)
+            },
+            ["swim"] = new[]
+            {
+                ("sh", 0, -28d, 0d, 0d), ("sh", 1, -28d, 0d, 0d), ("sh", 2, -28d, 0d, 0d), ("sh", 3, -28d, 0d, 0d),
+                ("sh", 4, 0d, 0d, 0d), ("sh", 5, 0d, 0d, 0d), ("sh", 6, 0d, 0d, 0d), ("sh", 7, -28d, 0d, 0d)
+            }
+        };
+
+        // AIR reads an "action_offset_<state>" asset for every action state (AvatarActionManager.parseActionOffsets).
+        private static List<ActionOffset> BuildActionOffsets(List<AvatarAction> actions, string xmlDirectory)
+        {
+            var result = new List<ActionOffset>();
+
+            foreach (var state in actions.Select(a => a.state).Where(s => !string.IsNullOrEmpty(s)).Distinct())
+            {
+                List<Offset> offsets = null;
+                string offsetFilePath = Path.Combine(xmlDirectory ?? ".", $"action_offset_{state}.xml");
+
+                if (File.Exists(offsetFilePath))
+                {
+                    offsets = XDocument.Load(offsetFilePath).Descendants("offset")
+                                       .Select(o => new Offset
+                                       {
+                                           size = (string)o.Attribute("size"),
+                                           direction = int.TryParse((string)o.Attribute("direction"), out int d) ? d : null,
+                                           x = int.TryParse((string)o.Attribute("x"), out int x) ? x : 0,
+                                           y = int.TryParse((string)o.Attribute("y"), out int y) ? y : 0,
+                                           z = double.TryParse((string)o.Attribute("z"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double z) ? z : 0
+                                       })
+                                       .Where(o => !string.IsNullOrEmpty(o.size) && o.direction != null)
+                                       .ToList();
+                }
+                else if (DefaultActionOffsets.TryGetValue(state, out var defaults))
+                {
+                    offsets = defaults.Select(o => new Offset { size = o.size, direction = o.direction, x = o.x, y = o.y, z = o.z }).ToList();
+                }
+
+                if (offsets != null && offsets.Count > 0)
+                    result.Add(new ActionOffset { action = state, offsets = offsets });
+            }
+
+            return result;
         }
 
         private static bool? GetNullableBoolFromAttribute(XElement element, string attributeName)

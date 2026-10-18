@@ -71,7 +71,7 @@ namespace Habbo_Downloader.App
                     "Original_ClothesData", "Import_ClothesData", "Merged_ClothesData",
                     "Original_Productdata", "Import_Productdata", "Merged_Productdata"
                 } },
-                { "Generate", new[] { "Furnidata", "Furniture", "Output_SQL" } },
+                { "Generate", new[] { "Furnidata", "default_furniture", "bc_furniture", "Output_SQL" } },
                 { "SWFCompiler", new[]
                 {
                     "clothes", "furniture", "import",
@@ -84,6 +84,9 @@ namespace Habbo_Downloader.App
                 { "Database", new[] { "Variables" } },
                 { "custom_downloads", new[] { "clothes", "nitro_furniture", Path.Combine("nitro_furniture", "icons") } }
             };
+
+            // Generate/Furniture became Generate/default_furniture: move an existing folder first.
+            if (Directory.Exists("Generate")) ConsoleApplication.SQLGenerator.MoveLegacyFurnitureFolder("Generate");
 
             foreach (var (baseDir, subDirs) in structure)
             {

@@ -8,19 +8,38 @@ using Newtonsoft.Json.Linq;
 
 namespace ConsoleApplication
 {
+    /// <summary>Which catalog the generated furni go into; items_base is the same for both.</summary>
+    public enum FurnitureSqlTarget
+    {
+        /// <summary>Generate/default_furniture -> catalog_items (page_id from catalog_pages).</summary>
+        Standard,
+
+        /// <summary>Generate/bc_furniture -> catalog_items_bc (page_id from catalog_pages_bc).</summary>
+        BuildersClub
+    }
+
     public static class SQLGenerator
     {
         private static readonly Dictionary<string, FileSettings> processedFileSettings = new Dictionary<string, FileSettings>(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, JToken> furniByClassname = new Dictionary<string, JToken>(StringComparer.Ordinal);
         private static JObject? indexedFurnidata;
 
-        public static void GenerateSQL()
+        /// <summary>The folder inside Generate/ whose furni a target turns into SQL.</summary>
+        public static string FurnitureFolder(FurnitureSqlTarget target) =>
+            target == FurnitureSqlTarget.BuildersClub ? "bc_furniture" : "default_furniture";
+
+        /// <summary>The folder Standaard furniture used before it was renamed to default_furniture.</summary>
+        public const string LegacyFurnitureFolder = "Furniture";
+
+        public static void GenerateSQL() => GenerateSQL(FurnitureSqlTarget.Standard);
+
+        public static void GenerateSQL(FurnitureSqlTarget target)
         {
             // Per run: settings of an earlier run must not add variants again, and the furnidata is released after.
             ResetRunState();
             try
             {
-                GenerateSqlRun();
+                GenerateSqlRun(target);
             }
             finally
             {
@@ -51,22 +70,30 @@ namespace ConsoleApplication
             return furniByClassname.GetValueOrDefault(classname);
         }
 
-        private static void GenerateSqlRun()
+        private static void GenerateSqlRun(FurnitureSqlTarget target)
         {
             string baseDir = Path.Combine(Directory.GetCurrentDirectory(), "Generate");
             string furnidataDir = Path.Combine(baseDir, "Furnidata");
-            string furnitureDir = Path.Combine(baseDir, "Furniture");
+            MoveLegacyFurnitureFolder(baseDir);
+            string furnitureDir = Path.Combine(baseDir, FurnitureFolder(target));
             string outputDir = Path.Combine(baseDir, "Output_SQL");
             Directory.CreateDirectory(outputDir);
+            Directory.CreateDirectory(furnitureDir);
+            string catalogTable = CatalogItemsTable(target);
 
             if (CheckForDuplicateFiles(furnitureDir))
             {
                 return;
             }
 
-            Console.Write("Enter the starting ID for items_base and catalog_items: ");
+            Console.WriteLine(target == FurnitureSqlTarget.BuildersClub
+                ? $"Build Club furniture: Generate/{FurnitureFolder(target)}/ -> items_base + catalog_items_bc"
+                : $"Standaard furniture: Generate/{FurnitureFolder(target)}/ -> items_base + catalog_items");
+            Console.Write($"Enter the starting ID for items_base and {catalogTable}: ");
             int startId = int.Parse(Console.ReadLine());
-            Console.Write("Enter the Catalog_Page ID for catalog_items: ");
+            Console.Write(target == FurnitureSqlTarget.BuildersClub
+                ? "Enter the Catalog_Page ID (catalog_pages_bc) for catalog_items_bc: "
+                : "Enter the Catalog_Page ID (catalog_pages) for catalog_items: ");
             int pageId = int.Parse(Console.ReadLine());
 
             JObject furnidata;
@@ -102,7 +129,7 @@ namespace ConsoleApplication
                     Console.WriteLine($"Processing SWF file: {fileName}");
                     string extractedDir = Path.Combine(furnitureDir, $"{fileName}_extracted");
                     ExtractSWF(file, extractedDir);
-                    ProcessExtractedSWF(extractedDir, furnidata, fileName, roomItems, wallItems, itemsBaseSQL, catalogItemsSQL, ref startId, pageId);
+                    ProcessExtractedSWF(extractedDir, furnidata, fileName, roomItems, wallItems, itemsBaseSQL, catalogItemsSQL, ref startId, pageId, target);
                     Console.WriteLine($"✅ Completed processing SWF file: {fileName}");
                     if (Directory.Exists(extractedDir))
                     {
@@ -111,7 +138,7 @@ namespace ConsoleApplication
                 }
                 else if (file.EndsWith(".nitro", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".hab", StringComparison.OrdinalIgnoreCase))
                 {
-                    ProcessNitroFile(file, furnidata, roomItems, wallItems, itemsBaseSQL, catalogItemsSQL, ref startId, pageId);
+                    ProcessNitroFile(file, furnidata, roomItems, wallItems, itemsBaseSQL, catalogItemsSQL, ref startId, pageId, target);
                     Console.WriteLine($"✅ Nitro file: {fileName} is done!");
                 }
             }
@@ -143,9 +170,8 @@ namespace ConsoleApplication
                     if (settings.FileType.Equals("SWF", StringComparison.OrdinalIgnoreCase))
                     {
                         itemsBaseSQL.Add($@"INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`) VALUES
-({id}, {spriteId}, '{variantClassname}', '{variantClassname}', 1, 1, 0.00, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', 'default', {settings.InteractionModesCount}, '0', '0', '0', 0, 0, '0');");
-                        catalogItemsSQL.Add($@"INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`) VALUES
-({id}, '{id}', {pageId}, {offerId}, 0, 99, '{variantClassname}', 5, 0, 0, 1, 0, 0, '', '1', '0');");
+({id}, {spriteId}, '{variantClassname}', '{variantClassname}', 1, 1, 0.00, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', '{InteractionTypeFor(variantClassname)}', {settings.InteractionModesCount}, '0', '0', '0', 0, 0, '0');");
+                        catalogItemsSQL.Add(CatalogItemInsert(target, id, pageId, offerId, variantClassname));
                     }
                     else if (settings.FileType.Equals("Nitro", StringComparison.OrdinalIgnoreCase))
                     {
@@ -155,9 +181,8 @@ namespace ConsoleApplication
                         string lengthVal = type == "i" ? "1" : settings.Length.ToString(CultureInfo.InvariantCulture);
                         string stackHeightVal = type == "i" ? "0.00" : settings.Height.ToString(CultureInfo.InvariantCulture);
                         itemsBaseSQL.Add($@"INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`) VALUES
-({id}, {spriteId}, '{variantClassname}', '{variantClassname}', {widthVal}, {lengthVal}, {stackHeightVal}, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', 'default', {settings.InteractionModesCount}, '0', '0', '0', 0, 0, '0');");
-                        catalogItemsSQL.Add($@"INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`) VALUES
-({id}, '{id}', {pageId}, {offerId}, 0, 99, '{variantClassname}', 5, 0, 0, 1, 0, 0, '', '1', '0');");
+({id}, {spriteId}, '{variantClassname}', '{variantClassname}', {widthVal}, {lengthVal}, {stackHeightVal}, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', '{InteractionTypeFor(variantClassname)}', {settings.InteractionModesCount}, '0', '0', '0', 0, 0, '0');");
+                        catalogItemsSQL.Add(CatalogItemInsert(target, id, pageId, offerId, variantClassname));
                     }
                 }
             }
@@ -167,13 +192,64 @@ namespace ConsoleApplication
                 "-- items_base inserts"
             };
             combinedSQL.AddRange(itemsBaseSQL);
-            combinedSQL.Add("-- catalog_items inserts");
+            combinedSQL.Add($"-- {catalogTable} inserts");
             combinedSQL.AddRange(catalogItemsSQL);
 
             string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
-            string outputPath = Path.Combine(outputDir, $"items_{timestamp}.sql");
+            string prefix = target == FurnitureSqlTarget.BuildersClub ? "bc_items" : "items";
+            string outputPath = Path.Combine(outputDir, $"{prefix}_{timestamp}.sql");
             File.WriteAllLines(outputPath, combinedSQL);
             Console.WriteLine($"📦 SQL file generated successfully:\n {outputPath}");
+        }
+
+        public static string CatalogItemsTable(FurnitureSqlTarget target) =>
+            target == FurnitureSqlTarget.BuildersClub ? "catalog_items_bc" : "catalog_items";
+
+        /// <summary>
+        /// The catalog row of one furni. catalog_items_bc has no price or offer columns, so a Builders
+        /// Club row keeps only the ones it has, with the same values.
+        /// </summary>
+        // Habbo's recolourable Builders Club furni (*_recolorable) keep their own colour on the server.
+        public static string InteractionTypeFor(string classname)
+        {
+            return classname != null && classname.EndsWith("_recolorable", StringComparison.OrdinalIgnoreCase) ? "recolorable" : "default";
+        }
+
+        public static string CatalogItemInsert(FurnitureSqlTarget target, int id, int pageId, int offerId, string classname)
+        {
+            if (target == FurnitureSqlTarget.BuildersClub)
+            {
+                return $@"INSERT INTO `catalog_items_bc` (`id`, `item_ids`, `page_id`, `catalog_name`, `order_number`, `extradata`) VALUES
+({id}, '{id}', {pageId}, '{classname}', 99, '');";
+            }
+
+            return $@"INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`) VALUES
+({id}, '{id}', {pageId}, {offerId}, 0, 99, '{classname}', 5, 0, 0, 1, 0, 0, '', '1', '0');";
+        }
+
+        /// <summary>Generate/Furniture became Generate/default_furniture; an existing folder is moved once.</summary>
+        public static void MoveLegacyFurnitureFolder(string generateDir)
+        {
+            string legacy = Path.Combine(generateDir, LegacyFurnitureFolder);
+            string current = Path.Combine(generateDir, FurnitureFolder(FurnitureSqlTarget.Standard));
+
+            if (!Directory.Exists(legacy)) return;
+
+            // An empty default_furniture (made at start-up) does not stop the old folder moving in.
+            if (Directory.Exists(current) && !Directory.EnumerateFileSystemEntries(current).Any())
+            {
+                Directory.Delete(current);
+            }
+
+            if (!Directory.Exists(current))
+            {
+                Directory.Move(legacy, current);
+                Console.WriteLine($"📁 Generate/{LegacyFurnitureFolder}/ is now Generate/{FurnitureFolder(FurnitureSqlTarget.Standard)}/.");
+                return;
+            }
+
+            if (!Directory.EnumerateFileSystemEntries(legacy).Any()) Directory.Delete(legacy);
+            else Console.WriteLine($"⚠️ Generate/{LegacyFurnitureFolder}/ still has files; move them to Generate/{FurnitureFolder(FurnitureSqlTarget.Standard)}/ (Standaard) or Generate/{FurnitureFolder(FurnitureSqlTarget.BuildersClub)}/ (Build Club).");
         }
 
         /// <summary>
@@ -267,7 +343,7 @@ namespace ConsoleApplication
             }
         }
 
-        private static void ProcessExtractedSWF(string extractedDir, JObject furnidata, string fileName, HashSet<string> roomItems, HashSet<string> wallItems, List<string> itemsBaseSQL, List<string> catalogItemsSQL, ref int startId, int pageId)
+        private static void ProcessExtractedSWF(string extractedDir, JObject furnidata, string fileName, HashSet<string> roomItems, HashSet<string> wallItems, List<string> itemsBaseSQL, List<string> catalogItemsSQL, ref int startId, int pageId, FurnitureSqlTarget target)
         {
             var logicFiles = Directory.GetFiles(extractedDir, "*_logic.bin", SearchOption.AllDirectories);
             foreach (var logicFile in logicFiles)
@@ -327,9 +403,8 @@ namespace ConsoleApplication
                     if (type == "i") { width = 1; length = 1; stackHeight = 0.00; }
 
                     itemsBaseSQL.Add($@"INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`) VALUES
-({id}, {spriteId}, '{classname}', '{classname}', {width.ToString(CultureInfo.InvariantCulture)}, {length.ToString(CultureInfo.InvariantCulture)}, {stackHeight.ToString(CultureInfo.InvariantCulture)}, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', 'default', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");
-                    catalogItemsSQL.Add($@"INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`) VALUES
-({id}, '{id}', {pageId}, {offerId}, 0, 99, '{classname}', 5, 0, 0, 1, 0, 0, '', '1', '0');");
+({id}, {spriteId}, '{classname}', '{classname}', {width.ToString(CultureInfo.InvariantCulture)}, {length.ToString(CultureInfo.InvariantCulture)}, {stackHeight.ToString(CultureInfo.InvariantCulture)}, '0', '0', '0', '0', '1', '1', '0', '1', '1', '{type}', '{InteractionTypeFor(classname)}', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");
+                    catalogItemsSQL.Add(CatalogItemInsert(target, id, pageId, offerId, classname));
 
                     if (!processedFileSettings.ContainsKey(fileName))
                     {
@@ -350,7 +425,7 @@ namespace ConsoleApplication
             }
         }
 
-        private static void ProcessNitroFile(string nitroFilePath, JObject furnidata, HashSet<string> roomItems, HashSet<string> wallItems, List<string> itemsBaseSQL, List<string> catalogItemsSQL, ref int startId, int pageId)
+        private static void ProcessNitroFile(string nitroFilePath, JObject furnidata, HashSet<string> roomItems, HashSet<string> wallItems, List<string> itemsBaseSQL, List<string> catalogItemsSQL, ref int startId, int pageId, FurnitureSqlTarget target)
         {
             string fileName = Path.GetFileNameWithoutExtension(nitroFilePath);
             try
@@ -400,9 +475,8 @@ namespace ConsoleApplication
                 if (type == "i") { width = 1; length = 1; height = 0.00; }
 
                 itemsBaseSQL.Add($@"INSERT INTO `items_base` (`id`, `sprite_id`, `item_name`, `public_name`, `width`, `length`, `stack_height`, `allow_stack`, `allow_sit`, `allow_lay`, `allow_walk`, `allow_gift`, `allow_trade`, `allow_recycle`, `allow_marketplace_sell`, `allow_inventory_stack`, `type`, `interaction_type`, `interaction_modes_count`, `vending_ids`, `multiheight`, `customparams`, `effect_id_male`, `effect_id_female`, `clothing_on_walk`) VALUES
-({id}, {spriteId}, '{classname}', '{classname}', {width.ToString(CultureInfo.InvariantCulture)}, {length.ToString(CultureInfo.InvariantCulture)}, {height.ToString(CultureInfo.InvariantCulture)}, '{(isStackable ? "1" : "0")}', '{(canSitOn ? "1" : "0")}', '{(canLayOn ? "1" : "0")}', '{(canStandOn ? "1" : "0")}', '1', '1', '0', '1', '1', '{type}', 'default', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");
-                catalogItemsSQL.Add($@"INSERT INTO `catalog_items` (`id`, `item_ids`, `page_id`, `offer_id`, `song_id`, `order_number`, `catalog_name`, `cost_credits`, `cost_points`, `points_type`, `amount`, `limited_sells`, `limited_stack`, `extradata`, `have_offer`, `club_only`) VALUES
-({id}, '{id}', {pageId}, {offerId}, 0, 99, '{classname}', 5, 0, 0, 1, 0, 0, '', '1', '0');");
+({id}, {spriteId}, '{classname}', '{classname}', {width.ToString(CultureInfo.InvariantCulture)}, {length.ToString(CultureInfo.InvariantCulture)}, {height.ToString(CultureInfo.InvariantCulture)}, '{(isStackable ? "1" : "0")}', '{(canSitOn ? "1" : "0")}', '{(canLayOn ? "1" : "0")}', '{(canStandOn ? "1" : "0")}', '1', '1', '0', '1', '1', '{type}', '{InteractionTypeFor(classname)}', {interactionModesCount}, '0', '0', '0', 0, 0, '0');");
+                catalogItemsSQL.Add(CatalogItemInsert(target, id, pageId, offerId, classname));
 
                 if (!processedFileSettings.ContainsKey(fileName))
                 {

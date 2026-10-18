@@ -40,7 +40,8 @@ public static class OperationCatalog
         Op("tools.merge-furnidata", OperationCategory.HotelTools, "Merge furnidata", "Merge strict FurnitureData.json files without duplicate IDs or classnames.", CompareFurnidata.Compare, true),
         Op("tools.merge-productdata", OperationCategory.HotelTools, "Merge productdata", "Merge strict ProductData.json files with conflict control.", CompareProductData.Compare, true),
         Op("tools.merge-clothes", OperationCategory.HotelTools, "Merge clothes", "Merge strict FigureData.json and FigureMap.json files.", CompareClothesData.Compare, true),
-        Op("tools.generate-sql", OperationCategory.HotelTools, "Generate SQL", "Generate items_base and catalog_items SQL from furniture assets.", GenerateSqlAsync, true),
+        Op("tools.generate-sql", OperationCategory.HotelTools, "Generate SQL: Standaard furniture", "Generate items_base and catalog_items SQL from the furniture in Generate/default_furniture.", GenerateSqlAsync, true),
+        Op("tools.generate-sql-bc", OperationCategory.HotelTools, "Generate SQL: Build Club furniture", "Generate items_base and catalog_items_bc SQL from the furniture in Generate/bc_furniture.", GenerateBuildersClubSqlAsync, true),
         Op("tools.decompile-nitro", OperationCategory.HotelTools, "Decompile NitroFiles", "Extract .nitro bundles into their json and sheet.", () => BundleTools.DecompileAsync(".nitro")),
         Op("tools.compile-nitro", OperationCategory.HotelTools, "Compile NitroFiles", "Pack json + sheet folders into .nitro bundles (WebP Lossless).", () => BundleTools.CompileAsync(".nitro")),
         Op("tools.decompile-hab", OperationCategory.HotelTools, "Decompile HabFiles", "Extract .hab bundles into their json and sheet.", () => BundleTools.DecompileAsync(".hab")),
@@ -102,7 +103,13 @@ public static class OperationCatalog
 
     private static Task GenerateSqlAsync()
     {
-        SQLGenerator.GenerateSQL();
+        SQLGenerator.GenerateSQL(FurnitureSqlTarget.Standard);
+        return Task.CompletedTask;
+    }
+
+    private static Task GenerateBuildersClubSqlAsync()
+    {
+        SQLGenerator.GenerateSQL(FurnitureSqlTarget.BuildersClub);
         return Task.CompletedTask;
     }
 }

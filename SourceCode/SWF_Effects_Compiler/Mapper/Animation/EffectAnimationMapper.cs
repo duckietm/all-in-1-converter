@@ -123,6 +123,11 @@ namespace Habbo_Downloader.SWF_Effects_Compiler.Mapper.Animation
         [JsonPropertyName("repeats")]
         public int? Repeats { get; set; }
 
+        // Per-frame direction offset (AIR Animation.parseFrames reads frame.direction[0].@offset;
+        // the renderer reads frame.directions[0].offset). Omitted when the frame has none.
+        [JsonPropertyName("directions")]
+        public List<AssetAnimationDirection>? Directions { get; set; }
+
         [JsonPropertyName("fxs")]
         public List<AssetAnimationFramePart>? Fxs { get; set; }
 
@@ -411,7 +416,17 @@ namespace Habbo_Downloader.SWF_Effects_Compiler.Mapper.Animation
 
             foreach (var child in frameEl.Elements())
             {
-                if (child.Name.LocalName.ToLower() == "fx")
+                if (child.Name.LocalName.ToLower() == "direction")
+                {
+                    // <frame><direction offset="N"/>...</frame>: AIR only uses the first one.
+                    if (int.TryParse(child.Attribute("offset")?.Value, out int frameOffset))
+                    {
+                        if (frame.Directions == null)
+                            frame.Directions = new List<AssetAnimationDirection>();
+                        frame.Directions.Add(new AssetAnimationDirection { Offset = frameOffset });
+                    }
+                }
+                else if (child.Name.LocalName.ToLower() == "fx")
                 {
                     if (frame.Fxs == null)
                         frame.Fxs = new List<AssetAnimationFramePart>();
@@ -448,6 +463,8 @@ namespace Habbo_Downloader.SWF_Effects_Compiler.Mapper.Animation
                         bp.Dx = bdx;
                     if (int.TryParse(child.Attribute("dy")?.Value, out int bdy))
                         bp.Dy = bdy;
+                    if (int.TryParse(child.Attribute("dz")?.Value, out int bdz))
+                        bp.Dz = bdz;
                     if (int.TryParse(child.Attribute("dd")?.Value, out int bdd))
                         bp.Dd = bdd;
                     bp.Base = child.Attribute("base")?.Value;

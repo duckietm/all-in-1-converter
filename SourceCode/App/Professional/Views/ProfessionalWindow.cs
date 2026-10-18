@@ -796,7 +796,7 @@ public sealed class ProfessionalWindow : Window
     {
         if (operation.Category != OperationCategory.HotelTools) return null;
         string id = operation.Id;
-        if (id.Contains("merge") || id.EndsWith("generate-sql")) return "Gamedata";
+        if (id.Contains("merge") || id.Contains("generate-sql")) return "Gamedata";
         if (id == "tools.decompile-swf") return "SWF";
         if (id.Contains("compile")) return "Bundles";
         if (id.Contains("furniture")) return "Furniture";
