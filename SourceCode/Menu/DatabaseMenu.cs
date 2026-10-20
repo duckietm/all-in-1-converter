@@ -44,6 +44,27 @@ namespace ConsoleApplication
                 "RUN THIS BEFORE option 3 / 4 when you have just added new\n" +
                 "furniture - otherwise the offer_id / sit-lay-walk fixes have\n" +
                 "nothing to match against."),
+
+            new("6", "Fix interaction count (SQL from Habbo_Default/hof_furni/hab)", OperationCatalog.Get("database.interaction-count").Action, HowToUse:
+                "Reads every floor and wall furni (type s or i; pets 'a0 ...' left out)\n" +
+                "with interaction_type 'default' and no multiheight, opens\n" +
+                "Habbo_Default/hof_furni/hab/<item_name>.hab and\n" +
+                "counts its interaction modes the same way Generate SQL does.\n" +
+                "Rows whose interaction_modes_count differs are written to\n" +
+                "Generate/Update_Interaction_count_<date>.sql; the .hab files that\n" +
+                "are missing (or unreadable) go to Generate/Missing_Hab_files_<date>.txt.\n" +
+                "The database is only read:\n" +
+                "check the file, then run it yourself."),
+
+            new("7", "Fix width / length / height (SQL from Habbo_Default/hof_furni/hab)", OperationCatalog.Get("database.item-size").Action, HowToUse:
+                "Reads every floor and wall furni (type s or i; pets 'a0 ...' left out)\n" +
+                "without multiheight. A floor furni gets width / length / stack_height\n" +
+                "from logic.model.dimensions in Habbo_Default/hof_furni/hab/<item_name>.hab,\n" +
+                "the same way Generate SQL does; a wall furni is always 1 x 1 x 0.00.\n" +
+                "Rows that change are written to Generate/Update_Item_size_<date>.sql;\n" +
+                "the .hab files that are missing (or unreadable) go to\n" +
+                "Generate/Missing_Hab_files_<date>.txt. The database is only read:\n" +
+                "check the file, then run it yourself."),
         });
     }
 }

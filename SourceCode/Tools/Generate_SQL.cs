@@ -544,47 +544,48 @@ namespace ConsoleApplication
                     return 1;
                 }
 
-                string jsonContent = File.ReadAllText(nitroJsonPath);
-                using (JsonDocument doc = JsonDocument.Parse(jsonContent))
-                {
-                    if (!doc.RootElement.TryGetProperty("visualizations", out JsonElement visualizations))
-                    {
-                        return 1;
-                    }
-
-                    foreach (var viz in visualizations.EnumerateArray())
-                    {
-                        if (viz.TryGetProperty("animations", out JsonElement animationsElement))
-                        {
-                            List<int> validAnimationIds = new List<int>();
-                            foreach (var prop in animationsElement.EnumerateObject())
-                            {
-                                if (int.TryParse(prop.Name, out int animId) && animId >= 0 && animId < 50)
-                                {
-                                    validAnimationIds.Add(animId);
-                                }
-                            }
-                            if (validAnimationIds.Count > 0)
-                            {
-                                if (validAnimationIds.Contains(0))
-                                {
-                                    int maxId = validAnimationIds.Max();
-                                    return maxId + 1;
-                                }
-                                else
-                                {
-                                    return validAnimationIds.Count;
-                                }
-                            }
-                        }
-                    }
-                }
-                return 1;
+                using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(nitroJsonPath));
+                return InteractionModesCountFromNitroJson(doc.RootElement);
             }
             catch (Exception)
             {
                 return 1;
             }
+        }
+
+        /// <summary>
+        /// The interaction_modes_count of a .nitro / .hab bundle json: the animation ids 0..49 of the first
+        /// visualization that has any; with an animation 0 that is the highest id + 1, otherwise their number.
+        /// 1 when there are none.
+        /// </summary>
+        public static int InteractionModesCountFromNitroJson(JsonElement root)
+        {
+            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("visualizations", out JsonElement visualizations)
+                || visualizations.ValueKind != JsonValueKind.Array)
+            {
+                return 1;
+            }
+
+            foreach (var viz in visualizations.EnumerateArray())
+            {
+                if (viz.ValueKind == JsonValueKind.Object && viz.TryGetProperty("animations", out JsonElement animationsElement)
+                    && animationsElement.ValueKind == JsonValueKind.Object)
+                {
+                    List<int> validAnimationIds = new List<int>();
+                    foreach (var prop in animationsElement.EnumerateObject())
+                    {
+                        if (int.TryParse(prop.Name, out int animId) && animId >= 0 && animId < 50)
+                        {
+                            validAnimationIds.Add(animId);
+                        }
+                    }
+                    if (validAnimationIds.Count > 0)
+                    {
+                        return validAnimationIds.Contains(0) ? validAnimationIds.Max() + 1 : validAnimationIds.Count;
+                    }
+                }
+            }
+            return 1;
         }
 
         private static (double width, double length, double height) GetDimensionsFromNitroJson(string nitroJsonPath)
@@ -596,35 +597,44 @@ namespace ConsoleApplication
                     return (1, 1, 0.00);
                 }
 
-                string jsonContent = File.ReadAllText(nitroJsonPath);
-                using (JsonDocument doc = JsonDocument.Parse(jsonContent))
-                {
-                    if (doc.RootElement.TryGetProperty("logic", out JsonElement logicElement) &&
-                        logicElement.TryGetProperty("model", out JsonElement modelElement) &&
-                        modelElement.TryGetProperty("dimensions", out JsonElement dimensionsElement))
-                    {
-                        double width = 1, length = 1, height = 0.00;
-                        if (dimensionsElement.TryGetProperty("x", out JsonElement xElem))
-                        {
-                            width = xElem.GetDouble();
-                        }
-                        if (dimensionsElement.TryGetProperty("y", out JsonElement yElem))
-                        {
-                            length = yElem.GetDouble();
-                        }
-                        if (dimensionsElement.TryGetProperty("z", out JsonElement zElem))
-                        {
-                            height = zElem.GetDouble();
-                        }
-                        return (width, length, height);
-                    }
-                }
+                using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(nitroJsonPath));
+                return DimensionsFromNitroJson(doc.RootElement) ?? (1, 1, 0.00);
             }
             catch (Exception ex)
             {
                 Console.WriteLine("❌ Error reading dimensions from Nitro JSON: " + ex.Message);
             }
             return (1, 1, 0.00);
+        }
+
+        /// <summary>
+        /// Width, length and stack height of a .nitro / .hab bundle json: logic.model.dimensions x, y and z (a missing
+        /// axis is 1, 1 and 0). Null when the bundle has no dimensions.
+        /// </summary>
+        public static (double width, double length, double height)? DimensionsFromNitroJson(JsonElement root)
+        {
+            if (root.ValueKind == JsonValueKind.Object &&
+                root.TryGetProperty("logic", out JsonElement logicElement) && logicElement.ValueKind == JsonValueKind.Object &&
+                logicElement.TryGetProperty("model", out JsonElement modelElement) && modelElement.ValueKind == JsonValueKind.Object &&
+                modelElement.TryGetProperty("dimensions", out JsonElement dimensionsElement) && dimensionsElement.ValueKind == JsonValueKind.Object)
+            {
+                double width = 1, length = 1, height = 0.00;
+                if (dimensionsElement.TryGetProperty("x", out JsonElement xElem) && xElem.ValueKind == JsonValueKind.Number)
+                {
+                    width = xElem.GetDouble();
+                }
+                if (dimensionsElement.TryGetProperty("y", out JsonElement yElem) && yElem.ValueKind == JsonValueKind.Number)
+                {
+                    length = yElem.GetDouble();
+                }
+                if (dimensionsElement.TryGetProperty("z", out JsonElement zElem) && zElem.ValueKind == JsonValueKind.Number)
+                {
+                    height = zElem.GetDouble();
+                }
+                return (width, length, height);
+            }
+
+            return null;
         }
 
         private class FileSettings

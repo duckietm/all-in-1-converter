@@ -66,6 +66,8 @@ public static class OperationCatalog
         Op("database.offer-id", OperationCategory.Database, "Fix offer IDs", "Align database offer IDs with FurnitureData.json.", SetOfferID.RunAsync, false, true),
         Op("database.item-settings", OperationCategory.Database, "Fix sit, lay and walk", "Align furniture interaction settings with FurnitureData.json.", FixItemSettings.RunAsync, false, true),
         Op("database.sprite-id", OperationCategory.Database, "Fix sprite and item IDs", "Align sprite and item IDs with FurnitureData.json.", FixSpriteIDSettings.RunAsync, false, true),
+        Op("database.interaction-count", OperationCategory.Database, "Fix interaction count", "Write Generate/Update_Interaction_count_<date>.sql with the interaction_modes_count of each default floor/wall furni (no multiheight, no pets) from Habbo_Default/hof_furni/hab, plus Missing_Hab_files_<date>.txt.", FixInteractionCount.RunAsync),
+        Op("database.item-size", OperationCategory.Database, "Fix width, length and height", "Write Generate/Update_Item_size_<date>.sql with the width, length and stack_height of each floor/wall furni (no multiheight, no pets) from Habbo_Default/hof_furni/hab, plus Missing_Hab_files_<date>.txt.", FixItemSize.RunAsync),
 
         Op("general.version", OperationCategory.General, "Current Habbo client version", "Fetch the current official Habbo client build.", CliRunner.DisplayVersionAsync),
         Op("general.credits", OperationCategory.General, "Credits and contributors", "Show project authors and contributors.", Credits.ShowAsync)
